@@ -88,6 +88,24 @@ export function DetailsEnhancements() {
 					max={d.maxLevel}
 					step={1}
 				/>
+
+				{d.maxCaphrasStep > 0 && (
+					<>
+						<div className="flex items-center gap-6">
+							<Label>Caphras Enhancement</Label>
+							<span className="text-sm text-muted-foreground">{d.caphrasStep}</span>
+						</div>
+						<Slider
+							value={d.caphrasStep}
+							onValueChange={(value) => {
+								details.caphrasStep = value as number;
+							}}
+							min={0}
+							max={d.maxCaphrasStep}
+							step={1}
+						/>
+					</>
+				)}
 			</div>
 
 		</DetailsSection>

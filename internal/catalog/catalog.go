@@ -13,7 +13,7 @@ import (
 )
 
 // GradeOrder lists item grades from common to rare, for the grade filter.
-var GradeOrder = []string{"white", "green", "blue", "yellow", "orange"}
+var GradeOrder = []string{"white", "green", "blue", "yellow", "red", "purple"}
 
 // MarketCategoryWithCount is one central-market category (or sub-category) with
 // its item count — the item source's navigation structure.
@@ -39,16 +39,8 @@ func New() (*Catalog, error) {
 // DataDir returns the resolved data directory (for loading map/image assets).
 func (c *Catalog) DataDir() string { return config.GetExtractedDataDir() }
 
-// --- Wails binding type anchors ---------------------------------------------
-//
-// Each dataset now lives in its own source rather than on Catalog, which removed
-// the bound query methods that used to reference these model types — so the Wails
-// TS generator stopped emitting them. The frontend still imports them for its own
-// typing (region / knowledge / grindspot details, source state), and the source
-// GetEntry/GetEntryDetails paths pass them through `any`, so nothing else anchors
-// them. Returning them here keeps the generator emitting the types (and their
-// nested types) into the frontend bindings. BindingTypes isn't called at runtime;
-// add a field when the frontend needs a model type no live bound signature covers.
+// BindingTypes isn't called at runtime - it exists purely so these model
+// types stay referenced, keeping the Wails TS generator emitting them.
 type BindingTypes struct {
 	Zone           *model.Zone           `json:"zone,omitempty"`
 	WorldRegion    *model.WorldRegion    `json:"worldRegion,omitempty"`

@@ -6,16 +6,8 @@
 import * as model$0 from "../../../github.com/idevelopthings/bdo-data-extractor/src/model/models.js";
 
 /**
- * --- Wails binding type anchors ---------------------------------------------
- * 
- * Each dataset now lives in its own source rather than on Catalog, which removed
- * the bound query methods that used to reference these model types — so the Wails
- * TS generator stopped emitting them. The frontend still imports them for its own
- * typing (region / knowledge / grindspot details, source state), and the source
- * GetEntry/GetEntryDetails paths pass them through `any`, so nothing else anchors
- * them. Returning them here keeps the generator emitting the types (and their
- * nested types) into the frontend bindings. BindingTypes isn't called at runtime;
- * add a field when the frontend needs a model type no live bound signature covers.
+ * BindingTypes isn't called at runtime - it exists purely so these model
+ * types stay referenced, keeping the Wails TS generator emitting them.
  */
 export interface BindingTypes {
     "zone"?: model$0.Zone | null;

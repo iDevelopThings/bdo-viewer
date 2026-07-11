@@ -13,7 +13,8 @@ var gradeColors = map[string]color.Color{
 	"green":  color.RGBA{0x7d, 0xc8, 0x6e, 0xff},
 	"blue":   color.RGBA{0x5b, 0x9d, 0xff, 0xff},
 	"yellow": color.RGBA{0xe6, 0xc8, 0x4e, 0xff},
-	"orange": color.RGBA{0xe0, 0x8a, 0x3c, 0xff},
+	"red":    color.RGBA{0xdb, 0x4d, 0x3d, 0xff},
+	"purple": color.RGBA{0xc0, 0x84, 0xe6, 0xff},
 }*/
 
 export const grades = {
@@ -29,8 +30,11 @@ export const grades = {
 	"yellow" : {
 		color : "#e6c84e",
 	},
-	"orange" : {
-		color : "#e08a3c",
+	"red" : {
+		color : "#db4d3d",
+	},
+	"purple" : {
+		color : "#c084e6",
 	}
 };
 export type Grade = keyof typeof grades;

@@ -91,6 +91,7 @@ export class DetailStore {
 	public source: WrappedSource | undefined     = undefined;
 
 	private _level: number                      = 0;
+	private _caphrasStep: number                = 0;
 	public enhancement: Enhancement | undefined = undefined;
 	public enchant: EnchantLevel | undefined    = undefined;
 	private _stats: StatGroup[]                 = [];
@@ -317,13 +318,34 @@ export class DetailStore {
 		this.setLevel(value);
 	}
 
+	public get caphrasStep() {
+		return this._caphrasStep;
+	}
+
+	public set caphrasStep(value: number) {
+		this.setCaphrasStep(value);
+	}
+
+	// maxCaphrasStep is only nonzero at the enchant levels Caphras applies to
+	// (TRI/TET/PEN) - see EnchantLevel.Caphras.
+	public get maxCaphrasStep(): number {
+		const caphras = this.enchant?.caphras ?? [];
+		return caphras.length > 0 ? Math.max(...caphras.map(c => c.level)) : 0;
+	}
+
 	private setLevel(value: number) {
 		this._level = Math.max(this.minLevel, Math.min(this.maxLevel, value));
 
 		if (this.enhancement) {
 			this.enchant = this.enhancement.levels.find(l => l.level === this._level);
 		}
+		this._caphrasStep = Math.min(this._caphrasStep, this.maxCaphrasStep);
 
+		void this.refreshStats();
+	}
+
+	private setCaphrasStep(value: number) {
+		this._caphrasStep = Math.max(0, Math.min(this.maxCaphrasStep, value));
 		void this.refreshStats();
 	}
 
@@ -336,6 +358,6 @@ export class DetailStore {
 			this._stats = [];
 			return;
 		}
-		this._stats = (await GetStatsByURN(urn, this._level, 0)) ?? [];
+		this._stats = (await GetStatsByURN(urn, this._level, this._caphrasStep)) ?? [];
 	}
 }
