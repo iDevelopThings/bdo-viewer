@@ -22,12 +22,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout viewer
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: bdo-viewer
 
       - name: Checkout extractor (the replaced dependency)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: idevelopthings/bdo-data-extractor
           path: bdo-data-extractor
@@ -37,11 +37,12 @@ jobs:
         working-directory: bdo-viewer
         run: go mod edit -replace github.com/idevelopthings/bdo-data-extractor=../bdo-data-extractor
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: bdo-viewer/go.mod
+          cache-dependency-path: bdo-viewer/go.sum
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
 
@@ -80,7 +81,7 @@ jobs:
 
       - name: Publish release
         if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: v${{ steps.ver.outputs.version }}
           files: |
