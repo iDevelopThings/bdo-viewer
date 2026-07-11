@@ -10,6 +10,7 @@ import (
 
 	"bdo-viewer/internal/boot"
 	"bdo-viewer/internal/config"
+	"bdo-viewer/internal/updates"
 
 	"github.com/idevelopthings/bdo-data-extractor/pipeline"
 
@@ -136,7 +137,7 @@ func (s *Service) RunExtraction(gameDir, dataDir, lang string) error {
 
 		pipeline.SetReporter(&eventReporter{})
 
-		if err := pipeline.RunAll(pipeline.Options{GameDir: gameDir, DataDir: dataDir, Lang: lang}); err != nil {
+		if err := pipeline.RunAll(pipeline.Options{GameDir: gameDir, DataDir: dataDir, Lang: lang, AppVersion: updates.Version}); err != nil {
 			application.Get().Event.Emit(EventError, ErrorPayload{Message: err.Error()})
 			return
 		}

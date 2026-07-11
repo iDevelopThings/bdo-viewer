@@ -5,21 +5,40 @@
 package boot
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 
 	"bdo-viewer/internal/config"
 	"bdo-viewer/internal/sources"
+	"bdo-viewer/internal/updates"
 
+	"github.com/idevelopthings/bdo-data-extractor/pipeline"
 	"github.com/idevelopthings/bdo-data-extractor/src/models"
 )
 
-// NeedsSetup reports whether the first-run wizard must be shown — true when the
-// extracted dataset is absent (items.json is the marker every load depends on).
-// A configured game dir is only needed to extract, not to run, so it isn't checked.
+// NeedsSetup reports whether the setup/extraction flow must run before the data can
+// be loaded. That's true on a genuine first run (no dataset yet), and also when the
+// existing dataset is stale — the game has been patched, or this app has updated
+// since the data was extracted (tracked via the data dir's manifest). A game dir
+// that can't be read leaves the existing data in place (a re-extraction isn't
+// possible anyway), so a moved/offline install still runs.
 func NeedsSetup() bool {
-	_, err := os.Stat(filepath.Join(config.GetExtractedDataDir(), "items.json"))
-	return err != nil
+	dataDir := config.GetExtractedDataDir()
+	if _, err := os.Stat(filepath.Join(dataDir, "items.json")); err != nil {
+		return true // no dataset yet — genuine first run
+	}
+
+	gameDir := ""
+	if config.Global != nil {
+		gameDir = config.Global.GameDir
+	}
+	stale, reason := pipeline.NeedsExtraction(dataDir, gameDir, updates.Version)
+	if stale {
+		log.Printf("bdo-viewer: dataset stale (%s) — re-extraction required", reason)
+	}
+
+	return stale
 }
 
 // LoadData (re)loads every source's JSON and runs the cross-store build. It resets
