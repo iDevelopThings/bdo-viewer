@@ -60,10 +60,3 @@ export function ListSourceEntries(params: $models.ListSourceParams): $Cancellabl
 export function LoadAll(): $CancellablePromise<void> {
     return $Call.ByName("bdo-viewer/internal/sources.SourceRegistry.LoadAll");
 }
-
-/**
- * RegisterSource wails:internal
- */
-export function RegisterSource(source: $models.Source): $CancellablePromise<void> {
-    return $Call.ByName("bdo-viewer/internal/sources.SourceRegistry.RegisterSource", source);
-}

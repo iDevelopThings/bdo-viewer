@@ -129,10 +129,10 @@ func (r *SourceRegistry) LoadAll() error {
 }
 
 // RegisterSource adds a source to the registry. It's called from Go setup code,
-// never the frontend, so it's excluded from the generated bindings — the Source
+// never the frontend, so it's skipped by the bindings generator — the Source
 // interface parameter can't be populated by encoding/json.
 //
-//wails:internal
+//wails:ignore
 func (r *SourceRegistry) RegisterSource(source Source) {
 	r.sources[source.GetSourceKind()] = source
 	r.sourceRegisterOrder = append(r.sourceRegisterOrder, source.GetSourceKind())
