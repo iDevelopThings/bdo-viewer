@@ -1,0 +1,42 @@
+.task
+bin
+build/linux/appimage/build
+build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+# Mobile generated (per-machine; overlays hold absolute paths)
+build/ios/xcode/overlay.json
+build/ios/xcode/gen/
+build/android/overlay.json
+build/android/gen/
+bdo-viewer.exe
+
+CLAUDE.md
+/.agents/
+/.claude/
+/.task/
+
+
+/frontend/dist
+/frontend/node_modules
+/frontend/.agents
+/frontend/.claude
+/wip
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env / secrets (Vite reads these)
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/
+frontend/.idea
+.idea
+
+
+# Build artifacts
+*.tsbuildinfo
+*.test
+*.out

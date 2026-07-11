@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=My Product
+Comment=A bdo-viewer application
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/bdo-viewer.exe %u
+Terminal=false
+Type=Application
+Icon=bdo-viewer.exe
+Categories=Utility;
+StartupWMClass=bdo-viewer.exe
+
+ 

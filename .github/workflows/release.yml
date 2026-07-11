@@ -1,0 +1,88 @@
+# Builds a Windows release and publishes it so the in-app updater can find it.
+# The published asset is named "<...>-windows-amd64.exe" so the updater's default
+# asset matcher (needs "windows" + "amd64" in the name) picks it, and a
+# checksums.txt sidecar (sha256sum format) is attached for verification.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (no leading v), for a dry run"
+        required: true
+        default: "0.0.0"
+
+permissions:
+  contents: write # create releases + upload assets
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout viewer
+        uses: actions/checkout@v4
+        with:
+          path: bdo-viewer
+
+      - name: Checkout extractor (the replaced dependency)
+        uses: actions/checkout@v4
+        with:
+          repository: idevelopthings/bdo-data-extractor
+          path: bdo-data-extractor
+          # token: ${{ secrets.EXTRACTOR_TOKEN }}  # uncomment if the repo is private
+
+      - name: Point the replace directive at the checked-out extractor
+        working-directory: bdo-viewer
+        run: go mod edit -replace github.com/idevelopthings/bdo-data-extractor=../bdo-data-extractor
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: bdo-viewer/go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Task and the Wails CLI
+        run: |
+          go install github.com/go-task/task/v3/cmd/task@latest
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.111
+
+      - name: Install frontend dependencies
+        working-directory: bdo-viewer/frontend
+        run: npm ci
+
+      - name: Resolve version (strip leading v from the tag)
+        id: ver
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build
+        working-directory: bdo-viewer
+        run: task build VERSION=${{ steps.ver.outputs.version }}
+
+      - name: Stage release assets + checksums
+        working-directory: bdo-viewer
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp bin/bdo-viewer.exe dist/bdo-viewer-windows-amd64.exe
+          cd dist
+          sha256sum bdo-viewer-windows-amd64.exe > checksums.txt
+          cat checksums.txt
+
+      - name: Publish release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: v${{ steps.ver.outputs.version }}
+          files: |
+            bdo-viewer/dist/bdo-viewer-windows-amd64.exe
+            bdo-viewer/dist/checksums.txt
