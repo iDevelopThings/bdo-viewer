@@ -61,6 +61,23 @@ Everything the viewer stores lives under the OS cache directory:
 The dataset is large but fully regenerable — re-run extraction from **Settings**
 after a game patch to refresh it.
 
+## Download
+
+Grab the latest Windows build (`bdo-viewer-windows-amd64.exe`) from the
+[**Releases**](https://github.com/iDevelopThings/bdo-viewer/releases/latest) page,
+or [build from source](#build--run). Once it's running it keeps itself up to date
+(see [Updating](#updating)).
+
+> **Heads-up — Windows will probably warn about the download.** The build isn't
+> code-signed (a signing certificate is a recurring paid expense that isn't worth
+> it for a free hobby tool), so **Windows SmartScreen / Defender may show a
+> "Windows protected your PC" prompt, or flag it as unrecognized.** That's the
+> standard warning for *any* unsigned indie app — **it is not a virus.** To run it,
+> click **More info → Run anyway**. If you'd rather verify first: every release
+> ships a `checksums.txt` (SHA-256), the full source is right here, and the binaries
+> are built by the public GitHub Actions [release workflow](.github/workflows/release.yml),
+> not on anyone's personal machine.
+
 ## Requirements
 
 - **Go 1.26+** and **Node.js 18+** (npm), to build the Go backend and the React
