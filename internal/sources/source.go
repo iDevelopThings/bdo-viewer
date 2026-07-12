@@ -6,6 +6,7 @@ import (
 	"log"
 	"regexp"
 
+	"bdo-viewer/internal/event_reporter"
 	"github.com/idevelopthings/bdo-data-extractor/src/urn"
 	"github.com/idevelopthings/bdo-data-extractor/src/utils"
 
@@ -78,17 +79,25 @@ type BaseSource struct {
 	// Sorts are the orderings this source offers the sort dropdown. Set in the
 	// source's constructor; empty means "Default" (query-ranked) only.
 	Sorts []SortOption `json:"sorts,omitempty"`
+
+	Reporter *event_reporter.EventReporter `json:"-"`
 }
 
 func (s *BaseSource) GetURN() SourceURN { return s.URN }
+func (s *BaseSource) SetReporter(reporter *event_reporter.EventReporter) {
+	s.Reporter = reporter
+}
 
 // GetStats is a no-op default for sources without stats; concrete sources
 // that have any (Item, Knowledge) shadow it with their own implementation.
 // caphrasStep is ignored by every source except Item (0 = no Caphras bonus
 // applied, matching the in-game default).
-func (s *BaseSource) GetStats(ref urn.URN, level int, caphrasStep int) []stats.StatGroup { return nil }
+func (s *BaseSource) GetStats(ref urn.URN, level int, caphrasStep int) []stats.StatGroup {
+	return nil
+}
 
 type Source interface {
+	SetReporter(reporter *event_reporter.EventReporter)
 	Load() error
 	GetSourceKind() SourceKind
 	GetURN() SourceURN
@@ -112,17 +121,26 @@ var Registry *SourceRegistry = &SourceRegistry{
 // LoadAll runs every source's Load() (call once at startup, after config is
 // loaded). Sources still backed by the catalog return nil here today; new
 // sources (character) own their data via Load — the convention we're moving to.
-func (r *SourceRegistry) LoadAll() error {
+func (r *SourceRegistry) LoadAll(reporter *event_reporter.EventReporter) error {
 	total := utils.Timed("[SOURCES] LoadAll")
 	defer total()
 
-	for _, source := range r.GetAllSources() {
+	reporter.Phase("Loading sources")
+
+	src := r.GetAllSources()
+	for i, source := range src {
+		source.SetReporter(reporter)
+
+		reporter.Phase(fmt.Sprintf("Loading %s", source.GetSourceKind()))
+
 		t := utils.Timed(fmt.Sprintf("[SOURCE] load %s", source.GetSourceKind()))
 		if err := source.Load(); err != nil {
 			t()
 			return err
 		}
 		t()
+
+		reporter.Progress(int64(i+1), int64(len(src)))
 	}
 
 	return nil

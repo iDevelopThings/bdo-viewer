@@ -5,7 +5,8 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/idevelopthings/bdo-data-extractor/src/model"
+	"bdo-viewer/internal/sources"
+
 	"github.com/idevelopthings/bdo-data-extractor/src/urn"
 )
 
@@ -50,13 +51,13 @@ func (r *Resolver) ResolveCraftPlan(target urn.URN, qty int, selections map[stri
 	if qty < 1 {
 		qty = 1
 	}
-	items := map[urn.URN]*model.Item{}
+	items := map[urn.URN]sources.ListSourceEntry{}
 	addItem := func(x urn.URN) {
 		if _, seen := items[x]; seen {
 			return
 		}
 		if it, ok := r.items.Get(x); ok {
-			items[x] = it
+			items[x] = itemEntry(it)
 		}
 	}
 	base := map[urn.URN]int{}

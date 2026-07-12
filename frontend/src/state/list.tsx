@@ -67,23 +67,6 @@ type PartialSearchParams = {
 
 let debouncedSearchTimeout: any = null;
 
-export function applyDebouncedListSearch(newSearch: PartialSearchParams) {
-	// Only fields actually present in newSearch get applied - the query input's
-	// onChange only passes {query}, so category/subcategory/source must stay
-	// untouched rather than getting reset to undefined on every keystroke.
-	if ("query" in newSearch) list.query = newSearch.query;
-	if ("category" in newSearch) list.category = newSearch.category;
-	if ("subcategory" in newSearch) list.subcategory = newSearch.subcategory;
-	if ("source" in newSearch) list.source = newSearch.source;
-
-	/* if (debouncedSearchTimeout) {
-		clearTimeout(debouncedSearchTimeout);
-	}
-	debouncedSearchTimeout = setTimeout(() => {
-		loadList();
-	}, 150); */
-}
-
 export function debounceLoadList() {
 	if (debouncedSearchTimeout) {
 		clearTimeout(debouncedSearchTimeout);

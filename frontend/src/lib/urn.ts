@@ -115,53 +115,6 @@ export function parseURN(raw: string): URNParts {
 }
 
 export function createURNHandler(domain: string, kinds: string[] = []): URNHandler {
-	/*const kindSet  = new Set(kinds);
-	const hasKinds = kindSet.size > 0;
-
-	const handler: URNHandler = {
-		new   : (...parts) => {
-			if (hasKinds) {
-				if (parts.length !== 2) {
-					throw new Error(`${domain} URNs require kind and id`);
-				}
-				const [kind, id] = parts.map(String);
-				if (!kindSet.has(kind)) {
-					throw new Error(`${kind} is not a valid ${domain} URN kind`);
-				}
-				return `${PREFIX}${domain}:${kind}:${id}`;
-			}
-
-			if (parts.length !== 1) {
-				throw new Error(`${domain} URNs require id`);
-			}
-			return `${PREFIX}${domain}:${String(parts[0])}`;
-		},
-		parse : (raw) => {
-			const parsed = parseURN(raw);
-			if (parsed.domain !== domain) {
-				throw new Error(`Expected ${domain} URN, got ${parsed.domain}`);
-			}
-			if (hasKinds && (!parsed.kind || !kindSet.has(parsed.kind))) {
-				throw new Error(`${parsed.kind ?? ""} is not a valid ${domain} URN kind`);
-			}
-			if (!hasKinds && parsed.kind) {
-				throw new Error(`${domain} URNs do not use a kind segment`);
-			}
-			return parsed;
-		},
-		match : (raw, kind) => {
-			if (!raw) return false;
-			try {
-				const parsed = parseURN(raw);
-				if (parsed.domain !== domain) return false;
-				if (kind !== undefined) return parsed.kind === kind;
-				return hasKinds ? !!parsed.kind && kindSet.has(parsed.kind) : !parsed.kind;
-			} catch {
-				return false;
-			}
-		},
-	}; */
-
 	if(domain in urns) {
 		const existing = urns[domain];
 		existing.tryUpdate(domain, kinds);

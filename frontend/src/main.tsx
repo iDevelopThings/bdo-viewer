@@ -1,17 +1,9 @@
-import React, {useEffect, useState} from "react";
+import React from "react";
 import ReactDOM from "react-dom/client";
 import "./app.css";
-import {AppLayout} from "./Layout.tsx";
 import {TooltipProvider} from "@/components/ui/tooltip.tsx";
-import {HistoryPanel} from "@/components/history/history-panel.tsx";
-import {useSnapshot} from "valtio/react";
-import {sources, loadSources} from "@/state/sources/sources.ts";
 import {installDevHelpers} from "@/lib/dev.ts";
-import {SetupWizard} from "@/components/setup/setup-wizard.tsx";
-import {UpdateBanner} from "@/components/updates/update-banner.tsx";
-import {NeedsSetup} from "@bindings/bdo-viewer/internal/setup/service.ts";
-
-
+import {AppRoot} from "@/app-root.tsx";
 
 
 window.addEventListener("keydown", (e) => {
@@ -23,52 +15,17 @@ window.addEventListener("keydown", (e) => {
 
 installDevHelpers();
 
-export function AppRoot() {
-	const srcs = useSnapshot(sources);
-	const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
+// Reuse a single React root across hot-reloads. main.tsx runs at module scope, and
+// when Vite HMR re-executes it (an edit anywhere in its import graph), calling
+// createRoot again on the same #root that already has a root produces a second root
+// fighting over the same DOM node — which surfaces as "createRoot() on a container
+// that has already been passed to createRoot()" and a removeChild NotFoundError. Cache
+// the root so a re-run just re-renders into it.
+const container = document.getElementById("root") as HTMLElement;
+const globalForRoot = window as unknown as {__reactRoot?: ReactDOM.Root};
+const root = globalForRoot.__reactRoot ?? (globalForRoot.__reactRoot = ReactDOM.createRoot(container));
 
-	useEffect(() => {
-		void NeedsSetup().then(setNeedsSetup);
-	}, []);
-
-	// Only load sources once we know the dataset exists — before then the backend
-	// has nothing to serve and the setup wizard owns the screen.
-	useEffect(() => {
-		if (needsSetup === false) {
-			loadSources();
-		}
-	}, [needsSetup]);
-
-	if (needsSetup === null) {
-		return (
-			<div className="flex flex-col items-center justify-center h-full w-full">
-				<div className="text-zinc-400 text-sm">Checking…</div>
-			</div>
-		);
-	}
-
-	if (needsSetup) {
-		return <SetupWizard onComplete={() => setNeedsSetup(false)} />;
-	}
-
-	if (srcs.loading) {
-		return (
-			<div className="flex flex-col items-center justify-center h-full w-full">
-				<div className="text-zinc-400 text-sm">Loading sources...</div>
-			</div>
-		);
-	}
-
-	return (
-		<div className="flex flex-col h-full w-full overflow-hidden">
-			<UpdateBanner />
-			<AppLayout />
-			<HistoryPanel/>
-		</div>
-	);
-}
-
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+root.render(
 	<React.StrictMode>
 		<TooltipProvider delay={300}>
 			<AppRoot />

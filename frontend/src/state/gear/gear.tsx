@@ -37,6 +37,7 @@ export function GearBuildProvider({buildId = "default", children}: GearBuildProv
 						characterClass : state.characterClass,
 						slots          : state.slots,
 						activeGroup    : state.activeGroup,
+						maxOnEquip     : state.maxOnEquip,
 					});
 				},
 				deserialize(data: string): GearBuildStore {

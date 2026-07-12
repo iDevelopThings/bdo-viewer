@@ -3,9 +3,24 @@ package recipe
 import (
 	"strconv"
 
+	"bdo-viewer/internal/sources"
+
 	"github.com/idevelopthings/bdo-data-extractor/src/model"
 	"github.com/idevelopthings/bdo-data-extractor/src/urn"
 )
+
+// itemEntry projects an item to the slim display entry the recipe UI actually reads
+// (name/grade/icon), instead of the full model.Item. A full item carries its ~84 KB
+// enhancement curve, which a wide tree multiplies into tens of MB the UI never uses.
+func itemEntry(it *model.Item) sources.ListSourceEntry {
+	return sources.ListSourceEntry{
+		ID:       it.ID,
+		URN:      urn.Item.New(it.ID).String(),
+		Title:    it.Name,
+		Subtitle: it.Grade,
+		Icon:     it.Icon,
+	}
+}
 
 // This is the lazy, selection-aware crafting-tree model that replaces the old
 // BuildFullRecipes (which fully materialised every alternative at every depth — a
@@ -84,19 +99,20 @@ type RecipeTreeByproduct struct {
 // RecipeTree is the response of ResolveRecipeTree: the resolved Root, any byproduct
 // recipes, and the deduped item objects every id refers into.
 type RecipeTree struct {
-	Root       *RecipeTreeNode         `json:"root,omitempty"`
-	Byproducts []RecipeTreeByproduct   `json:"byproducts,omitempty"`
-	Items      map[urn.URN]*model.Item `json:"items"`
-	Status     string                  `json:"status,omitempty"`
+	Root       *RecipeTreeNode                     `json:"root,omitempty"`
+	Byproducts []RecipeTreeByproduct               `json:"byproducts,omitempty"`
+	Items      map[urn.URN]sources.ListSourceEntry `json:"items"`
+	Status     string                              `json:"status,omitempty"`
 }
 
 // Use is one recipe that consumes a given item: what it produces, by which
-// process, and how many of the queried item it takes.
+// process, and how many of the queried item it takes. Output is the slim display
+// entry (see itemEntry) — the recipe UI only needs its name/grade/icon.
 type Use struct {
-	Output  *model.Item `json:"output"`
-	Type    string      `json:"type"`
-	Station string      `json:"station"`
-	Count   int         `json:"count"`
+	Output  sources.ListSourceEntry `json:"output"`
+	Type    string                  `json:"type"`
+	Station string                  `json:"station"`
+	Count   int                     `json:"count"`
 }
 
 // UsedIn returns every recipe that uses the item as an ingredient (deduped by
@@ -105,7 +121,14 @@ func (r *Resolver) UsedIn(u urn.URN) []Use {
 	r.ensureIndexed()
 	recs := r.byInput[u]
 	uses := make([]Use, 0, len(recs))
-	seen := make(map[Use]bool, len(recs))
+	// ListSourceEntry has a map field so Use isn't comparable — dedup on a small key.
+	type useKey struct {
+		output  urn.URN
+		typ     string
+		station string
+		count   int
+	}
+	seen := make(map[useKey]bool, len(recs))
 	for _, rec := range recs {
 		count := 0
 		for _, in := range rec.Inputs {
@@ -114,17 +137,21 @@ func (r *Resolver) UsedIn(u urn.URN) []Use {
 				break
 			}
 		}
-		out := Use{
-			Output:  r.items.GetUnsafe(rec.Output.URN),
+		k := useKey{output: rec.Output.URN, typ: rec.Type, station: rec.Station, count: count}
+		if seen[k] {
+			continue
+		}
+		seen[k] = true
+		out, ok := r.items.Get(rec.Output.URN)
+		if !ok {
+			continue
+		}
+		uses = append(uses, Use{
+			Output:  itemEntry(out),
 			Type:    rec.Type,
 			Station: rec.Station,
 			Count:   count,
-		}
-		if seen[out] {
-			continue
-		}
-		seen[out] = true
-		uses = append(uses, out)
+		})
 	}
 
 	return uses
@@ -135,13 +162,13 @@ func (r *Resolver) UsedIn(u urn.URN) []Use {
 // the selected path is expanded — alternatives ride along as metadata for the UI.
 func (r *Resolver) ResolveRecipeTree(u urn.URN, selections map[string]RecipeSelection, craftOverrides map[string]bool) RecipeTree {
 	r.ensureIndexed()
-	items := map[urn.URN]*model.Item{}
+	items := map[urn.URN]sources.ListSourceEntry{}
 	addItem := func(x urn.URN) {
 		if _, seen := items[x]; seen {
 			return
 		}
 		if it, ok := r.items.Get(x); ok {
-			items[x] = it
+			items[x] = itemEntry(it)
 		}
 	}
 

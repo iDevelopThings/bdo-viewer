@@ -16,6 +16,10 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 // @ts-ignore: Unused imports
 import * as pipeline$0 from "../../../github.com/idevelopthings/bdo-data-extractor/pipeline/models.js";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as $models from "./models.js";
+
 /**
  * AvailableLanguages lists the localization languages present in a game install.
  */
@@ -36,6 +40,26 @@ export function DefaultDataDir(): $CancellablePromise<string> {
  */
 export function DefaultGameDir(): $CancellablePromise<string> {
     return $Call.ByName("bdo-viewer/internal/setup.Service.DefaultGameDir");
+}
+
+/**
+ * ForceLoadData reloads the dataset from disk even when it's already in memory — for
+ * an explicit "reload" that the idempotent LoadData would skip.
+ */
+export function ForceLoadData(): $CancellablePromise<void> {
+    return $Call.ByName("bdo-viewer/internal/setup.Service.ForceLoadData");
+}
+
+/**
+ * LoadData loads the extracted dataset into memory and returns when it's done, so the
+ * frontend can await it and then show the app. It's idempotent — a no-op if the data
+ * is already loaded — so React re-mounts (StrictMode in dev, an F5 reload) don't
+ * reload needlessly. Progress streams over the load:* events for the loading screen.
+ * Concurrent calls serialize on loadMu; a second caller returns as soon as the first
+ * finishes loading.
+ */
+export function LoadData(): $CancellablePromise<void> {
+    return $Call.ByName("bdo-viewer/internal/setup.Service.LoadData");
 }
 
 /**
@@ -62,6 +86,13 @@ export function PickDirectory(title: string): $CancellablePromise<string> {
  */
 export function RunExtraction(gameDir: string, dataDir: string, lang: string): $CancellablePromise<void> {
     return $Call.ByName("bdo-viewer/internal/setup.Service.RunExtraction", gameDir, dataDir, lang);
+}
+
+/**
+ * Status reports whether setup is required and why.
+ */
+export function Status(): $CancellablePromise<$models.SetupState> {
+    return $Call.ByName("bdo-viewer/internal/setup.Service.Status");
 }
 
 /**

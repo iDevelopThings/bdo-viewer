@@ -13,8 +13,8 @@ export function EffectSections({groups}: { groups: DeepReadonly<StatGroup[]> }) 
 
 	return (
 		<div className={"flex flex-col gap-4"}>
-			{groups.map(group => (
-				<div key={group.title}>
+			{groups.map((group, i) => (
+				<div key={`${group.title}-${i}`}>
 					<div className={"text-sm font-semibold text-zinc-300 mb-1"}>{group.title}</div>
 					<table className={"border-separate border-spacing-x-4 border-spacing-y-0.5"}>
 						<tbody>

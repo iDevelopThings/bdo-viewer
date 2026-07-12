@@ -3,14 +3,16 @@ package catalog
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/idevelopthings/bdo-data-extractor/src/utils"
 	"github.com/pkg/errors"
+
+	"github.com/idevelopthings/bdo-data-extractor/src/utils"
 
 	"bdo-viewer/internal/config"
 	"bdo-viewer/internal/recipe"
@@ -92,10 +94,14 @@ func (s *ItemSource) GetSourceKind() sources.SourceKind { return s.Kind }
 func (s *ItemSource) Load() error {
 	var items []model.Item
 	var enhancements []model.Enhancement
+
+	const steps = 4
+
 	{
 		ijTimed := utils.Timed("[SOURCE] load items.json")
 		defer ijTimed()
 
+		s.Reporter.Step(1, steps, "Loading items.json")
 		if err := util.ReadJSON(filepath.Join(config.GetExtractedDataDir(), "items.json"), &items); err != nil {
 			return errors.Wrap(err, "read items.json")
 		}
@@ -105,11 +111,14 @@ func (s *ItemSource) Load() error {
 		ijTimed := utils.Timed("[SOURCE] load enhancements.json")
 		defer ijTimed()
 
+		s.Reporter.Step(2, steps, "Loading item_enhancements.json")
+
 		if err := util.ReadJSON(filepath.Join(config.GetExtractedDataDir(), "item_enhancements.json"), &enhancements); err != nil {
 			return errors.Wrap(err, "read item_enhancements.json")
 		}
 	}
 
+	s.Reporter.Step(3, steps, "Loading marketcategories.json")
 	if err := s.loadMarketCategories(); err != nil {
 		return err
 	}
@@ -140,6 +149,8 @@ func (s *ItemSource) Load() error {
 		},
 	)
 
+	s.Reporter.Step(4, steps, "Registering items")
+
 	for i := range items {
 		it := &items[i]
 
@@ -157,6 +168,8 @@ func (s *ItemSource) Load() error {
 		if err := s.Store.Add(it.GetURN(), it); err != nil {
 			return fmt.Errorf("registering item %d: %w", it.ID, err)
 		}
+
+		s.Reporter.Progress(int64(i+1), int64(len(items)))
 	}
 
 	// Update image paths relative to viewer
@@ -442,9 +455,7 @@ type itemFilters struct {
 	ItemType  string `json:"itemType,omitempty"`
 	EquipType string `json:"equipType,omitempty"`
 	Effect    string `json:"effect,omitempty"`
-	// EquipSlots matches items whose EquipInfo.Slot (or any entry of
-	// EquipInfo.Slots) is one of the listed values - a UI slot can accept
-	// several data slot values (the tool accessory takes lanterns too).
+	// EquipSlots matches items whose EquipInfo.Slot is one of the listed values
 	EquipSlots []string `json:"equipSlots,omitempty"`
 	// Class matches items whose Classes list contains it; empty Classes = usable by all.
 	Class string `json:"class,omitempty"`
@@ -458,6 +469,8 @@ type itemFilters struct {
 func (s *ItemSource) List(params sources.ListSourceParams) []sources.ListSourceEntry {
 	var f itemFilters
 	_ = json.Unmarshal(params.Filters, &f) // empty/absent Filters = zero value = no constraint
+
+	log.Printf("ItemSource.List: filters=%+v", f)
 
 	ef := strings.ToLower(strings.TrimSpace(f.Effect))
 	pass := func(it *model.Item) bool {
@@ -502,10 +515,10 @@ func (s *ItemSource) List(params sources.ListSourceParams) []sources.ListSourceE
 				return false
 			}
 
-			if !it.EquipInfo.ContainsSlot(f.EquipSlots...) {
+			// We only want to match the actual slot name
+			if !slices.Contains(f.EquipSlots, it.EquipInfo.Slot) {
 				return false
 			}
-
 		}
 		if f.Craftable && (recipe.Instance == nil || !recipe.Instance.IsCraftable(it.GetURN())) {
 			return false

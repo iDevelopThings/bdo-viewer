@@ -141,7 +141,7 @@ export function DetailsKnowledge() {
 
 				{d.knowledge.entries?.length > 0 && (
 					<div className={"flex flex-col gap-2"}>
-						<SectionSubtitle title={"Categories"}/>
+						<SectionSubtitle title={"Categories"} />
 						<ChipList
 							variant={"md"}
 							items={d.knowledge.entries.map((entry) => ({id : entry.key, name : entry.name}))}
@@ -152,7 +152,7 @@ export function DetailsKnowledge() {
 
 				{d.knowledge.themes?.length > 0 && (
 					<div className={"flex flex-col gap-2"}>
-						<SectionSubtitle title={"Themes"}/>
+						<SectionSubtitle title={"Themes"} />
 						<ChipList
 							variant={"md"}
 							items={d.knowledge.themes.map((theme) => ({id : theme.key, name : theme.name}))}

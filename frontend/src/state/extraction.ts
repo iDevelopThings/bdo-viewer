@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from "react";
 import {Events} from "@wailsio/runtime";
 import {RunExtraction} from "@bindings/bdo-viewer/internal/setup/service.ts";
-import type {Progress} from "@bindings/bdo-viewer/internal/setup/models.ts";
+import type {Progress} from "@bindings/bdo-viewer/internal/event_reporter/models.ts";
 
 export type ExtractionStatus = "idle" | "running" | "done" | "error";
 

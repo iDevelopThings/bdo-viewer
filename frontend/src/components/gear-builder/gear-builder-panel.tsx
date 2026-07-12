@@ -49,7 +49,28 @@ function GearBuilderInner() {
 							{tab.label}
 						</button>
 					))}
-					{snap.loading && <span className={"text-xs text-zinc-400 ml-auto"}>Loading...</span>}
+					<div className={"ml-auto flex items-center gap-3"}>
+						{snap.loading && <span className={"text-xs text-zinc-400"}>Loading...</span>}
+						<button
+							type={"button"}
+							title={"Equip items at max enhancement + Caphras"}
+							onClick={() => {
+								store.maxOnEquip = !store.maxOnEquip;
+							}}
+							className={cn(
+								"flex items-center gap-1.5 px-2 py-1 rounded-md text-xs border cursor-pointer transition-colors",
+								snap.maxOnEquip
+									? "border-primary/60 bg-primary/15 text-primary"
+									: "border-input text-zinc-400 hover:bg-zinc-900 hover:text-white",
+							)}
+						>
+							<span className={cn(
+								"h-2 w-2 rounded-full",
+								snap.maxOnEquip ? "bg-primary" : "bg-zinc-600",
+							)} />
+							Max on equip
+						</button>
+					</div>
 				</div>
 
 				<div className={"flex flex-col items-center gap-2 p-4"}>

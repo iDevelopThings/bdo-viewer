@@ -1,13 +1,12 @@
-import {type ReactNode} from "react";
 import {ChevronRightIcon} from "lucide-react";
 import {type MaybeReadonly, grades} from "@/types.ts";
 import {CHARACTER_CLASSES} from "@/state/gear/gear-slots.gen.ts";
 import {Input} from "@/components/ui/input.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList} from "@/components/ui/combobox.tsx";
-import {Label} from "@/components/ui/label.tsx";
 import {useSnapshot} from "valtio/react";
 import {global, toggleExpanded} from "@/state/global.tsx";
+import {FilterRow} from "@/components/entry-list/entry-filter-panel.tsx";
 
 // Mirrors the Go-side itemFilters struct (internal/sources/item_source.go) -
 // equipSlots isn't exposed here since callers that care about it (item picker)
@@ -22,18 +21,9 @@ export type ItemFilters = {
 	craftable?: boolean;
 };
 
-export type ItemFilterField = "grade" | "class" | "itemType" | "equipType" | "effect";
+export type ItemFilterField = "grade" | "class" | "effect";
 
-const ALL_FIELDS: ItemFilterField[] = ["grade", "class", "itemType", "equipType", "effect"];
-
-function FilterRow({label, children}: { label: string, children: ReactNode }) {
-	return (
-		<div className={"flex items-center gap-3"}>
-			<Label className={"w-20 shrink-0 text-xs text-muted-foreground"}>{label}</Label>
-			<div className={"flex-1 min-w-0"}>{children}</div>
-		</div>
-	);
-}
+const ALL_FIELDS: ItemFilterField[] = ["grade", "class", "effect"];
 
 export function ItemFiltersPanel({value, onChange, fields = ALL_FIELDS}: {
 	value: MaybeReadonly<ItemFilters>;
@@ -97,28 +87,6 @@ export function ItemFiltersPanel({value, onChange, fields = ALL_FIELDS}: {
 									</ComboboxList>
 								</ComboboxContent>
 							</Combobox>
-						</FilterRow>
-					)}
-
-					{fields.includes("itemType") && (
-						<FilterRow label={"Item Type"}>
-							<Input
-								placeholder="Any item type"
-								value={value.itemType ?? ""}
-								onChange={e => set("itemType", e.target.value || undefined)}
-								className={"w-full"}
-							/>
-						</FilterRow>
-					)}
-
-					{fields.includes("equipType") && (
-						<FilterRow label={"Equip Type"}>
-							<Input
-								placeholder="Any equip type"
-								value={value.equipType ?? ""}
-								onChange={e => set("equipType", e.target.value || undefined)}
-								className={"w-full"}
-							/>
 						</FilterRow>
 					)}
 

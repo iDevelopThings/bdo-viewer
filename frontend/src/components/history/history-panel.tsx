@@ -2,8 +2,7 @@ import {persist} from "valtio-persist";
 import {UntypedSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import {useSnapshot} from "valtio/react";
 import {useMiddleClickProps} from "@/utils.tsx";
-import {openItemPanel} from "@/state/panels.ts";
-import {isItem} from "@/state/sources/item-source.tsx";
+import {openSourceDetails} from "@/state/panels.ts";
 
 export type HistoryState = {
 	entries: UntypedSourceEntry[];
@@ -35,9 +34,7 @@ export function HistoryPanel() {
 	const h = useSnapshot(history);
 
 	const open = (entry: UntypedSourceEntry, isMiddle: boolean) => {
-		if (isItem(entry)) {
-			openItemPanel(entry.value, isMiddle);
-		}
+		openSourceDetails(entry.type, entry.value, isMiddle);
 	};
 	return (
 		<div className={"flex flex-row items-center"}

@@ -15,8 +15,8 @@ export type StatCardProps = {
 export function StatCard({title, value}: StatCardProps) {
 	return (
 		<div className={"flex flex-col gap-1 px-4 py-2 bg-zinc-800 rounded-md"}>
-			<div className={"text-sm font-bold"}>{title}</div>
-			<div className={"text-sm text-zinc-500 uppercase"}>{value}</div>
+			<div className={"text-sm font-bold"}>{value}</div>
+			<div className={"text-sm text-zinc-500 uppercase"}>{title}</div>
 		</div>
 	);
 }

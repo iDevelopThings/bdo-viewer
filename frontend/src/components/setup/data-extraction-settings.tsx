@@ -5,7 +5,7 @@ import {cn} from "@/lib/utils.ts";
 import {DirPicker} from "./dir-picker.tsx";
 import {ExtractionProgress} from "./extraction-progress.tsx";
 import {useExtraction} from "@/state/extraction.ts";
-import {loadSources} from "@/state/sources/sources.ts";
+import {load} from "@/state/load.ts";
 import {AvailableLanguages, ValidateGameDir} from "@bindings/bdo-viewer/internal/setup/service.ts";
 import {GetExtractedDataDir, GetGameDir, SetExtractedDataDir, SetGameDir} from "@bindings/bdo-viewer/internal/config/config.ts";
 
@@ -24,8 +24,11 @@ export function DataExtractionSettings() {
 	const [languages, setLanguages] = useState<string[]>([]);
 	const [valid, setValid]     = useState(false);
 
+	// Re-extraction only rewrites the JSON on disk. Route the reload through the load
+	// store so it flows through the same load screen (and refreshes the frontend) as a
+	// normal startup load.
 	const {state, run, reset, fraction} = useExtraction(() => {
-		void loadSources();
+		void load.reload();
 	});
 
 	useEffect(() => {

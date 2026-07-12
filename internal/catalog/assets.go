@@ -13,9 +13,9 @@ import (
 	"bdo-viewer/internal/config"
 )
 
-// redirectCache serves a generic path-alias table (redirects.json): a request for
-// one served path is transparently served from another file under the data dir.
-// Item icons use it to share one decoded file across the many item ids that
+// redirectCache serves a generic path-alias table (asset_redirects.json): a request
+// for one served path is transparently served from another file under the data dir.
+// Item and knowledge icons use it to share one decoded file across the many ids that
 // reference it, but the mechanism is content-agnostic — any asset can add aliases.
 // The parsed table is cached and only re-read when the file's mtime (or the data
 // dir) changes, so ordinary requests never re-parse it.
@@ -28,11 +28,11 @@ type redirectCache struct {
 
 var redirects redirectCache
 
-// redirectFile is where the icons step writes the alias table. It lives in the
-// icons dir (its owner), but its keys/targets are relative to the data dir, so the
-// handler applies them to any request.
+// redirectFile is the merged alias table the extractor writes at the data-dir root.
+// Its keys/targets are relative to the data dir, so the handler applies them to any
+// request (item icons, knowledge icons, …).
 func redirectFile(dataDir string) string {
-	return filepath.Join(dataDir, "icons", "redirects.json")
+	return filepath.Join(dataDir, "asset_redirects.json")
 }
 
 // key normalizes a request URL path to a data-dir-relative table key.

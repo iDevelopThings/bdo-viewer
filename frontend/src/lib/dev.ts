@@ -3,6 +3,7 @@ import {sources} from "@/state/sources/sources.ts";
 import {navigation} from "@/state/navigation.tsx";
 import {list} from "@/state/list.tsx";
 import {snapshot} from "valtio/vanilla";
+import {load} from "@/state/load.ts";
 
 // installDevHelpers wires debugging conveniences onto window in DEV builds only
 // (a no-op in production): `window.__app` to navigate by URN and inspect live
@@ -34,18 +35,18 @@ export function installDevHelpers() {
 		goToURN,
 		openItemPanel,
 		openSourceDetails,
-		wailsDebug: {
+		wailsDebug : {
 			get enabled() {
-				return localStorage.getItem('enable-wails-method-debug') === 'true';
+				return localStorage.getItem("enable-wails-method-debug") === "true";
 			},
-			toggle: () => {
-				const newValue = localStorage.getItem('enable-wails-method-debug') !== 'true';
-				localStorage.setItem('enable-wails-method-debug', String(newValue));
-				console.info(`[dev] Wails method debug logging ${newValue ? 'enabled' : 'disabled'}.`);
+			toggle : () => {
+				const newValue = localStorage.getItem("enable-wails-method-debug") !== "true";
+				localStorage.setItem("enable-wails-method-debug", String(newValue));
+				console.info(`[dev] Wails method debug logging ${newValue ? "enabled" : "disabled"}.`);
 			}
 		},
 		// live valtio stores (snapshot() them yourself for a full dump)
-		stores : {sources, navigation, list},
+		stores : {sources, navigation, list, load},
 		// lean, JSON-safe summary — avoids dumping the whole nav tree / entry list
 		state       : () => {
 			const nav = snapshot(navigation);
@@ -64,5 +65,6 @@ export function installDevHelpers() {
 			errors.length = 0;
 		},
 	};
+
 	console.info("[dev] window.__app + window.__errors ready");
 }

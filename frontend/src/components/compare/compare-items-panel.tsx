@@ -6,11 +6,10 @@ import {Button} from "@/components/ui/button.tsx";
 import {Slider} from "@/components/ui/slider.tsx";
 import {EntryPicker} from "@/components/entry-list/entry-picker.tsx";
 import {addToCompare, type CompareEntry, clearCompare, compare, removeFromCompare} from "@/state/compare.ts";
-import {loadEntryDetails} from "@/lib/entry-details.ts";
 import {EffectSections} from "@/components/details/effects.tsx";
 import {flatStats, namedGroups} from "@/lib/stat-groups.ts";
 import {cn} from "@/lib/utils.ts";
-import {GetStatsByURN} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
+import {GetStatsByURN, GetEntryDetailsByURN} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
 import {SourceKind} from "@bindings/bdo-viewer/internal/sources";
 import type {Stat, StatGroup} from "@bindings/bdo-viewer/internal/stats";
 import type {Item as ItemModel} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
@@ -32,21 +31,14 @@ function CompareColumn({entry, onRemove, onResult}: {
 	const [level, setLevel]             = useState(0);
 	const [caphrasStep, setCaphrasStep] = useState(0);
 
-	// The initial bundled load already computes stats/effects for whatever
-	// (level, caphrasStep) it lands on - the recompute effect below compares
-	// against this to skip re-fetching that exact combination. A one-shot
-	// "skip the next firing" flag doesn't work here: if the resolved initial
-	// level is already 0 (its starting state value), setLevel(0) is a no-op
-	// React bails on, so the recompute effect never actually re-runs to
-	// consume the flag - leaving it to incorrectly swallow the *next real*
-	// slider change instead.
+
 	const loadedRef = useRef(false);
 	const lastFetchedRef = useRef({level : 0, caphrasStep : 0});
 
 	useEffect(() => {
 		let cancelled = false;
 
-		loadEntryDetails(entry.urn).then(details => {
+		GetEntryDetailsByURN(entry.urn).then(details => {
 			if (cancelled) return;
 
 			const it          = details?.[SourceKind.Item] as ItemModel | undefined;
@@ -262,10 +254,10 @@ export function CompareItemsPanel(_props: IDockviewPanelProps) {
 							{snap.entries.map(entry => {
 								const groups = namedGroups(results[entry.urn]?.stats);
 								if (groups.length === 0) {
-									return <div key={entry.urn} className={"flex-1 min-w-[140px]"} />;
+									return <div key={entry.urn} className={"flex-1 min-w-35"} />;
 								}
 								return (
-									<div key={entry.urn} className={"flex-1 min-w-[140px]"}>
+									<div key={entry.urn} className={"flex-1 min-w-35"}>
 										<EffectSections groups={groups} />
 									</div>
 								);
@@ -278,7 +270,7 @@ export function CompareItemsPanel(_props: IDockviewPanelProps) {
 			{pickerOpen && (
 				<EntryPicker
 					title={"Add item to compare"}
-					fields={["grade", "itemType", "effect"]}
+					fields={["grade", "effect"]}
 					onPick={entry => {
 						if (entry.urn) {
 							addToCompare({urn : entry.urn, title : entry.title, icon : entry.icon});

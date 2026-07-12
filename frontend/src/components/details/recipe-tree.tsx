@@ -6,7 +6,7 @@ import {RECIPE_TYPE_COLOR, recipeTypeLabel} from "@/lib/recipe-labels.ts";
 import {type DeepReadonly, type Grade, grades} from "@/types.ts";
 import {openItemPanel} from "@/state/panels.ts";
 import {ItemIcon} from "@/lib/item-icon.tsx";
-import {Item} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import type {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from "@/components/ui/dialog.tsx";
 
 // This is the reusable crafting-tree renderer. It's driven entirely by the
@@ -36,12 +36,14 @@ function useRecipeTree(): RecipeTreeCtx {
 	return ctx;
 }
 
-export function itemOf(items: RItems, itemUrn: string): DeepReadonly<Item> | undefined {
-	return (items as Record<string, DeepReadonly<Item> | null | undefined>)?.[itemUrn] ?? undefined;
+export function itemOf(items: RItems, itemUrn: string): DeepReadonly<ListSourceEntry> | undefined {
+	return (items as Record<string, DeepReadonly<ListSourceEntry> | null | undefined>)?.[itemUrn] ?? undefined;
 }
 
-export function gradeColor(item: DeepReadonly<Item> | undefined): string | undefined {
-	const grade = item?.grade as Grade | undefined;
+// The recipe tree carries slim ListSourceEntry rows (see internal/recipe.itemEntry),
+// so the grade lives in `subtitle` rather than a full item's `grade`.
+export function gradeColor(item: DeepReadonly<ListSourceEntry> | undefined): string | undefined {
+	const grade = item?.subtitle as Grade | undefined;
 	return grade && grades[grade] ? grades[grade].color : undefined;
 }
 
@@ -110,7 +112,7 @@ function NodeAltsButton({node, items, className}: { node: RNode, items: RItems, 
 		return null;
 	}
 
-	const itemName = itemOf(items, node.item)?.name ?? node.item;
+	const itemName = itemOf(items, node.item)?.title ?? node.item;
 
 	return (
 		<>
@@ -166,7 +168,7 @@ function NodeAltsButton({node, items, className}: { node: RNode, items: RItems, 
 											return (
 												<span key={`${inp.item}:${si}`} className={"flex flex-row items-center gap-1 bg-zinc-700/50 rounded px-1.5 py-0.5"}>
 													<ItemIcon urn={inp.item} className={"shrink-0"} imageClass={"w-4 h-4"} />
-													<span className={"text-sm"} style={{color: gradeColor(it)}}>{it?.name ?? inp.item}</span>
+													<span className={"text-sm"} style={{color: gradeColor(it)}}>{it?.title ?? inp.item}</span>
 													<span className={"text-xs text-zinc-400"}>×{inp.count}</span>
 												</span>
 											);
@@ -248,15 +250,15 @@ function RecipeRow({node, items, depth}: { node: RNode, items: RItems, depth: nu
 				data-crafted={crafted}
 				className={"flex flex-row gap-1.5 items-center py-1 px-2 rounded-sm hover:bg-zinc-700/40 cursor-pointer"}
 				style={{paddingLeft: `${8 + depth * 16}px`}}
-				onClick={() => craftable ? onToggleCraft(node.path, !crafted) : openItemPanel(item as Item, false)}
+				onClick={() => craftable ? onToggleCraft(node.path, !crafted) : (item && openItemPanel({id: item.id, name: item.title}, false))}
 				onMouseDown={e => {
 					if (e.button === 1) {
 						e.preventDefault();
 					}
 				}}
 				onAuxClick={e => {
-					if (e.button === 1) {
-						openItemPanel(item as Item, true);
+					if (e.button === 1 && item) {
+						openItemPanel({id: item.id, name: item.title}, true);
 					}
 				}}
 			>
@@ -271,7 +273,7 @@ function RecipeRow({node, items, depth}: { node: RNode, items: RItems, depth: nu
 					<span className={"size-3.5 shrink-0"} />
 				)}
 				<ItemIcon urn={node.item} className={"shrink-0"} imageClass={"w-5 h-5"} />
-				<span className={"text-sm min-w-0 truncate"} style={color ? {color} : undefined}>{item?.name}</span>
+				<span className={"text-sm min-w-0 truncate"} style={color ? {color} : undefined}>{item?.title}</span>
 				{!!node.count && <span className={"text-sm text-zinc-500 shrink-0"}>×{node.count}</span>}
 				{node.gathered ? (
 					<span className={"text-sm shrink-0"} style={{color: grades.green.color}}>gathered</span>

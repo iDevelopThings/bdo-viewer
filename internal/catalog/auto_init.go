@@ -1,6 +1,9 @@
 package catalog
 
-import "bdo-viewer/internal/sources"
+import (
+	"bdo-viewer/internal/sources"
+	"github.com/idevelopthings/bdo-data-extractor/pipeline"
+)
 
 func init() {
 	sources.Registry.RegisterSource(NewRecipeSource())
@@ -11,4 +14,15 @@ func init() {
 	sources.Registry.RegisterSource(NewWorldRegionSource())
 	sources.Registry.RegisterSource(NewCharacterSource())
 	sources.Registry.RegisterSource(NewMasterySource())
+}
+
+var eventReporter pipeline.Reporter = pipeline.GetLogReporter()
+
+func SetEventReporter(r pipeline.Reporter) {
+	if r == nil {
+		eventReporter = pipeline.GetLogReporter()
+		return
+	}
+
+	eventReporter = r
 }

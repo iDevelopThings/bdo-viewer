@@ -49,7 +49,7 @@ jobs:
       - name: Install Task and the Wails CLI
         run: |
           go install github.com/go-task/task/v3/cmd/task@latest
-          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.111
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.117
 
       - name: Install frontend dependencies
         working-directory: bdo-viewer/frontend

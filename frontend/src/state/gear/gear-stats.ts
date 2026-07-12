@@ -1,4 +1,4 @@
-import {EnchantLevel, Item} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import {CaphrasLevel, EffectGroup, EnchantLevel, Item} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {GEAR_SLOTS, type GearSlotDef} from "@/state/gear/gear-slots.ts";
 import {
 	AP_STAT_KEYS,
@@ -45,7 +45,39 @@ export type GearStatsResult = { sections: StatSection[], totals: GearTotals };
 type ItemLookup = {
 	itemFor(slotId: string): Item | undefined;
 	enchantFor(slotId: string): EnchantLevel | undefined;
+	caphrasFor(slotId: string): CaphrasLevel | undefined;
 };
+
+// applyEffectGroups folds enhancement/Caphras DSL effect groups (same shape) into the
+// accumulator. Set/wear bonuses only apply with a full set worn, which this aggregator
+// doesn't verify, so groups titled as a set bonus are skipped.
+function applyEffectGroups(acc: StatAcc, def: GearSlotDef, groups: readonly EffectGroup[] | null | undefined) {
+	for (const group of groups ?? []) {
+		if (group.title?.includes("Set Effect")) {
+			continue;
+		}
+		for (const effect of group.stats ?? []) {
+			const func = effect.func;
+			if (!func) {
+				continue;
+			}
+			const arg = effect.args?.[0];
+			if (arg === undefined) {
+				continue;
+			}
+			const info = effectFuncInfo(func);
+			if (!info) {
+				continue;
+			}
+			const value = info.negate ? -arg : arg;
+			if (info.apStat) {
+				addBucket(acc[info.apStat], def, value);
+			} else if (info.stat) {
+				acc[info.stat] += value;
+			}
+		}
+	}
+}
 
 export function aggregateGearStats(lookup: ItemLookup): GearStatsResult {
 	const acc = emptyAcc();
@@ -65,35 +97,14 @@ export function aggregateGearStats(lookup: ItemLookup): GearStatsResult {
 			acc.damageReduction += enchant.damageReduction ?? 0;
 			acc.hp              += enchant.maxHp ?? 0;
 
-			// Set/wear bonuses only apply with multiple pieces equipped, and this
-			// aggregator doesn't verify a full set is actually worn - skip whole
-			// groups titled as a set bonus rather than counting them speculatively.
-			for (const group of enchant.effects ?? []) {
-				if (group.title?.includes("Set Effect")) {
-					continue;
-				}
+			applyEffectGroups(acc, def, enchant.effects);
+		}
 
-				for (const effect of group.stats ?? []) {
-					const func = effect.func;
-					if (!func)
-						continue;
-
-					const arg = effect.args?.[0];
-					if (arg === undefined)
-						continue;
-
-					const info = effectFuncInfo(func);
-					if (!info)
-						continue;
-
-					const value = info.negate ? -arg : arg;
-					if (info.apStat) {
-						addBucket(acc[info.apStat], def, value);
-					} else if (info.stat) {
-						acc[info.stat] += value;
-					}
-				}
-			}
+		// Caphras adds its step's total stats on top of the enhancement level, in the
+		// same DSL shape.
+		const caphras = lookup.caphrasFor(def.id);
+		if (caphras) {
+			applyEffectGroups(acc, def, caphras.effects);
 		}
 
 		// Alchemy stones and life gear carry their stats as StatMod buffs

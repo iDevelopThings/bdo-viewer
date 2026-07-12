@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as model$0 from "../../../github.com/idevelopthings/bdo-data-extractor/src/model/models.js";
+import * as sources$0 from "../sources/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as urn$0 from "../../../github.com/idevelopthings/bdo-data-extractor/src/urn/models.js";
@@ -76,7 +76,7 @@ export interface RecipeSlotOption {
 export interface RecipeTree {
     "root"?: RecipeTreeNode | null;
     "byproducts"?: RecipeTreeByproduct[] | null;
-    "items": { [_ in urn$0.URN]?: model$0.Item | null } | null;
+    "items": { [_ in urn$0.URN]?: sources$0.ListSourceEntry } | null;
     "status"?: string;
 }
 
@@ -144,10 +144,11 @@ export interface Requirement {
 
 /**
  * Use is one recipe that consumes a given item: what it produces, by which
- * process, and how many of the queried item it takes.
+ * process, and how many of the queried item it takes. Output is the slim display
+ * entry (see itemEntry) — the recipe UI only needs its name/grade/icon.
  */
 export interface Use {
-    "output": model$0.Item | null;
+    "output": sources$0.ListSourceEntry;
     "type": string;
     "station": string;
     "count": number;

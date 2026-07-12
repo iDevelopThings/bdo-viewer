@@ -5,7 +5,6 @@ import (
 	"log"
 	"time"
 
-	"bdo-viewer/internal/boot"
 	"bdo-viewer/internal/catalog"
 	"bdo-viewer/internal/config"
 	"bdo-viewer/internal/market"
@@ -37,18 +36,16 @@ func main() {
 		config.Global = &config.Config{}
 	}
 
+	setupService := setup.New()
+
 	catalogService, err := catalog.New()
 	if err != nil {
 		log.Fatal("Failed to load catalog..: ", err)
 	}
 
-	// On a fresh install the dataset is absent — boot into the setup wizard rather
-	// than crashing. The wizard runs extraction, then loads the data itself.
-	if !boot.NeedsSetup() {
-		if err := boot.LoadData(); err != nil {
-			log.Fatal("Failed to load data: ", err)
-		}
-	}
+	// The dataset isn't loaded here — the frontend owns that: it checks setup status,
+	// runs the wizard if needed, then awaits LoadData() behind its load screen. That
+	// keeps a single owner for the load and lets the window open immediately.
 
 	// market service is shared between the resolver's price closure and the bound service.
 	marketService := market.New()
@@ -75,7 +72,7 @@ func main() {
 			Description: "BDO Companion App",
 			Services: []application.Service{
 				application.NewService(config.Global),
-				application.NewService(setup.New()),
+				application.NewService(setupService),
 				application.NewService(updates.New()),
 				application.NewServiceWithOptions(catalogService, application.ServiceOptions{Route: "/icons"}),
 				application.NewService(resolver),
@@ -106,13 +103,14 @@ func main() {
 				Backdrop:                application.MacBackdropTranslucent,
 				TitleBar:                application.MacTitleBarHiddenInset,
 			},
-			BackgroundColour: application.NewRGB(27, 38, 54),
-			URL:              "/",
-			InitialPosition:  application.WindowXY,
-			X:                windowConf.X,
-			Y:                windowConf.Y,
-			Width:            windowConf.Width,
-			Height:           windowConf.Height,
+			BackgroundColour:       application.NewRGB(27, 38, 54),
+			URL:                    "/",
+			InitialPosition:        application.WindowXY,
+			X:                      windowConf.X,
+			Y:                      windowConf.Y,
+			Width:                  windowConf.Width,
+			Height:                 windowConf.Height,
+			OpenInspectorOnStartup: true,
 		},
 	)
 

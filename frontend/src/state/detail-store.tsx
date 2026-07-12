@@ -1,3 +1,4 @@
+import {ref} from "valtio/vanilla";
 import {SourceKind, UntypedSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import {findSourceByType, type WrappedSource} from "@/state/sources/sources.ts";
 import {EnchantLevel, Enhancement, Item, KnowledgeEntry, KnowledgeTheme, Territory, WorldRegion} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
@@ -61,14 +62,6 @@ export type PartialSourceEntry = UntypedSourceEntry & {
 	value: number | string | Item;
 }
 
-export function partialSourceEntryRequiresLoad(entry: PartialSourceEntry | undefined): entry is { type: SourceKind, value: number | string } {
-	if (!entry)
-		return false;
-	if (typeof entry.value === "number" || typeof entry.value === "string") {
-		return true;
-	}
-	return false;
-}
 
 export type KnowledgeData = {
 	themes?: KnowledgeTheme[],
@@ -100,7 +93,7 @@ export class DetailStore {
 	// per-node recipe/ingredient selections (keyed by RecipeTreeNode.path); sent to
 	// ResolveRecipeTree to re-resolve after the user picks an alternative.
 	public recipeSelections: Record<string, RecipeSelection> = {};
-	public recipeCraftOverrides: Record<string, boolean> = {};
+	public recipeCraftOverrides: Record<string, boolean>     = {};
 	public usedIn: Use[]                                     = [];
 
 	public knowledge: KnowledgeData | undefined  = undefined;
@@ -170,12 +163,13 @@ export class DetailStore {
 					...data.knowledgeExtra
 				};
 			if ("recipes" in data) {
-				this.recipes              = data.recipes;
+				this.recipes              = data.recipes ? ref(data.recipes) : data.recipes;
 				this.recipeSelections     = {};
 				this.recipeCraftOverrides = {};
 			}
 			if ("usedIn" in data)
-				this.usedIn = data.usedIn || [];
+				// ref() — read-only list, replaced wholesale; skip valtio's per-entry proxying.
+				this.usedIn = ref(data.usedIn || []);
 			if ("vendors" in data)
 				this.vendors = data?.vendors || [];
 			if ("regionExtra" in data) {
@@ -206,22 +200,6 @@ export class DetailStore {
 		void this.ensureEconomicRecipes();
 	}
 
-	// ensureEconomicRecipes re-resolves the recipe tree once live prices are loaded,
-	// so the buy-vs-craft decisions reflect real economics even when the detail was
-	// opened before market data arrived.
-	private async ensureEconomicRecipes() {
-		const rootId = this.recipes?.root?.item;
-		if (!rootId || marketLoaded()) {
-			return;
-		}
-		await fetchMarket();
-		try {
-			this.recipes = await ResolveRecipeTree(rootId, this.recipeSelections, this.recipeCraftOverrides);
-		} catch (error) {
-			console.error("Failed to re-resolve recipe tree with prices", error);
-		}
-	}
-
 	private ensureSource() {
 		/* 	if(this.source) {
 				this.source = wrapSource(this.source);
@@ -235,36 +213,6 @@ export class DetailStore {
 
 	public postLoad() {
 		this.initialize(this.entry);
-	}
-
-	// selectRecipe records a per-node recipe/ingredient choice (keyed by the node's
-	// path) and re-resolves the tree from the backend. It's async on purpose — only
-	// the selected path expands, so the payload stays small.
-	public async selectRecipe(path: string, selection: RecipeSelection) {
-		const rootId = this.recipes?.root?.item;
-		if (!rootId) {
-			return;
-		}
-		this.recipeSelections = {...this.recipeSelections, [path] : selection};
-		try {
-			this.recipes = await ResolveRecipeTree(rootId, this.recipeSelections, this.recipeCraftOverrides);
-		} catch (error) {
-			console.error("Failed to resolve recipe tree", error);
-		}
-	}
-
-	// toggleCraft forces a node (by path) to craft or buy and re-resolves the tree.
-	public async toggleCraft(path: string, craft: boolean) {
-		const rootId = this.recipes?.root?.item;
-		if (!rootId) {
-			return;
-		}
-		this.recipeCraftOverrides = {...this.recipeCraftOverrides, [path] : craft};
-		try {
-			this.recipes = await ResolveRecipeTree(rootId, this.recipeSelections, this.recipeCraftOverrides);
-		} catch (error) {
-			console.error("Failed to resolve recipe tree", error);
-		}
 	}
 
 	public get gatheredFrom(): string[] {
@@ -284,7 +232,7 @@ export class DetailStore {
 	}
 
 	public get valid() {
-		return this.enhancement !== undefined;
+		return this.enhancement !== undefined && (this.enhancement?.maxLevel > this.enhancement?.minLevel);
 	}
 
 	public get minLevel() {
@@ -360,4 +308,51 @@ export class DetailStore {
 		}
 		this._stats = (await GetStatsByURN(urn, this._level, this._caphrasStep)) ?? [];
 	}
+
+
+	/// ---------------------- RECIPES
+
+
+	// ensureEconomicRecipes re-resolves the recipe tree once live prices are loaded,
+	// so the buy-vs-craft decisions reflect real economics even when the detail was
+	// opened before market data arrived.
+	private async ensureEconomicRecipes() {
+		const rootId = this.recipes?.root?.item;
+		if (!rootId || marketLoaded()) {
+			return;
+		}
+		await fetchMarket();
+		await this.fetchRecipeTree(rootId);
+	}
+
+	private async fetchRecipeTree(rootId: string) {
+		try {
+			this.recipes = ref(await ResolveRecipeTree(rootId, this.recipeSelections, this.recipeCraftOverrides));
+		} catch (error) {
+			console.error("Failed to re-resolve recipe tree with prices", error);
+		}
+	}
+
+	// selectRecipe records a per-node recipe/ingredient choice (keyed by the node's
+	// path) and re-resolves the tree from the backend. It's async on purpose — only
+	// the selected path expands, so the payload stays small.
+	public async selectRecipe(path: string, selection: RecipeSelection) {
+		const rootId = this.recipes?.root?.item;
+		if (!rootId) {
+			return;
+		}
+		this.recipeSelections = {...this.recipeSelections, [path] : selection};
+		await this.fetchRecipeTree(rootId);
+	}
+
+	// toggleCraft forces a node (by path) to craft or buy and re-resolves the tree.
+	public async toggleCraft(path: string, craft: boolean) {
+		const rootId = this.recipes?.root?.item;
+		if (!rootId) {
+			return;
+		}
+		this.recipeCraftOverrides = {...this.recipeCraftOverrides, [path] : craft};
+		await this.fetchRecipeTree(rootId);
+	}
+
 }

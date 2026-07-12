@@ -3,11 +3,10 @@ import {useSyncExternalStore} from "react";
 import {Item} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {addHistoryEntry} from "@/components/history/history-panel.tsx";
 import {SourceKind} from "@bindings/bdo-viewer/internal/sources";
-import type {DeepReadonly, MaybeReadonly} from "@/types.ts";
+import type {MaybeReadonly} from "@/types.ts";
 import {ItemURN} from "@/lib/urn.ts";
-import {findSourceByType, findSourceByURN} from "@/state/sources/sources.ts";
+import {findSourceByType, findSourceByURN, WrappedSource} from "@/state/sources/sources.ts";
 import {navigateToURN, getNavigationNodeByURN} from "@/state/navigation.tsx";
-import {isItem} from "@/state/sources/item-source.tsx";
 
 // Describes a piece of content to show in a panel — not tied to any specific
 // dockview panel id/slot, so any source (items, npcs, zones, ...) can use it.
@@ -292,7 +291,7 @@ export function goToURN(urn: string | undefined, options: GoToURNOptions = {}): 
 		return true;
 	}
 
-	let source = undefined;
+	let source: WrappedSource | undefined = undefined;
 	try {
 		source = findSourceByURN(urn);
 	} catch (error) {
@@ -305,8 +304,8 @@ export function goToURN(urn: string | undefined, options: GoToURNOptions = {}): 
 		openSourceDetails(
 			sourceRef.source,
 			{
-				id: sourceRef.key,
-				name: options.title ?? navNode?.title ?? urn,
+				id   : sourceRef.key,
+				name : options.title ?? navNode?.title ?? urn,
 				urn,
 			},
 			options.pinned ?? false,

@@ -51,16 +51,18 @@ export function SortSelect({value, onChange, className}: {
 export type SortOption = { key: string; label: string };
 export type SortDir = "asc" | "desc";
 
-// SortControls is the source-driven sort picker: a type dropdown fed from the
-// source's Sorts plus a direction toggle. Renders nothing when the source
-// offers no orderings.
-export function SortControls({sorts, sortKey, dir, onChange, className}: {
+export type SortControlsProps = {
 	sorts: readonly SortOption[],
 	sortKey: string | undefined,
 	dir: SortDir,
 	onChange: (key: string, dir: SortDir) => void,
 	className?: string,
-}) {
+}
+
+// SortControls is the source-driven sort picker: a type dropdown fed from the
+// source's Sorts plus a direction toggle. Renders nothing when the source
+// offers no orderings.
+export function SortControls({sorts, sortKey, dir, onChange, className}: SortControlsProps) {
 	if (!sorts.length) {
 		return null;
 	}

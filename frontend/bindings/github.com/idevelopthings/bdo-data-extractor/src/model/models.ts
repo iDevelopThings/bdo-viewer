@@ -376,17 +376,30 @@ export interface Enhancement {
 }
 
 /**
- * EquipInfo groups an equippable item's slot taxonomy. Kind is the broad gear class
- * (Weapon/Armor/Other, itemenchant @15); Slot is the normalized, class-independent
- * equip slot (@14) — the only slot source for artifacts, life/gathering tools and
- * costume accessories whose Type is blank; Type is the specific EquipType (@7), the
- * weapon class for weapons. Slots lists every slot the item occupies (@14 + @16-18)
- * for multi-slot items like functional costumes; absent = single-slot.
+ * EquipInfo groups an equippable item's slot taxonomy.
  */
 export interface EquipInfo {
+    /**
+     * Slot is the normalized, class-independent
+     * equip slot (@14) — the only slot source for artifacts, life/gathering tools and
+     * costume accessories whose Type is blank;
+     */
     "slot"?: string;
+
+    /**
+     * Kind is the broad gear class (Weapon/Armor/Other, itemenchant @15);
+     */
     "kind"?: string;
+
+    /**
+     * Type is the specific EquipType (@7), the weapon class for weapons.
+     */
     "type"?: string;
+
+    /**
+     * Slots lists every slot the item occupies (@14 + @16-18)
+     * for multi-slot items like functional costumes; absent = single-slot.
+     */
     "slots"?: string[] | null;
 }
 

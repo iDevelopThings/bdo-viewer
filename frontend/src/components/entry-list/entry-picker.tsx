@@ -4,17 +4,22 @@ import {CancelError} from "@wailsio/runtime";
 import {ListSourceEntries} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
 import {type ListSourceEntry, SourceKind} from "@bindings/bdo-viewer/internal/sources";
 import type {DeepReadonly} from "@/types.ts";
-import {Input} from "@/components/ui/input.tsx";
-import {InputGroup} from "@/components/ui/input-group.tsx";
 import {Button} from "@/components/ui/button.tsx";
-import {type EntrySort, EntryRowBase, sortParam, SortSelect, VirtualEntryList} from "@/components/entry-list/entry-list.tsx";
+import {EntryRowBase, type SortDir, VirtualEntryList} from "@/components/entry-list/entry-list.tsx";
 import {type ItemFilterField, type ItemFilters, ItemFiltersPanel} from "@/components/entry-list/item-filters.tsx";
+import {EntryFilterHeader} from "@/components/entry-list/entry-filter-panel.tsx";
+import {findSourceByType} from "@/state/sources/sources.ts";
 
 // EntryPicker is the generic search-and-pick slide-over: a search box, optional
 // filter fields, and a virtualized result list from ListSourceEntries. The gear
 // item picker and the crafting calculator's "add item" flow both compose it —
 // they only differ in title, which filter fields show, the fixed baseFilters
 // they scope to (equip slots / class / craftable), and what onPick does.
+//
+// It mirrors SourceList's header (EntryFilterHeader + source-driven SortControls),
+// but backs everything with local state and a direct ListSourceEntries call instead
+// of the shared `list` store — it's a transient modal and must not clobber the main
+// source-list panel.
 export type EntryPickerProps = {
 	title: string;
 	source?: SourceKind;
@@ -23,7 +28,10 @@ export type EntryPickerProps = {
 	// baseFilters are fixed constraints merged into every query (not user-editable),
 	// e.g. the gear picker's equipSlots/class or the calculator's craftable flag.
 	baseFilters?: Partial<ItemFilters>;
-	defaultSort?: EntrySort;
+	// defaultSort/defaultSortDir set the initial ordering — a key from the source's
+	// Sorts (e.g. "grade" for the gear picker); defaults to the source's first sort.
+	defaultSort?: string;
+	defaultSortDir?: SortDir;
 	onPick: (entry: DeepReadonly<ListSourceEntry>) => void;
 	onClose: () => void;
 };
@@ -31,30 +39,43 @@ export type EntryPickerProps = {
 export function EntryPicker({
 	title,
 	source = SourceKind.Item,
-	fields = ["grade", "itemType", "effect"],
+	fields = ["grade", "effect"],
 	baseFilters,
-	defaultSort = "grade",
+	defaultSort,
+	defaultSortDir = "asc",
 	onPick,
 	onClose,
 }: EntryPickerProps) {
 	const parentRef = useRef<HTMLDivElement>(null);
 
+	const s = findSourceByType(source);
+
 	const [query, setQuery]     = useState("");
-	const [sort, setSort]       = useState<EntrySort>(defaultSort);
+	const [sortKey, setSortKey] = useState<string>(() => defaultSort ?? findSourceByType(source)?.sorts?.[0]?.key ?? "");
+	const [sortDir, setSortDir] = useState<SortDir>(defaultSortDir);
 	const [filters, setFilters] = useState<ItemFilters>({});
 	const [entries, setEntries] = useState<ListSourceEntry[]>([]);
 	const [loading, setLoading] = useState(true);
 
+	const hasActiveFilters = query.trim() !== "" || Object.values(filters).some(
+		v => Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && v !== "",
+	);
+
+	// baseFilters is usually an inline object literal, so depend on its content, not
+	// its identity — otherwise every parent re-render would re-run the query.
+	const baseKey = JSON.stringify(baseFilters ?? {});
+
 	useEffect(() => {
 		setLoading(true);
 
-		let cancelled  = false;
+		let cancelled = false;
 		const timeout = setTimeout(() => {
 			ListSourceEntries({
-				query   : query,
-				source  : source,
-				sort    : sortParam(sort),
-				filters : {...filters, ...baseFilters},
+				query    : query,
+				source   : source,
+				sort     : sortKey,
+				sort_dir : sortDir,
+				filters  : {...filters, ...baseFilters},
 			}).then(
 				result => {
 					if (cancelled) return;
@@ -75,7 +96,8 @@ export function EntryPicker({
 			cancelled = true;
 			clearTimeout(timeout);
 		};
-	}, [query, sort, filters, source, baseFilters]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [query, sortKey, sortDir, filters, source, baseKey]);
 
 	return (
 		<div
@@ -100,17 +122,21 @@ export function EntryPicker({
 				</div>
 
 				<div className={"flex flex-col gap-2 p-1"}>
-					<div className={"flex flex-row gap-1 items-center"}>
-						<InputGroup className={"flex-1"}>
-							<Input
-								autoFocus
-								placeholder="Search..."
-								value={query}
-								onChange={e => setQuery(e.target.value)}
-							/>
-						</InputGroup>
-						<SortSelect value={sort} onChange={setSort} />
-					</div>
+					<EntryFilterHeader
+						query={query}
+						setQuery={setQuery}
+						hasActiveFilters={hasActiveFilters}
+						onClearFilters={() => setFilters({})}
+						sortControls={{
+							sorts   : s?.sorts ?? [],
+							sortKey : sortKey,
+							dir     : sortDir,
+							onChange: (key, dir) => {
+								setSortKey(key);
+								setSortDir(dir);
+							},
+						}}
+					/>
 
 					{fields.length > 0 && (
 						<ItemFiltersPanel value={filters} onChange={setFilters} fields={fields} />

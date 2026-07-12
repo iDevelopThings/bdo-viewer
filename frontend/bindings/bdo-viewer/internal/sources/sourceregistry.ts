@@ -7,6 +7,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as event_reporter$0 from "../event_reporter/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as stats$0 from "../stats/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -57,6 +60,6 @@ export function ListSourceEntries(params: $models.ListSourceParams): $Cancellabl
  * loaded). Sources still backed by the catalog return nil here today; new
  * sources (character) own their data via Load — the convention we're moving to.
  */
-export function LoadAll(): $CancellablePromise<void> {
-    return $Call.ByName("bdo-viewer/internal/sources.SourceRegistry.LoadAll");
+export function LoadAll(reporter: event_reporter$0.EventReporter | null): $CancellablePromise<void> {
+    return $Call.ByName("bdo-viewer/internal/sources.SourceRegistry.LoadAll", reporter);
 }

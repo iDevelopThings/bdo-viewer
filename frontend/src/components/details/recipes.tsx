@@ -6,7 +6,6 @@ import {openItemPanel} from "@/state/panels.ts";
 import {ItemIcon} from "@/lib/item-icon.tsx";
 import {DetailsSection} from "@/components/details/details-components.tsx";
 import {useDetail} from "@/state/detail.tsx";
-import {Item} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {useMiddleClickProps} from "@/utils.tsx";
 import {gradeColor, itemOf, type RItems, RecipeTreeView} from "@/components/details/recipe-tree.tsx";
 
@@ -80,14 +79,14 @@ function ByproductEntry({bp, items}: { bp: DeepReadonly<RecipeTreeByproduct>, it
 				<div
 					className={"flex flex-row gap-1 items-center bg-zinc-700/50 px-1.5 py-0.5 rounded-md cursor-pointer select-none"}
 					{...useMiddleClickProps(
-						() => openItemPanel(out as Item, false),
-						() => openItemPanel(out as Item, true),
+						() => out && openItemPanel({id : out.id, name : out.title}, false),
+						() => out && openItemPanel({id : out.id, name : out.title}, true),
 					)}
 				>
 					<ItemIcon urn={bp.realOutput} className={"shrink-0"} imageClass={"w-4 h-4"} />
-					<span className={"text-sm"} style={{color}}>{out?.name}</span>
+					<span className={"text-sm"} style={{color}}>{out?.title}</span>
 				</div>
-				<span className={"text-sm"} style={{color: RECIPE_TYPE_COLOR}}>{recipeTypeLabel(bp.type, bp.station)}</span>
+				<span className={"text-sm"} style={{color : RECIPE_TYPE_COLOR}}>{recipeTypeLabel(bp.type, bp.station)}</span>
 			</div>
 			{bp.inputs?.length ? (
 				<div className={"flex flex-row flex-wrap gap-2 items-center"}>
@@ -122,14 +121,14 @@ export function DetailsUsedIn() {
 						key={index}
 						className={"flex flex-row gap-2 items-center cursor-pointer"}
 						{...useMiddleClickProps(
-							() => openItemPanel(use.output, false),
-							() => openItemPanel(use.output, true),
+							() => openItemPanel({id : use.output.id, name : use.output.title}, false),
+							() => openItemPanel({id : use.output.id, name : use.output.title}, true),
 						)}
 					>
 						<EntryTooltip urn={use.output.urn} className={"gap-2"} side={"top"}>
 							<div className={"flex flex-row gap-1 items-center bg-zinc-700/50 px-1.5 py-0.5 rounded-md select-none"}>
-								<img src={use.output.icon} alt={use.output.name} className={"w-4 h-4"} />
-								<span className={"text-sm text-zinc-300"}>{use.output.name}</span>
+								<img src={use.output.icon} alt={use.output.title} className={"w-4 h-4"} />
+								<span className={"text-sm text-zinc-300"}>{use.output.title}</span>
 							</div>
 							<span className={"text-sm text-zinc-400"}>via <span className={"font-bold"}>{recipeTypeLabel(use.type, use.station)}</span></span>
 							<span className={"text-sm text-zinc-400"}>×{use.count}</span>

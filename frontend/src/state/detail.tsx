@@ -35,13 +35,14 @@ export function DetailProvider({entry, children}: DetailProviderProps) {
 					}
 
 					return JSON.stringify({
-						entry        : {
+						entry         : {
 							type  : state.entry?.type,
 							value : getEntryKey(state.entry),
 						},
-						source       : state.source,
-						_level       : state.level,
-						scrollOffset : state.scrollOffset,
+						source        : state.source,
+						_caphrasStep  : state.level,
+						_caphrasLevel : state.caphrasStep,
+						scrollOffset  : state.scrollOffset,
 					});
 
 				},

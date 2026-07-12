@@ -10,7 +10,8 @@ import {findSourceByURN} from "@/state/sources/sources.ts";
 import {EffectSections} from "@/components/details/effects.tsx";
 import {flatStats, namedGroups} from "@/lib/stat-groups.ts";
 import {Tooltip as TooltipPrimitive} from "@base-ui/react/tooltip";
-import {type EntryDetails, loadEntryDetails} from "@/lib/entry-details.ts";
+import {GetEntryDetailsByURN} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
+import {EntryDetailsData} from "@/state/detail-store.tsx";
 
 // Drop-in tooltip for any entry, given its URN: <EntryTooltip urn={"urn::item:123"}>…</EntryTooltip>.
 // Data loads lazily on first hover (and is cached after that), so wrapping
@@ -24,7 +25,7 @@ type EntryTooltipProps = PropsWithChildren<{
 >
 
 export function EntryTooltip({urn, children, className, ...props}: EntryTooltipProps) {
-	const [details, setDetails] = useState<EntryDetails | undefined>(undefined);
+	const [details, setDetails] = useState<EntryDetailsData | undefined>(undefined);
 	const [loading, setLoading] = useState(false);
 
 	return (
@@ -32,7 +33,7 @@ export function EntryTooltip({urn, children, className, ...props}: EntryTooltipP
 			onOpenChange={open => {
 				if (open && !details && !loading) {
 					setLoading(true);
-					loadEntryDetails(urn).then(result => {
+					GetEntryDetailsByURN(urn).then(result => {
 						setDetails(result);
 						setLoading(false);
 					});
@@ -59,7 +60,7 @@ export function EntryTooltip({urn, children, className, ...props}: EntryTooltipP
 	);
 }
 
-function EntryTooltipCard({urn, details}: { urn: string, details: EntryDetails }) {
+function EntryTooltipCard({urn, details}: { urn: string, details: EntryDetailsData }) {
 	const kind    = findSourceByURN(urn)?.kind;
 	const stats   = flatStats(details.stats);
 	const effects = namedGroups(details.stats);

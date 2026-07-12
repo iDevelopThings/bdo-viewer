@@ -17,11 +17,15 @@ export function ItemPicker() {
 		return null;
 	}
 
+	console.log('item picker', def)
+
 	return (
 		<EntryPicker
 			key={slotId}
 			title={`Choose ${def.label}`}
-			fields={["grade", "itemType", "equipType", "effect"]}
+			fields={["grade", /* "equipType", */ "effect"]}
+			defaultSort={"grade"}
+			defaultSortDir={"desc"}
 			baseFilters={{
 				equipSlots : def.equipSlots,
 				class      : snap.characterClass ?? "",

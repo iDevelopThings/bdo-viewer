@@ -1,13 +1,19 @@
 import {ref} from "valtio/vanilla";
 import {GetItemsByURN, Item as GetItem} from "@bindings/bdo-viewer/internal/catalog/catalog.ts";
-import {EnchantLevel, Item} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import {CaphrasLevel, EnchantLevel, Item} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {GEAR_SLOTS, type GearGroupId} from "@/state/gear/gear-slots.ts";
 import {ItemURN} from "@/lib/urn.ts";
 
-export type EquippedSlot = { itemId?: number; level: number };
+// level is the enhancement level; caphras is the Caphras step (only meaningful at
+// the enchant levels Caphras applies to — TRI/TET/PEN — and 0 otherwise).
+export type EquippedSlot = { itemId?: number; level: number; caphras: number };
+
+function emptySlot(): EquippedSlot {
+	return {itemId : undefined, level : 0, caphras : 0};
+}
 
 function emptySlots(): Record<string, EquippedSlot> {
-	return Object.fromEntries(GEAR_SLOTS.map(s => [s.id, {itemId : undefined, level : 0}]));
+	return Object.fromEntries(GEAR_SLOTS.map(s => [s.id, emptySlot()]));
 }
 
 export class GearBuildStore {
@@ -17,6 +23,10 @@ export class GearBuildStore {
 	public slots: Record<string, EquippedSlot> = emptySlots();
 	public activeGroup: GearGroupId = "combat";
 	public loading: boolean = false;
+
+	// When set, equipping an item jumps it straight to max enhancement + max Caphras.
+	// Persisted so the preference sticks across sessions.
+	public maxOnEquip: boolean = false;
 
 	// Transient UI state - not serialized.
 	public pickerSlot: string | undefined = undefined;
@@ -36,7 +46,16 @@ export class GearBuildStore {
 		this.pickerSlot   = undefined;
 		this.selectedSlot = undefined;
 		this.loading      = false;
-		this.slots        = {...emptySlots(), ...this.slots};
+
+		// Rebuild from a full empty set so new slots appear, and normalize each
+		// restored slot — pre-Caphras saves have no `caphras` field.
+		const slots = emptySlots();
+		for (const [id, slot] of Object.entries(this.slots)) {
+			if (slots[id]) {
+				slots[id] = {itemId : slot.itemId, level : slot.level ?? 0, caphras : slot.caphras ?? 0};
+			}
+		}
+		this.slots = slots;
 	}
 
 	public async hydrate() {
@@ -63,9 +82,10 @@ export class GearBuildStore {
 
 			// A missing item just stays unhydrated (renders as empty) - never
 			// clear the stored id over what may be a transient lookup failure.
-			for (const slot of Object.values(this.slots)) {
+			for (const [id, slot] of Object.entries(this.slots)) {
 				if (slot.itemId !== undefined && cache[slot.itemId]) {
-					slot.level = this.clampLevel(cache[slot.itemId], slot.level);
+					slot.level   = this.clampLevel(cache[slot.itemId], slot.level);
+					slot.caphras = Math.min(slot.caphras, this.maxCaphrasFor(id));
 				}
 			}
 		} catch (error) {
@@ -83,8 +103,9 @@ export class GearBuildStore {
 				continue;
 			const item = this._items[slot.itemId];
 			if (item?.classes?.length && !item.classes.includes(cls)) {
-				slot.itemId = undefined;
-				slot.level  = 0;
+				slot.itemId  = undefined;
+				slot.level   = 0;
+				slot.caphras = 0;
 			}
 		}
 	}
@@ -116,18 +137,34 @@ export class GearBuildStore {
 
 		const slot  = this.slots[slotId];
 		slot.itemId = itemId;
-		slot.level  = this.clampLevel(item, slot.level);
+		if (this.maxOnEquip) {
+			// itemId is set, so maxLevelFor/maxCaphrasFor resolve against this slot;
+			// set the level first since the Caphras cap depends on it.
+			slot.level   = this.maxLevelFor(slotId);
+			slot.caphras = this.maxCaphrasFor(slotId);
+		} else {
+			slot.level   = this.clampLevel(item, slot.level);
+			slot.caphras = Math.min(slot.caphras, this.maxCaphrasFor(slotId));
+		}
 	}
 
 	public unequip(slotId: string) {
-		const slot  = this.slots[slotId];
-		slot.itemId = undefined;
-		slot.level  = 0;
+		const slot   = this.slots[slotId];
+		slot.itemId  = undefined;
+		slot.level   = 0;
+		slot.caphras = 0;
 	}
 
 	public setLevel(slotId: string, level: number) {
-		const slot = this.slots[slotId];
-		slot.level = this.clampLevel(this.itemFor(slotId), level);
+		const slot   = this.slots[slotId];
+		slot.level   = this.clampLevel(this.itemFor(slotId), level);
+		// Caphras only applies at TRI/TET/PEN, so re-clamp it whenever the level moves.
+		slot.caphras = Math.min(slot.caphras, this.maxCaphrasFor(slotId));
+	}
+
+	public setCaphras(slotId: string, caphras: number) {
+		const slot   = this.slots[slotId];
+		slot.caphras = Math.max(0, Math.min(this.maxCaphrasFor(slotId), Math.round(caphras)));
 	}
 
 	public itemFor(slotId: string): Item | undefined {
@@ -139,6 +176,23 @@ export class GearBuildStore {
 		const item = this.itemFor(slotId);
 		const slot = this.slots[slotId];
 		return item?.enhancement?.levels?.find(l => l.level === slot.level);
+	}
+
+	// caphrasFor is the Caphras step the slot is currently at (its total added stats),
+	// or undefined at step 0 / a level without Caphras.
+	public caphrasFor(slotId: string): CaphrasLevel | undefined {
+		const slot = this.slots[slotId];
+		if (!slot?.caphras) {
+			return undefined;
+		}
+		return this.enchantFor(slotId)?.caphras?.find(c => c.level === slot.caphras);
+	}
+
+	// maxCaphrasFor is the highest Caphras step at the slot's current enhance level
+	// (0 unless it's a Caphras-enhanceable level — TRI/TET/PEN).
+	public maxCaphrasFor(slotId: string): number {
+		const caphras = this.enchantFor(slotId)?.caphras;
+		return caphras?.length ? Math.max(...caphras.map(c => c.level)) : 0;
 	}
 
 	public minLevelFor(slotId: string): number {

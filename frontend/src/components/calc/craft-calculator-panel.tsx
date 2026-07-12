@@ -2,7 +2,7 @@ import {IDockviewPanelProps} from "dockview-react";
 import {useEffect, useMemo, useState} from "react";
 import {useSnapshot} from "valtio/react";
 import {Plus, X} from "lucide-react";
-import {Item} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import type {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import {Requirement} from "@bindings/bdo-viewer/internal/recipe";
 import {addTarget, calc, type CalcTarget, calcRuntime, recompute, removeTarget, selectRecipe, setQty, toggleCraft} from "@/state/calc/calc-store.ts";
 import {gradeColor, itemOf, RecipeTreeView} from "@/components/details/recipe-tree.tsx";
@@ -20,7 +20,7 @@ import type {DeepReadonly} from "@/types.ts";
 // the base materials just that target needs. A combined shopping list at the
 // bottom rolls every target's materials into one priced total.
 
-type ItemMap = Record<string, Item | null | undefined>;
+type ItemMap = Record<string, ListSourceEntry | null | undefined>;
 
 export function CraftCalculatorPanel(_props: IDockviewPanelProps) {
 	const snap       = useSnapshot(calc);
@@ -83,7 +83,7 @@ export function CraftCalculatorPanel(_props: IDockviewPanelProps) {
 			{picking && (
 				<EntryPicker
 					title={"Add item to craft"}
-					fields={["grade", "itemType", "effect"]}
+					fields={["grade", "effect"]}
 					baseFilters={{craftable: true}}
 					onPick={entry => {
 						addTarget(entry.urn);
@@ -115,9 +115,9 @@ function TargetBlock({target, items}: { target: DeepReadonly<CalcTarget>, items:
 				<span
 					className={"flex-1 min-w-0 truncate text-sm font-semibold cursor-pointer hover:underline"}
 					style={{color: gradeColor(item)}}
-					onClick={() => item && openItemPanel(item as Item, false)}
+					onClick={() => item && openItemPanel({id: item.id, name: item.title}, false)}
 				>
-					{item?.name ?? target.urn}
+					{item?.title ?? target.urn}
 				</span>
 				<Input
 					type={"number"}
@@ -195,11 +195,11 @@ function ShoppingRow({urn, count, cost, item}: {
 			className={"flex flex-row items-center gap-2 py-1 cursor-pointer hover:bg-zinc-800/50 rounded-sm px-1"}
 			data-testid={"shopping-row"}
 			data-urn={urn}
-			onClick={() => item && openItemPanel(item as Item, false)}
+			onClick={() => item && openItemPanel({id: item.id, name: item.title}, false)}
 		>
 			<ItemIcon urn={urn} className={"shrink-0"} imageClass={"w-5 h-5"} />
 			<span className={"flex-1 min-w-0 truncate text-sm"} style={{color: gradeColor(item)}}>
-				{item?.name ?? urn}
+				{item?.title ?? urn}
 			</span>
 			<span className={"text-sm text-zinc-400 shrink-0"}>×{count}</span>
 			{cost !== undefined && (

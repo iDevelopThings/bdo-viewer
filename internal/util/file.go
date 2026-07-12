@@ -1,17 +1,52 @@
 package util
 
 import (
-	"bufio"
-	"encoding/json"
+	"fmt"
 	"os"
+	"time"
+
+	"github.com/goccy/go-json"
+
+	"github.com/idevelopthings/bdo-data-extractor/src/utils"
 )
 
+var jsonLoadTimes = map[string]time.Duration{}
+
+const jsonDebugTimes = false
+
+func DumpJSONLoadTimes() {
+	if len(jsonLoadTimes) == 0 {
+		return
+	}
+
+	total := time.Duration(0)
+	fmt.Println("JSON load times:")
+	for path, dur := range jsonLoadTimes {
+		fmt.Printf("\t%s: %s\n", path, dur)
+		total += dur
+	}
+	fmt.Printf("\tTOTAL: %s\n", total)
+	jsonLoadTimes = map[string]time.Duration{}
+}
+
 func ReadJSON(path string, v any) error {
-	f, err := os.Open(path)
+	var timed func()
+	if jsonDebugTimes {
+		timed = utils.TimedTrack(
+			fmt.Sprintf("ReadJSON: %s", path),
+			func(t *utils.TimeTrack) {
+				jsonLoadTimes[path] = t.Duration()
+			},
+		)
+	} else {
+		timed = func() {}
+	}
+	defer timed()
+
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
-	return json.NewDecoder(bufio.NewReaderSize(f, 1<<20)).Decode(v)
+	return json.Unmarshal(data, v)
 }

@@ -7,14 +7,17 @@ import type { Events } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import type * as setup$0 from "../../../../../bdo-viewer/internal/setup/models.js";
+import type * as event_reporter$0 from "../../../../../bdo-viewer/internal/event_reporter/models.js";
 
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
+            "load:done": {};
+            "load:error": event_reporter$0.ErrorPayload;
+            "load:progress": event_reporter$0.Progress;
             "setup:done": {};
-            "setup:error": setup$0.ErrorPayload;
-            "setup:progress": setup$0.Progress;
+            "setup:error": event_reporter$0.ErrorPayload;
+            "setup:progress": event_reporter$0.Progress;
             "time": string;
         }
     }

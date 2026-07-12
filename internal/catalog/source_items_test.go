@@ -24,7 +24,7 @@ func TestItemSource_GetStats(t *testing.T) {
 		t.Fatal("Failed to load catalog..: ", err)
 	}
 
-	if err := sources.Registry.LoadAll(); err != nil {
+	if err := sources.Registry.LoadAll(nil); err != nil {
 		t.Fatal("Failed to load sources: ", err)
 	}
 
