@@ -1,6 +1,6 @@
 import {persist} from "valtio-persist";
 import {ref} from "valtio/vanilla";
-import {SourceNavigationNode} from "@bindings/bdo-viewer/internal/sources";
+import {SourceKind, SourceNavigationNode} from "@bindings/bdo-viewer/internal/sources";
 import {findSourceByType, type WrappedSource} from "@/state/sources/sources.ts";
 
 export type NavigationState = {
@@ -13,6 +13,9 @@ export type NavigationState = {
 }
 
 export type NavigationListScope = {
+	// kind is the node's source kind, which the source itself can't provide for
+	// SourceKind.All - it's the cross-source search node, not a registered source.
+	kind?: SourceKind;
 	source?: WrappedSource;
 	category?: string;
 	subcategory?: string;
@@ -53,6 +56,12 @@ export function buildNavigationTree(tree: SourceNavigationNode[]) {
 	navigation.nodesByPath = ref(nodesByPath);
 	navigation.nodesByURN = ref(nodesByURN);
 	navigation.originalIdsByPath = ref(originalIdsByPath);
+
+	// Nothing to restore (fresh launch), or a persisted path that no longer exists
+	// after a data change - fall back to the first root, the global search node.
+	if (!navigation.activePath || !nodesByPath.has(navigation.activePath)) {
+		navigation.activePath = tree[0]?.path;
+	}
 }
 
 export function getNavigationNode(path: string | undefined): SourceNavigationNode | undefined {
@@ -106,6 +115,7 @@ export function getNavigationListScope(path?: string): NavigationListScope {
 	const pathParts = getOriginalPathParts(path);
 
 	return {
+		kind: getNavigationNode(path)?.source,
 		source,
 		category: pathParts[0],
 		subcategory: pathParts[1],

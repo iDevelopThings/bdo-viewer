@@ -2,16 +2,18 @@ import {useEffect, useState} from "react";
 import {RefreshCw} from "lucide-react";
 import {Button} from "@/components/ui/button.tsx";
 import {Label} from "@/components/ui/label.tsx";
-import {cn} from "@/lib/utils.ts";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {DirPicker} from "./dir-picker.tsx";
 import {ExtractionProgress} from "./extraction-progress.tsx";
 import {useExtraction} from "@/state/extraction.ts";
 import {
 	AvailableLanguages,
+	AvailableRegions,
 	DefaultDataDir,
 	DefaultGameDir,
 	ValidateGameDir,
 } from "@bindings/bdo-viewer/internal/setup/service.ts";
+import {GetDataRegion} from "@bindings/bdo-viewer/internal/config/config.ts";
 import type {Meta} from "@bindings/github.com/idevelopthings/bdo-data-extractor/pipeline/models.ts";
 
 // reasonMessage turns the backend's stale-data reason into user-facing copy.
@@ -25,11 +27,6 @@ function reasonMessage(reason: string): string {
 	return "Your extracted data is from an older version. Re-extract to refresh it.";
 }
 
-const selectClass = cn(
-	"h-9 rounded-md border border-input bg-transparent dark:bg-input/30 px-2 text-sm text-zinc-300 outline-none cursor-pointer",
-	"focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [&>option]:bg-zinc-900",
-);
-
 // SetupWizard is the extraction screen — the first-boot flow (firstRun) where the
 // user points at their BDO install, and the re-extraction flow (reason set) shown
 // after an update or game patch, where it makes clear why the data must be refreshed.
@@ -37,6 +34,8 @@ export function SetupWizard({onComplete, firstRun, reason}: {onComplete: () => v
 	const [gameDir, setGameDir]   = useState("");
 	const [dataDir, setDataDir]   = useState("");
 	const [lang, setLang]         = useState("en");
+	const [region, setRegion]     = useState("");
+	const [regions, setRegions]   = useState<string[]>([]);
 	const [meta, setMeta]         = useState<Meta | null>(null);
 	const [languages, setLanguages] = useState<string[]>([]);
 	const [validating, setValidating] = useState(false);
@@ -45,9 +44,10 @@ export function SetupWizard({onComplete, firstRun, reason}: {onComplete: () => v
 	const {state, run, reset, fraction} = useExtraction(onComplete);
 
 	useEffect(() => {
-		void Promise.all([DefaultGameDir(), DefaultDataDir()]).then(([g, d]) => {
+		void Promise.all([DefaultGameDir(), DefaultDataDir(), GetDataRegion()]).then(([g, d, r]) => {
 			setGameDir(g);
 			setDataDir(d);
+			setRegion(r);
 		});
 	}, []);
 
@@ -62,8 +62,8 @@ export function SetupWizard({onComplete, firstRun, reason}: {onComplete: () => v
 		let cancelled = false;
 		setValidating(true);
 		const timer = setTimeout(() => {
-			void Promise.all([ValidateGameDir(gameDir), AvailableLanguages(gameDir)])
-				.then(([m, langs]) => {
+			void Promise.all([ValidateGameDir(gameDir), AvailableLanguages(gameDir), AvailableRegions(gameDir)])
+				.then(([m, langs, regs]) => {
 					if (cancelled) {
 						return;
 					}
@@ -72,6 +72,7 @@ export function SetupWizard({onComplete, firstRun, reason}: {onComplete: () => v
 					const list = langs ?? [];
 					setLanguages(list);
 					setLang(prev => (list.includes(prev) ? prev : (list.includes("en") ? "en" : list[0] ?? prev)));
+					setRegions(regs ?? []);
 				})
 				.catch((err: unknown) => {
 					if (cancelled) {
@@ -79,6 +80,7 @@ export function SetupWizard({onComplete, firstRun, reason}: {onComplete: () => v
 					}
 					setMeta(null);
 					setLanguages([]);
+					setRegions([]);
 					setValidateError(err instanceof Error ? err.message : String(err));
 				})
 				.finally(() => {
@@ -152,21 +154,44 @@ export function SetupWizard({onComplete, firstRun, reason}: {onComplete: () => v
 
 						<div className={"flex flex-col gap-1.5"}>
 							<Label className={"text-xs text-muted-foreground"}>Language</Label>
-							<select
+							<Select
 								value={lang}
-								onChange={e => setLang(e.target.value)}
+								onValueChange={v => setLang(v ?? "en")}
 								disabled={languages.length === 0}
-								className={selectClass}
 							>
-								{(languages.length ? languages : [lang]).map(l => (
-									<option key={l} value={l}>{l}</option>
-								))}
-							</select>
+								<SelectTrigger size={"sm"} className={"w-full"}>
+									<SelectValue placeholder={"Language"} />
+								</SelectTrigger>
+								<SelectContent>
+									{(languages.length ? languages : [lang]).map(l => (
+										<SelectItem key={l} value={l}>{l}</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+
+						<div className={"flex flex-col gap-1.5"}>
+							<Label className={"text-xs text-muted-foreground"}>Server region</Label>
+							<Select
+								value={region || null}
+								onValueChange={v => setRegion(v ?? "")}
+								disabled={regions.length === 0}
+							>
+								<SelectTrigger size={"sm"} className={"w-full"}>
+									<SelectValue placeholder={"Same as language"} />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value={null}>Same as language</SelectItem>
+									{regions.map(r => (
+										<SelectItem key={r} value={r}>{r}</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</div>
 
 						<Button
 							disabled={!meta || validating || !dataDir}
-							onClick={() => run(gameDir, dataDir, lang)}
+							onClick={() => run(gameDir, dataDir, lang, region)}
 						>
 							{firstRun ? "Extract game data" : "Re-extract game data"}
 						</Button>

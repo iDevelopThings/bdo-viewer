@@ -9,8 +9,6 @@
 package main
 
 import (
-	"bdo-viewer/internal/config"
-	"bdo-viewer/internal/util"
 	"fmt"
 	"log"
 	"os"
@@ -18,6 +16,9 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"bdo-viewer/internal/config"
+	"bdo-viewer/internal/util"
 
 	"github.com/idevelopthings/bdo-data-extractor/src/model"
 )

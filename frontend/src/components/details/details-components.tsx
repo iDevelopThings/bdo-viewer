@@ -258,7 +258,7 @@ const chipVariants = cva(
 );
 
 export type ChipProps = {
-	label: string,
+	label: ReactNode,
 	onClick?: () => void,
 	onMouseDown?: (e: any) => void
 	onAuxClick?: (e: any) => void

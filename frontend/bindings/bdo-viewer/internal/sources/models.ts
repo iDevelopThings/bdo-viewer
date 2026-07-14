@@ -40,6 +40,12 @@ export enum SourceKind {
     $zero = "",
 
     Unknown = "unknown",
+
+    /**
+     * All is not a source: it asks ListSourceEntries for a cross-source search
+     * instead of dispatching to one source (see SearchAll).
+     */
+    All = "all",
     Item = "item",
     GrindSpot = "grindspot",
     Recipe = "recipe",

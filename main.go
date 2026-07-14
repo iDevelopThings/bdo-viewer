@@ -106,6 +106,8 @@ func main() {
 			BackgroundColour:       application.NewRGB(27, 38, 54),
 			URL:                    "/",
 			InitialPosition:        application.WindowXY,
+			MinWidth:               300,
+			MinHeight:              300,
 			X:                      windowConf.X,
 			Y:                      windowConf.Y,
 			Width:                  windowConf.Width,
@@ -116,37 +118,63 @@ func main() {
 
 	go func() {
 
+		didFirstTimeWindowCheck := false
 		var prevX, prevY, prevW, prevH int
 		for {
+			if window == nil {
+				time.Sleep(time.Second)
+				continue
+			}
 
-			if window != nil {
-				hasChanges := false
-				x, y := window.Position()
-				if x != prevX || y != prevY {
-					prevX, prevY = x, y
-					hasChanges = true
+			if !window.IsVisible() || window.IsMinimised() {
+				time.Sleep(time.Second)
+				continue
+			}
+
+			if !didFirstTimeWindowCheck {
+				if s, err := window.GetScreen(); err == nil {
+					// Ensure the saved pos & size aren't off-screen.
+					// (there's a weird bug that causes window pos to get saved to something crazy, and size as 0)
+
+					wpX, wpY := window.Position()
+					wsX, wsY := window.Size()
+					wCenterX, wCenterY := wpX+(wsX/2), wpY+(wsY/2)
+
+					b := s.WorkArea
+					if !b.Contains(application.Point{X: wCenterX, Y: wCenterY}) {
+						window.Center()
+					}
+
+					didFirstTimeWindowCheck = true
 				}
+			}
 
-				w, h := window.Size()
-				if w != prevW || h != prevH {
-					prevW, prevH = w, h
-					hasChanges = true
-				}
+			hasChanges := false
+			x, y := window.Position()
+			if x != prevX || y != prevY {
+				prevX, prevY = x, y
+				hasChanges = true
+			}
 
-				if hasChanges {
-					config.Update(
-						func(c *config.Config) {
-							if c.Window == nil {
-								c.Window = &config.WindowState{}
-							}
+			w, h := window.Size()
+			if w != prevW || h != prevH {
+				prevW, prevH = w, h
+				hasChanges = true
+			}
 
-							c.Window.X = x
-							c.Window.Y = y
-							c.Window.Width = w
-							c.Window.Height = h
-						},
-					)
-				}
+			if hasChanges {
+				config.Update(
+					func(c *config.Config) {
+						if c.Window == nil {
+							c.Window = &config.WindowState{}
+						}
+
+						c.Window.X = x
+						c.Window.Y = y
+						c.Window.Width = w
+						c.Window.Height = h
+					},
+				)
 			}
 
 			time.Sleep(time.Second)

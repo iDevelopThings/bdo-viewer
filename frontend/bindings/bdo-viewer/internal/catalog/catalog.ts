@@ -51,6 +51,42 @@ export function GetNpcsByURN(urns: urn$0.URN[] | null): $CancellablePromise<(mod
 }
 
 /**
+ * GetPlacedNpcs returns every NPC the world places at least once — the map draws a
+ * marker per placement. The unplaced ones (no spawn) have nowhere to go, so they're
+ * left out rather than shipped and filtered on the frontend.
+ */
+export function GetPlacedNpcs(): $CancellablePromise<(model$0.NPC | null)[] | null> {
+    return $Call.ByName("bdo-viewer/internal/catalog.Catalog.GetPlacedNpcs");
+}
+
+/**
+ * GetWorldNodes returns every worldmap node (towns, gateways, farms and their
+ * co-located sub-nodes) from world.json. Each carries its urn, position, kind,
+ * main flag, contribution cost and child refs — the frontend map's "our data"
+ * source, an alternative to the bundled bdolytics nodes.
+ */
+export function GetWorldNodes(): $CancellablePromise<model$0.WorldNode[] | null> {
+    return $Call.ByName("bdo-viewer/internal/catalog.Catalog.GetWorldNodes");
+}
+
+/**
+ * GetWorldRegions returns every map region from world.json with its position,
+ * extra worldmap marks, world-space AABB bounds and NPC/monster spawn placements
+ * — for drawing region overlays (bounds boxes, spawn points) on the map.
+ */
+export function GetWorldRegions(): $CancellablePromise<model$0.WorldRegion[] | null> {
+    return $Call.ByName("bdo-viewer/internal/catalog.Catalog.GetWorldRegions");
+}
+
+/**
+ * GetWorldTerritories returns the world's territories (Balenos, Serendia, …), so
+ * the frontend map can resolve a node's territory ref to a name.
+ */
+export function GetWorldTerritories(): $CancellablePromise<model$0.Territory[] | null> {
+    return $Call.ByName("bdo-viewer/internal/catalog.Catalog.GetWorldTerritories");
+}
+
+/**
  * Item returns the item with the given URN, or nil. Thin facade over the item
  * Store (owned by ItemSource) for the frontend's direct id lookups.
  */

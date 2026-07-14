@@ -10,6 +10,14 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as $models from "./models.js";
 
 /**
+ * GetDataRegion returns the extractor's region variant, or "" when unset (meaning
+ * the localization language is used as the region).
+ */
+export function GetDataRegion(): $CancellablePromise<string> {
+    return $Call.ByName("bdo-viewer/internal/config.Config.GetDataRegion");
+}
+
+/**
  * GetExtractedDataDir (bound) exposes the resolved data dir to the frontend.
  */
 export function GetExtractedDataDir(): $CancellablePromise<string> {
@@ -37,6 +45,14 @@ export function GetPlayer(): $CancellablePromise<$models.PlayerInfo> {
  */
 export function SaveIfDirty(): $CancellablePromise<void> {
     return $Call.ByName("bdo-viewer/internal/config.Config.SaveIfDirty");
+}
+
+/**
+ * SetDataRegion persists the region variant the extractor loads client data for.
+ * It takes effect on the next extraction.
+ */
+export function SetDataRegion(region: string): $CancellablePromise<void> {
+    return $Call.ByName("bdo-viewer/internal/config.Config.SetDataRegion", region);
 }
 
 /**

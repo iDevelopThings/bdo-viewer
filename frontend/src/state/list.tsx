@@ -108,12 +108,10 @@ function syncListFromActiveNode(path: string | undefined) {
 	// items) - reset them when switching to a different source, but keep them
 	// when just browsing between categories within the same source. Compare
 	// against the previous source before overwriting list.source below.
-	const sourceChanged = scope.source !== undefined && scope.source.kind !== list.source;
+	const kind          = scope.kind ?? SourceKind.Unknown;
+	const sourceChanged = kind !== list.source;
 
-	if (scope.source) {
-		list.source = scope.source.kind;
-	}
-
+	list.source      = kind;
 	list.category    = scope.category;
 	list.subcategory = scope.subcategory;
 
@@ -149,7 +147,7 @@ export function loadList(): CancellablePromise<void> {
 
 	const scope = getNavigationListScope(getDefaultNavigationPath());
 
-	list.source = scope.source?.kind ?? SourceKind.Unknown;
+	list.source = scope.kind ?? SourceKind.Unknown;
 
 	return ListSourceEntries({
 		query        : list.query ?? "",

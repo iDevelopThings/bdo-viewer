@@ -9,6 +9,7 @@ import {GearBuilderPanel} from "@/components/gear-builder/gear-builder-panel.tsx
 import {SettingsPanel} from "@/components/settings/settings-panel.tsx";
 import {CraftCalculatorPanel} from "@/components/calc/craft-calculator-panel.tsx";
 import {CompareItemsPanel} from "@/components/compare/compare-items-panel.tsx";
+import {WorldMapPanel} from "@/components/world-map/world-map-panel.tsx";
 
 
 const MyPanel = (props: IDockviewPanelProps) => {
@@ -36,14 +37,15 @@ const NoCloseTab = (props: IDockviewPanelHeaderProps) => {
 };
 
 const components = {
-	default     : MyPanel,
-	sidebar     : Sidebar,
-	list        : SourceList,
-	itemDetails : DetailsPanel,
-	gearBuilder : GearBuilderPanel,
-	settings    : SettingsPanel,
-	craftCalc   : CraftCalculatorPanel,
-	compareItems: CompareItemsPanel,
+	default      : MyPanel,
+	sidebar      : Sidebar,
+	list         : SourceList,
+	itemDetails  : DetailsPanel,
+	gearBuilder  : GearBuilderPanel,
+	settings     : SettingsPanel,
+	craftCalc    : CraftCalculatorPanel,
+	compareItems : CompareItemsPanel,
+	worldMap     : WorldMapPanel,
 };
 
 /*const RightActions = (props: IDockviewHeaderActionsProps) => {
@@ -117,7 +119,7 @@ export function AppLayout() {
 				direction      : "right",
 				referenceGroup : mainGroup.id,
 			});
-			const rightGroup = event.api.addGroup({
+			const rightGroup  = event.api.addGroup({
 				id             : "right",
 				direction      : "right",
 				referenceGroup : centerGroup.id,

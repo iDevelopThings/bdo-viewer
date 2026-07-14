@@ -223,12 +223,13 @@ export class DetailStore {
 		return this.entry.value.gatheredFrom || [];
 	}
 
+	/** URNs of the worldmap sub-nodes this item is gathered at (urn::world:node:<key>). */
 	public get gatherNodes(): string[] {
 		if (!("gatherNodes" in this.entry.value)) {
 			return [];
 		}
 
-		return this.entry.value.gatherNodes || [];
+		return this.entry.value.gatherNodes?.urns || [];
 	}
 
 	public get valid() {

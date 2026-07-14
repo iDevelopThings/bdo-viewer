@@ -102,12 +102,13 @@ export function SortControls({sorts, sortKey, dir, onChange, className}: SortCon
 export type EntryRowBaseProps = {
 	entry: DeepReadonly<ListSourceEntry>;
 	active?: boolean;
+	badge?: ReactNode;
 	onClick?: (e: MouseEvent) => void;
 	onAuxClick?: (e: MouseEvent) => void;
 };
 
-export function EntryRowBase({entry, active, onClick, onAuxClick}: EntryRowBaseProps) {
-	const gradeColor = entry.subtitle ? grades[entry.subtitle as Grade]?.color : undefined;
+export function EntryRowBase({entry, active, badge, onClick, onAuxClick}: EntryRowBaseProps) {
+	const gradeColor = entry.extra?.grade ? grades[entry.extra?.grade as Grade]?.color : undefined;
 
 	return (
 		<div
@@ -141,7 +142,18 @@ export function EntryRowBase({entry, active, onClick, onAuxClick}: EntryRowBaseP
 					</div>
 				)}
 			</div>
+			{badge}
 		</div>
+	);
+}
+
+// EntrySourceBadge labels which source a row came from - only meaningful in the
+// mixed results of a global search.
+export function EntrySourceBadge({source}: { source: string }) {
+	return (
+		<span className={"shrink-0 rounded-sm border border-zinc-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-zinc-400"}>
+			{source}
+		</span>
 	);
 }
 
@@ -150,9 +162,10 @@ export type VirtualEntryListProps = {
 	entries: DeepReadonly<ListSourceEntry[]>;
 	parentRef: MutableRefObject<HTMLDivElement | null>;
 	renderRow: (entry: DeepReadonly<ListSourceEntry>, index: number) => ReactNode;
+	emptyMessage?: string;
 };
 
-export function VirtualEntryList({loading, entries, parentRef, renderRow}: VirtualEntryListProps) {
+export function VirtualEntryList({loading, entries, parentRef, renderRow, emptyMessage}: VirtualEntryListProps) {
 	// Key by URN (unique across sources); many non-item sources share id 0.
 	const getItemKey       = useCallback((index: number) => entries[index].urn || entries[index].id, [entries]);
 	const getScrollElement = useCallback(() => parentRef.current, [parentRef]);
@@ -176,11 +189,11 @@ export function VirtualEntryList({loading, entries, parentRef, renderRow}: Virtu
 	});
 
 	if (loading) {
-		return <div className={"p-4 text-sm text-zinc-400"}>Loading...</div>;
+		return <div className={"p-4 text-sm text-zinc-400 text-center w-full"}>Loading...</div>;
 	}
 
 	if (entries.length === 0) {
-		return <div className={"p-4 text-sm text-zinc-400"}>No entries found</div>;
+		return <div className={"p-4 text-sm text-zinc-400 text-center w-full"}>{emptyMessage ?? "No entries found"}</div>;
 	}
 
 	return (

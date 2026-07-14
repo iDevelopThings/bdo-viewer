@@ -28,6 +28,15 @@ export function AvailableLanguages(dir: string): $CancellablePromise<string[] | 
 }
 
 /**
+ * AvailableRegions lists the region-variant suffixes a game install ships client
+ * data for (regionclientdata_<region>_.xml), e.g. na, kr, eu — for the wizard's
+ * and settings' region picker. Empty means only the base file exists.
+ */
+export function AvailableRegions(dir: string): $CancellablePromise<string[] | null> {
+    return $Call.ByName("bdo-viewer/internal/setup.Service.AvailableRegions", dir);
+}
+
+/**
  * DefaultDataDir returns the directory to prefill the data-dir picker with.
  */
 export function DefaultDataDir(): $CancellablePromise<string> {
@@ -84,8 +93,8 @@ export function PickDirectory(title: string): $CancellablePromise<string> {
  * the setup:done / setup:error events. Only one run may be in flight at a time —
  * the pipeline drives process-global state (config + progress sink).
  */
-export function RunExtraction(gameDir: string, dataDir: string, lang: string): $CancellablePromise<void> {
-    return $Call.ByName("bdo-viewer/internal/setup.Service.RunExtraction", gameDir, dataDir, lang);
+export function RunExtraction(gameDir: string, dataDir: string, lang: string, region: string): $CancellablePromise<void> {
+    return $Call.ByName("bdo-viewer/internal/setup.Service.RunExtraction", gameDir, dataDir, lang, region);
 }
 
 /**

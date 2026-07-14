@@ -24,6 +24,17 @@ type MarketCategoryWithCount struct {
 	SubCategories []MarketCategoryWithCount `json:"subCategories,omitempty"`
 }
 
+// BindingTypes isn't called at runtime - it exists purely so these model
+// types stay referenced, keeping the Wails TS generator emitting them.
+type BindingTypes struct {
+	Zone           *model.Zone           `json:"zone,omitempty"`
+	WorldRegion    *model.WorldRegion    `json:"worldRegion,omitempty"`
+	Territory      *model.Territory      `json:"territory,omitempty"`
+	KnowledgeTheme *model.KnowledgeTheme `json:"knowledgeTheme,omitempty"`
+	KnowledgeEntry *model.KnowledgeEntry `json:"knowledgeEntry,omitempty"`
+	Character      *model.Character      `json:"character,omitempty"`
+}
+
 // Catalog is the thin facade the frontend binds against. It owns no dataset —
 // each source owns its own — and reads the data dir live from config so a
 // re-extraction to a new location is picked up without a restart.
@@ -39,16 +50,28 @@ func New() (*Catalog, error) {
 // DataDir returns the resolved data directory (for loading map/image assets).
 func (c *Catalog) DataDir() string { return config.GetExtractedDataDir() }
 
-// BindingTypes isn't called at runtime - it exists purely so these model
-// types stay referenced, keeping the Wails TS generator emitting them.
-type BindingTypes struct {
-	Zone           *model.Zone           `json:"zone,omitempty"`
-	WorldRegion    *model.WorldRegion    `json:"worldRegion,omitempty"`
-	Territory      *model.Territory      `json:"territory,omitempty"`
-	KnowledgeTheme *model.KnowledgeTheme `json:"knowledgeTheme,omitempty"`
-	KnowledgeEntry *model.KnowledgeEntry `json:"knowledgeEntry,omitempty"`
-	Character      *model.Character      `json:"character,omitempty"`
+// Types anchors model-type generation for the frontend bindings (see BindingTypes).
+func (c *Catalog) Types() BindingTypes {
+	return BindingTypes{}
 }
 
-// Types anchors model-type generation for the frontend bindings (see BindingTypes).
-func (c *Catalog) Types() BindingTypes { return BindingTypes{} }
+// GetWorldNodes returns every worldmap node (towns, gateways, farms and their
+// co-located sub-nodes) from world.json. Each carries its urn, position, kind,
+// main flag, contribution cost and child refs — the frontend map's "our data"
+// source, an alternative to the bundled bdolytics nodes.
+func (c *Catalog) GetWorldNodes() []model.WorldNode {
+	return WorldRegions.Nodes
+}
+
+// GetWorldTerritories returns the world's territories (Balenos, Serendia, …), so
+// the frontend map can resolve a node's territory ref to a name.
+func (c *Catalog) GetWorldTerritories() []model.Territory {
+	return WorldRegions.Territories
+}
+
+// GetWorldRegions returns every map region from world.json with its position,
+// extra worldmap marks, world-space AABB bounds and NPC/monster spawn placements
+// — for drawing region overlays (bounds boxes, spawn points) on the map.
+func (c *Catalog) GetWorldRegions() []model.WorldRegion {
+	return WorldRegions.Regions
+}

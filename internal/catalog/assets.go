@@ -83,6 +83,18 @@ func (rc *redirectCache) lookup(dataDir, urlPath string) (string, bool) {
 // redirects.json are served from the shared target instead.
 func (c *Catalog) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	dataDir := config.GetExtractedDataDir()
+
+	// World-map tiles live in a per-layer tiles.pack, not as individual files; serve them
+	// by (z,x,y) from the pack. meta.json and everything else fall through to the files.
+	if layer, z, x, y, ok := parseWorldmapTile(r.URL.Path); ok {
+		packPath := filepath.Join(dataDir, "worldmap", layer, "tiles.pack")
+		if worldPacks.serveTile(w, packPath, z, x, y) {
+			return
+		}
+		http.NotFound(w, r)
+		return
+	}
+
 	if target, ok := redirects.lookup(dataDir, r.URL.Path); ok {
 		http.ServeFile(w, r, filepath.Join(dataDir, filepath.FromSlash(target)))
 		return

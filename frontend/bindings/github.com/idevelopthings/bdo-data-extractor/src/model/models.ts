@@ -40,6 +40,14 @@ export enum BindType {
 };
 
 /**
+ * Bounds is a region's world-space extent (union of its spatial boxes).
+ */
+export interface Bounds {
+    "min": number[];
+    "max": number[];
+}
+
+/**
  * CaphrasCategory is one Caphras-enhancement cost/stat chart from
  * cronenchant.bss ("CronEnchant" is the game's internal name for the Caphras
  * system). Items map to a category via the client's computed cronKey (the
@@ -782,20 +790,34 @@ export interface Item {
     "unknownIcon27"?: number | null;
 
     /**
-     * Acquisition, from the per-item info XML (ui_html/xml/<lang>/<id>.xml):
-     * NPCs that sell it (<shop>)
+     * Acquisition, from the per-item info XML (ui_html/xml/<lang>/<id>.xml). The XML
+     * names entities in prose, so the build resolves them: <shop> character names to
+     * NPC character templates (whose Spawns are the placed vendor variants), and
+     * <node region="A - B"> to the "B" production sub-node under main node "A".
+     * Vendors are NPC references resolved from <shop> character names.
      */
-    "vendors"?: string[] | null;
+    "vendors"?: models$0.EntityRefList<NPC> | null;
 
     /**
-     * gather/collect sources, e.g. "Wild Flax" (<collect>)
+     * UnresolvedVendors are <shop> names that could not be resolved to NPC references.
+     */
+    "unresolvedVendors"?: string[] | null;
+
+    /**
+     * GatheredFrom contains <collect> source names such as "Wild Flax".
      */
     "gatheredFrom"?: string[] | null;
 
     /**
-     * gathering node regions (<node region="…">)
+     * GatherNodes are world-node references resolved from <node region="..."> names.
      */
-    "gatherNodes"?: string[] | null;
+    "gatherNodes"?: models$0.EntityRefList<WorldNode> | null;
+
+    /**
+     * UnresolvedGatherNodes are <node region="..."> names that could not be resolved
+     * to a world-node reference. The original client text is retained losslessly.
+     */
+    "unresolvedGatherNodes"?: string[] | null;
 
     /**
      * Consumable (food/elixir) buff info, decoded from the item->skill->buff
@@ -869,9 +891,10 @@ export interface KnowledgeTheme {
 }
 
 /**
- * NPC is one row of npcsimply.bss: an NPC's id and its in-client name/title.
- * Names are the client's own (Korean) strings; English names live in .loc and
- * can be joined later by ID.
+ * NPC is an NPC character template keyed by the character key shared by
+ * npcsimply, characterspawntype, exploration and region spawn records. Spawns
+ * are its placed variants; one template can appear at several positions and
+ * dialog indices. Names are localized from loc table 6.
  */
 export interface NPC {
     "urn": urn$0.URN;
@@ -882,28 +905,293 @@ export interface NPC {
      * generic role label, e.g. "<Fruit Merchant>"
      */
     "title"?: string;
+
+    /**
+     * SpawnTypes are the NPC's client-defined map/navigation roles. Explorer
+     * identifies node managers; the other values identify town services.
+     */
+    "spawnTypes"?: NPCSpawnTypes;
     "spawns"?: NPCSpawn[] | null;
 }
 
 /**
- * NPCSpawn is one placement of an NPC: the region it spawns in (key + its
- * topography name, e.g. "Calpheon City") and its world position.
+ * NPCSpawn is one placed variant of an NPC template: the region it spawns in
+ * (ref + key + its topography name), world position and dialog variant.
  */
 export interface NPCSpawn {
-    "region": number;
+    "region"?: models$0.EntityRef<WorldRegion> | null;
+    "regionKey": number;
 
     /**
      * loc table 17, keyed by region
      */
     "regionName"?: string;
     "pos": number[];
+
+    /**
+     * DialogIndex distinguishes multiple placed variants of the same character.
+     */
+    "dialogIndex"?: number;
 }
+
+/**
+ * NPCSpawnType is one of the client SpawnType role flags from
+ * characterspawntype.dbss. Its numeric value is retained in JSON so the
+ * frontend can use the same icon/category mapping as the game.
+ */
+export enum NPCSpawnType {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = 0,
+
+    /**
+     * NPCSpawnTypeNormal is a normal NPC without a specialized service role.
+     */
+    NPCSpawnTypeNormal = 0,
+
+    /**
+     * NPCSpawnTypeSkillTrainer is a skill instructor.
+     */
+    NPCSpawnTypeSkillTrainer = 1,
+
+    /**
+     * NPCSpawnTypeItemRepairer repairs equipment.
+     */
+    NPCSpawnTypeItemRepairer = 2,
+
+    /**
+     * NPCSpawnTypeShopMerchant is a general shop merchant.
+     */
+    NPCSpawnTypeShopMerchant = 3,
+
+    /**
+     * NPCSpawnTypeImportantNPC is an important named NPC.
+     */
+    NPCSpawnTypeImportantNPC = 4,
+
+    /**
+     * NPCSpawnTypeTradeMerchant is a trade manager or merchant.
+     */
+    NPCSpawnTypeTradeMerchant = 5,
+
+    /**
+     * NPCSpawnTypeWarehouse is a storage keeper.
+     */
+    NPCSpawnTypeWarehouse = 6,
+
+    /**
+     * NPCSpawnTypeStable is a stable keeper.
+     */
+    NPCSpawnTypeStable = 7,
+
+    /**
+     * NPCSpawnTypeWharf is a wharf manager.
+     */
+    NPCSpawnTypeWharf = 8,
+
+    /**
+     * NPCSpawnTypeTransfer handles transport services.
+     */
+    NPCSpawnTypeTransfer = 9,
+
+    /**
+     * NPCSpawnTypeIntimacy participates in the amity system.
+     */
+    NPCSpawnTypeIntimacy = 10,
+
+    /**
+     * NPCSpawnTypeGuild provides guild services.
+     */
+    NPCSpawnTypeGuild = 11,
+
+    /**
+     * NPCSpawnTypeExplorer is a node manager.
+     */
+    NPCSpawnTypeExplorer = 12,
+
+    /**
+     * NPCSpawnTypeInn is an innkeeper.
+     */
+    NPCSpawnTypeInn = 13,
+
+    /**
+     * NPCSpawnTypeAuction provides auction services.
+     */
+    NPCSpawnTypeAuction = 14,
+
+    /**
+     * NPCSpawnTypeMating provides mount breeding services.
+     */
+    NPCSpawnTypeMating = 15,
+
+    /**
+     * NPCSpawnTypePotion sells potions.
+     */
+    NPCSpawnTypePotion = 16,
+
+    /**
+     * NPCSpawnTypeWeapon sells weapons.
+     */
+    NPCSpawnTypeWeapon = 17,
+
+    /**
+     * NPCSpawnTypeJewel sells crystals or jewelry.
+     */
+    NPCSpawnTypeJewel = 18,
+
+    /**
+     * NPCSpawnTypeFurniture sells furniture.
+     */
+    NPCSpawnTypeFurniture = 19,
+
+    /**
+     * NPCSpawnTypeCollect sells gathering supplies.
+     */
+    NPCSpawnTypeCollect = 20,
+
+    /**
+     * NPCSpawnTypeFish provides fishing services or supplies.
+     */
+    NPCSpawnTypeFish = 21,
+
+    /**
+     * NPCSpawnTypeWorker is a work supervisor.
+     */
+    NPCSpawnTypeWorker = 22,
+
+    /**
+     * NPCSpawnTypeAlchemy provides alchemy services.
+     */
+    NPCSpawnTypeAlchemy = 23,
+
+    /**
+     * NPCSpawnTypeGuildShop is a guild shop merchant.
+     */
+    NPCSpawnTypeGuildShop = 24,
+
+    /**
+     * NPCSpawnTypeItemMarket is a Central Market director.
+     */
+    NPCSpawnTypeItemMarket = 25,
+
+    /**
+     * NPCSpawnTypeTerritorySupply handles imperial supply delivery.
+     */
+    NPCSpawnTypeTerritorySupply = 26,
+
+    /**
+     * NPCSpawnTypeTerritoryTrade handles imperial trade delivery.
+     */
+    NPCSpawnTypeTerritoryTrade = 27,
+
+    /**
+     * NPCSpawnTypeSmuggle is a smuggler.
+     */
+    NPCSpawnTypeSmuggle = 28,
+
+    /**
+     * NPCSpawnTypeCook provides cooking services.
+     */
+    NPCSpawnTypeCook = 29,
+
+    /**
+     * NPCSpawnTypePC marks a player-character navigation category.
+     */
+    NPCSpawnTypePC = 30,
+
+    /**
+     * NPCSpawnTypeGrocery is a food or grocery merchant.
+     */
+    NPCSpawnTypeGrocery = 31,
+
+    /**
+     * NPCSpawnTypeRandomShop is a random shop merchant.
+     */
+    NPCSpawnTypeRandomShop = 32,
+
+    /**
+     * NPCSpawnTypeSupplyShop is a general supply merchant.
+     */
+    NPCSpawnTypeSupplyShop = 33,
+
+    /**
+     * NPCSpawnTypeRandomShopDay is a daytime random shop merchant.
+     */
+    NPCSpawnTypeRandomShopDay = 34,
+
+    /**
+     * NPCSpawnTypeFishSupplyShop is a fishing-supply merchant.
+     */
+    NPCSpawnTypeFishSupplyShop = 35,
+
+    /**
+     * NPCSpawnTypeGuildSupplyShop is a guild-supply merchant.
+     */
+    NPCSpawnTypeGuildSupplyShop = 36,
+
+    /**
+     * NPCSpawnTypeGuildStable is a guild stable keeper.
+     */
+    NPCSpawnTypeGuildStable = 37,
+
+    /**
+     * NPCSpawnTypeGuildWharf is a guild wharf manager.
+     */
+    NPCSpawnTypeGuildWharf = 38,
+
+    /**
+     * NPCSpawnTypePCRoomStable is an internet-cafe stable keeper.
+     */
+    NPCSpawnTypePCRoomStable = 39,
+
+    /**
+     * NPCSpawnTypeInstrument is an instrument merchant.
+     */
+    NPCSpawnTypeInstrument = 40,
+
+    /**
+     * NPCSpawnTypeUnknown41 is used by current client data but omitted from the
+     * shipped CppEnums.SpawnType Lua table.
+     */
+    NPCSpawnTypeUnknown41 = 41,
+
+    /**
+     * NPCSpawnTypeTrainingVehicleShop is a training-vehicle merchant.
+     */
+    NPCSpawnTypeTrainingVehicleShop = 42,
+
+    /**
+     * NPCSpawnTypeAbyssOneEnterPositionGuide guides players to the Magnus.
+     */
+    NPCSpawnTypeAbyssOneEnterPositionGuide = 43,
+
+    /**
+     * NPCSpawnTypeChangeMarniStone exchanges Marni's Stones.
+     */
+    NPCSpawnTypeChangeMarniStone = 44,
+
+    /**
+     * NPCSpawnTypeChurchBuff provides church buffs.
+     */
+    NPCSpawnTypeChurchBuff = 45,
+};
+
+/**
+ * NPCSpawnTypes is an NPC's set of client-defined map/navigation roles.
+ */
+export type NPCSpawnTypes = NPCSpawnType[] | null;
 
 /**
  * NodeRef is the zone's waypoint/node: the key (links the node graph), the zone
  * name, and the nav position (present for nav-based zones).
  */
 export interface NodeRef {
+    /**
+     * Node resolves to the worldmap node in world.json, when the key is one (6 of the
+     * 105 zones point at a key with no exploration node behind it).
+     */
+    "urn"?: models$0.EntityRef<WorldNode> | null;
     "key": number;
     "name"?: string;
     "pos"?: number[] | null;
@@ -923,11 +1211,25 @@ export interface QuestRef {
 /**
  * Ref is a numeric id resolved to its display name (filled by the build from
  * loc). Desc carries an optional description (e.g. a title's requirement text).
+ * URN is the durable link to the referenced entity when it maps to a catalog
+ * model (ecology → character, topography → world region); absent for refs with
+ * no backing model (e.g. titles).
  */
 export interface Ref {
     "id": number;
     "name"?: string;
     "desc"?: string;
+    "urn"?: urn$0.URN | null;
+}
+
+/**
+ * Spawn is one NPC/monster placement within a region: its character id, world
+ * position, and dialog/spawn variant index. Placements live on WorldRegion.Spawns.
+ */
+export interface Spawn {
+    "key": number;
+    "pos": number[];
+    "dialogIndex"?: number;
 }
 
 /**
@@ -1028,6 +1330,268 @@ export interface Territory {
 }
 
 /**
+ * WorldNode is one worldmap node from exploration.bss (the node-manager
+ * network: towns, gateways, farms, forests, mines, …). Key matches loc table
+ * 29 (localized node names) and the node ids community sites use. Kind is the
+ * game's node-kind enum (drives the worldmap icon). Position and Links come
+ * from mapdata_realexplore2.bwp; the remaining fields come from exploration.bss.
+ * Territory is derived from the nearest region because neither table stores it.
+ */
+export interface WorldNode {
+    "urn": urn$0.URN;
+    "key": number;
+    "name": string;
+    "kind": WorldNodeKind;
+
+    /**
+     * Territory is the world territory this node sits in (urn::world:territory:<idx>),
+     * derived from the nearest region because the node record stores no territory.
+     */
+    "territory": models$0.EntityRef<Territory> | null;
+    "position": number[];
+
+    /**
+     * ExplorationPosition is the family/label anchor at exploration.bss +104.
+     * It is omitted when it already equals Position.
+     */
+    "explorationPosition"?: number[] | null;
+
+    /**
+     * LinkedKey is a second node reference; == Key in every current record (a redundant copy).
+     */
+    "linkedKey"?: number;
+
+    /**
+     * SubKey is the node's waypoint-space key.
+     */
+    "subKey"?: number;
+
+    /**
+     * Knowledge references every knowledge entry the game associates with this node — its NPCs, creatures and topography (urn::knowledge:entry:<key>, see knowledge.json).
+     */
+    "knowledge"?: models$0.EntityRefList<KnowledgeEntry> | null;
+
+    /**
+     * Main is the primary/sub node distinction (the byte at +116): true for towns, gateways,
+     * farms and castles that carry knowledge; false for resource/sub nodes. Validated 100%
+     * against bdolytics' `main` flag across 999 shared nodes.
+     */
+    "main": boolean;
+
+    /**
+     * Contribution is the contribution-point cost to activate this node (0 for towns, else 1-3).
+     */
+    "contribution"?: number;
+
+    /**
+     * Radius is the node's map influence radius (f32 at +31); +35 caches Radius² and is not
+     * stored separately.
+     */
+    "radius"?: number;
+
+    /**
+     * Manager is the NPC template that manages this exact node. The build rejects
+     * non-main kind-0 pseudo families and retains repeated character keys only on
+     * the owner selected by characterfunction.dbss.
+     */
+    "manager"?: models$0.EntityRef<NPC> | null;
+
+    /**
+     * ManagerNode points from an affiliated node to the node that owns its
+     * manager. Resolve that node's Manager to reach the NPC template.
+     */
+    "managerNode"?: models$0.EntityRef<WorldNode> | null;
+
+    /**
+     * TownRepresentative is the ruler or representative stored at exploration.bss +45.
+     */
+    "townRepresentative"?: models$0.EntityRef<NPC> | null;
+
+    /**
+     * Children are the non-main nodes directly connected to this main node in the
+     * mapdata_realexplore2.bwp graph.
+     */
+    "children"?: models$0.EntityRefList<WorldNode> | null;
+
+    /**
+     * Links are the node's client-side graph edges from mapdata_realexplore2.bwp.
+     */
+    "links"?: models$0.EntityRefList<WorldNode> | null;
+
+    /**
+     * Products are the normal worker-production items available at this node.
+     * Quantities and lucky bonus drops are not present in the client tables.
+     */
+    "products"?: models$0.EntityRefList<Item> | null;
+
+    /**
+     * Flag is the const-1 byte at +4;
+     */
+    "flag": number;
+
+    /**
+     * SubKey2 (a key at +27, == SubKey for 997/1037 nodes)
+     */
+    "subKey2"?: number;
+
+    /**
+     * GroupHash is list-0 (a coarser grouping hash, 33 distinct values)
+     */
+    "groupHash"?: number[] | null;
+    "unknown2"?: number;
+    "unknown8"?: number;
+
+    /**
+     * The +16..+22 bytes are a small "location/zone class" subsystem, mapped by testing values
+     * against shrddr's dump and the in-game world map. The names are best-guess (the exact game
+     * terms aren't confirmed), and +17/+18 — which are just copies of Main — are dropped.
+     * 
+     * Special marks the 119 non-network "special locations" (byte +16 == 0): every town
+     * (kind 2), investment bank (kind 10), sea zone (Margoria/Ross/Juur), trade district and
+     * battlefield. The other 918 nodes are standard, contribution-investable network nodes.
+     */
+    "special"?: boolean;
+
+    /**
+     * ZoneIndex is a unique index (7..247, byte +19) on 63 "special content" nodes — islands,
+     * grind zones, castles, battlefields — a foreign key into an as-yet unidentified table.
+     */
+    "zoneIndex"?: number;
+
+    /**
+     * ZoneCategory classifies the ZoneIndex nodes (byte +20): 1 island · 2 coastal · 5 inland/
+     * desert grind · 6 battlefield & ocean "Great Spot"; set on 47 of them.
+     */
+    "zoneCategory"?: number;
+
+    /**
+     * GrindZone marks the 25 monster grind zones (byte +21, the Marni/Elvia set: Manshaum,
+     * Mirumok, Gyfin, Star's End, Hexe, …); the value is a unique index. Disjoint from zones.json
+     * (the drop-UI hunting grounds).
+     */
+    "grindZone"?: number;
+
+    /**
+     * GrindTier is the difficulty tier (byte +22) of the 12 endgame grind zones the in-game world
+     * map labels with a Recommended-AP value (2, or 3 for Star's End). A subset of GrindZone.
+     */
+    "grindTier"?: number;
+
+    /**
+     * Unknown39 is a small internal value (byte +39; 13 distinct: 1, 6, 10, 12, 18, 77, …) — still
+     * unidentified.
+     */
+    "unknown39"?: number;
+
+    /**
+     * NodeIndex is a per-node enumeration id (the low bits of +47; +47 also carries a constant
+     * 0x20000 flag that is masked off here). 0 for sub-nodes; a near-sequential id on the ~229
+     * main nodes, assigned roughly in region order (Balenos low, the islands 606-642 consecutive,
+     * Valencia/Land of Morning Light high). Looks like the node's index into another table.
+     */
+    "nodeIndex"?: number;
+
+    /**
+     * AreaID is a worldmap area/sector id (the high word of +51, which is stored as AreaID<<16).
+     * 44 areas that group nodes geographically — the whole contiguous old-world landmass is one
+     * 525-node sector, with islands, the Valencia desert and Land of Morning Light split into
+     * their own. Finer than territory, coarser than region.
+     */
+    "areaId"?: number;
+}
+
+/**
+ * WorldNodeKind is the exploration.bss worldmap node kind at record offset 5.
+ * Its numeric value is retained in JSON for compatibility with the client data.
+ */
+export enum WorldNodeKind {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = 0,
+
+    /**
+     * WorldNodeKindNormal is a generic field, location, island, or connecting node.
+     */
+    WorldNodeKindNormal = 0,
+
+    /**
+     * WorldNodeKindVillage is a town, village, settlement, or minor hub.
+     */
+    WorldNodeKindVillage = 1,
+
+    /**
+     * WorldNodeKindCity is a major city or capital.
+     */
+    WorldNodeKindCity = 2,
+
+    /**
+     * WorldNodeKindGate is a gateway, outpost, fort, or guard camp.
+     */
+    WorldNodeKindGate = 3,
+
+    /**
+     * WorldNodeKindFarm is a crop production sub-node.
+     */
+    WorldNodeKindFarm = 4,
+
+    /**
+     * WorldNodeKindTrade is a farm, ranch, or resource-camp main node.
+     */
+    WorldNodeKindTrade = 5,
+
+    /**
+     * WorldNodeKindCollect is a gathering production sub-node.
+     */
+    WorldNodeKindCollect = 6,
+
+    /**
+     * WorldNodeKindQuarry is a mining production sub-node.
+     */
+    WorldNodeKindQuarry = 7,
+
+    /**
+     * WorldNodeKindLogging is a lumbering production sub-node.
+     */
+    WorldNodeKindLogging = 8,
+
+    /**
+     * WorldNodeKindDangerous is a dangerous or combat-site main node.
+     */
+    WorldNodeKindDangerous = 9,
+
+    /**
+     * WorldNodeKindFinance is a town asset-management service node.
+     */
+    WorldNodeKindFinance = 10,
+
+    /**
+     * WorldNodeKindFishTrap is a fish-drying production sub-node.
+     */
+    WorldNodeKindFishTrap = 11,
+
+    /**
+     * WorldNodeKindMinorFinance is a worker investment-bank production sub-node.
+     */
+    WorldNodeKindMinorFinance = 12,
+
+    /**
+     * WorldNodeKindMonopolyFarm is a specialty production sub-node.
+     */
+    WorldNodeKindMonopolyFarm = 13,
+
+    /**
+     * WorldNodeKindCraft is an animal-product or other crafting production sub-node.
+     */
+    WorldNodeKindCraft = 14,
+
+    /**
+     * WorldNodeKindExcavation is an excavation or special-workshop production sub-node.
+     */
+    WorldNodeKindExcavation = 15,
+};
+
+/**
  * WorldRegion is one map region from regioninfo.bss: Velia, Heidel Pass, Evergart
  * Falls, … Key matches loc table 17 (localized place names), the regionclientdata
  * spawn regions and region_info.xml bounds. Territory indexes into
@@ -1039,7 +1603,11 @@ export interface WorldRegion {
     "key": number;
     "name": string;
     "type": number;
-    "territory": number;
+
+    /**
+     * Territory is the world territory this region belongs to (urn::world:territory:<idx>).
+     */
+    "territory": models$0.EntityRef<Territory> | null;
     "position": number[];
 
     /**
@@ -1064,9 +1632,21 @@ export interface WorldRegion {
      * name and position — e.g. Ancient Stone Chamber is keys 26/137/155.
      * 0/absent = the place's canonical (lowest-key) record; otherwise the
      * canonical record's key. Phase records stay separate because spawn data
-     * (regions.json) references the specific phase keys.
+     * references the specific phase keys.
      */
     "variantOf"?: number;
+
+    /**
+     * Bounds is the region's world-space AABB (union of its spatial boxes, from
+     * region_info.xml); absent when the region has no box data.
+     */
+    "bounds"?: Bounds | null;
+
+    /**
+     * Spawns are the NPC/monster placements inside this region
+     * (from regionclientdata.xml): character id, world position and dialog variant.
+     */
+    "spawns"?: Spawn[] | null;
 }
 
 /**

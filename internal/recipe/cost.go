@@ -49,10 +49,16 @@ func (cm *costModel) buyPrice(u urn.URN) int64 {
 			return p
 		}
 	}
-	if it, ok := cm.r.items.Get(u); ok && it.BuyPrice > 0 && len(it.Vendors) > 0 {
+	if it, ok := cm.r.items.Get(u); ok && it.BuyPrice > 0 && vendorSold(it) {
 		return it.BuyPrice
 	}
 	return costUnknown
+}
+
+// vendorSold reports whether an NPC vendor sells the item — including the handful
+// whose only vendors have no NPC record behind them (Item.UnresolvedVendors).
+func vendorSold(it *model.Item) bool {
+	return (it.Vendors != nil && it.Vendors.Len() > 0) || len(it.UnresolvedVendors) > 0
 }
 
 // cost returns the cheapest acquisition for one unit of u. Crafting is chosen when

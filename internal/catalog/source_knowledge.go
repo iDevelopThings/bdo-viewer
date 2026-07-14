@@ -71,6 +71,7 @@ func (s *KnowledgeSource) Load() error {
 	s.Themes = models.NewStore[model.KnowledgeTheme](len(kd.Themes), isKnowledge)
 	s.Entries = models.NewStore[model.KnowledgeEntry](len(kd.Entries), isKnowledge)
 
+	s.RootThemes = []*model.KnowledgeTheme{}
 	s.ThemeChildren = map[urn.URN][]*model.KnowledgeTheme{}
 	s.ThemeEntries = map[urn.URN][]*model.KnowledgeEntry{}
 	s.SubtreeCount = map[urn.URN]int{}
@@ -349,21 +350,26 @@ func (s *KnowledgeSource) List(params sources.ListSourceParams) []sources.ListSo
 		if u, err := urn.Parse(pathIds[len(pathIds)-1]); err == nil {
 			root = s.Theme(u)
 		}
-	}
-	if root == nil {
-		log.Printf("List: root theme not found for path %v", pathIds)
-		return []sources.ListSourceEntry{}
-	}
 
-	entries := make([]*model.KnowledgeEntry, 0)
-	var appendEntries func(theme *model.KnowledgeTheme)
-	appendEntries = func(theme *model.KnowledgeTheme) {
-		entries = append(entries, s.ThemeEntries[theme.GetURN()]...)
-		for _, child := range s.ThemeChildren[theme.GetURN()] {
-			appendEntries(child)
+		if root == nil {
+			log.Printf("List: root theme not found for path %v", pathIds)
+			return []sources.ListSourceEntry{}
 		}
 	}
-	appendEntries(root)
+
+	var entries []*model.KnowledgeEntry
+	if root == nil {
+		entries = s.Entries.All()
+	} else {
+		var appendEntries func(theme *model.KnowledgeTheme)
+		appendEntries = func(theme *model.KnowledgeTheme) {
+			entries = append(entries, s.ThemeEntries[theme.GetURN()]...)
+			for _, child := range s.ThemeChildren[theme.GetURN()] {
+				appendEntries(child)
+			}
+		}
+		appendEntries(root)
+	}
 
 	items := FilterAndRank(
 		entries,

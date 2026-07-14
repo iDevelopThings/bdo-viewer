@@ -70,9 +70,19 @@ export function useExtraction(onDone?: () => void) {
 		};
 	}, []);
 
-	const run = useCallback((gameDir: string, dataDir: string, lang: string) => {
+	// RunExtraction returns as soon as the pipeline is handed to a goroutine, so
+	// success arrives via setup:done — but it rejects synchronously (bad game dir,
+	// run already in flight) without ever emitting setup:error. Surfacing that
+	// rejection is the only thing that gets the UI off the progress screen.
+	const run = useCallback((gameDir: string, dataDir: string, lang: string, region: string) => {
 		setState({...initial, status: "running"});
-		void RunExtraction(gameDir, dataDir, lang);
+		RunExtraction(gameDir, dataDir, lang, region).catch((err: unknown) => {
+			setState(s => ({
+				...s,
+				status: "error",
+				error: err instanceof Error ? err.message : String(err) || "Extraction failed",
+			}));
+		});
 	}, []);
 
 	const reset = useCallback(() => setState(initial), []);

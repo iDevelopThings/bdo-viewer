@@ -4,6 +4,9 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as model$0 from "../../../github.com/idevelopthings/bdo-data-extractor/src/model/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as urn$0 from "../../../github.com/idevelopthings/bdo-data-extractor/src/urn/models.js";
 
 /**
  * BindingTypes isn't called at runtime - it exists purely so these model
@@ -18,7 +21,16 @@ export interface BindingTypes {
     "character"?: model$0.Character | null;
 }
 
+/**
+ * ItemVendorData is one vendor of an item, grouped by name: a vendor like "Clorince"
+ * is placed once per town, and the UI wants one entry listing all of them. Title is
+ * the NPC's role label ("<Farm Vendor>"). Spawns carries each placement's region and
+ * world position — the towns to name and the places to send the map. Both are empty
+ * for a vendor the client's NPC table has no record of (Item.UnresolvedVendors).
+ */
 export interface ItemVendorData {
     "name": string;
-    "towns": string[] | null;
+    "title"?: string;
+    "urns"?: urn$0.URN[] | null;
+    "spawns"?: model$0.NPCSpawn[] | null;
 }

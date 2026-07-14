@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"bdo-viewer/internal/boot"
+	"bdo-viewer/internal/catalog"
 	"bdo-viewer/internal/config"
 	"bdo-viewer/internal/event_reporter"
 	"bdo-viewer/internal/updates"
@@ -90,6 +91,13 @@ func (s *Service) AvailableLanguages(dir string) ([]string, error) {
 	return pipeline.AvailableLanguages(dir)
 }
 
+// AvailableRegions lists the region-variant suffixes a game install ships client
+// data for (regionclientdata_<region>_.xml), e.g. na, kr, eu — for the wizard's
+// and settings' region picker. Empty means only the base file exists.
+func (s *Service) AvailableRegions(dir string) ([]string, error) {
+	return pipeline.AvailableRegions(dir)
+}
+
 // PickDirectory opens the native directory picker and returns the chosen path
 // (empty string if the user cancels).
 func (s *Service) PickDirectory(title string) (string, error) {
@@ -107,7 +115,7 @@ func (s *Service) PickDirectory(title string) (string, error) {
 // loading the dataset on success. It returns immediately; completion arrives via
 // the setup:done / setup:error events. Only one run may be in flight at a time —
 // the pipeline drives process-global state (config + progress sink).
-func (s *Service) RunExtraction(gameDir, dataDir, lang string) error {
+func (s *Service) RunExtraction(gameDir, dataDir, lang, region string) error {
 	if _, err := pipeline.ValidateGameDir(gameDir); err != nil {
 		return fmt.Errorf("invalid game directory: %w", err)
 	}
@@ -129,6 +137,7 @@ func (s *Service) RunExtraction(gameDir, dataDir, lang string) error {
 	config.Update(func(c *config.Config) {
 		c.GameDir = gameDir
 		c.ExtractedDataDir = dataDir
+		c.DataRegion = &region
 	})
 
 	go func() {
@@ -145,7 +154,13 @@ func (s *Service) RunExtraction(gameDir, dataDir, lang string) error {
 		)
 		pipeline.SetReporter(reporter)
 
-		if err := pipeline.RunAll(pipeline.Options{GameDir: gameDir, DataDir: dataDir, Lang: lang, AppVersion: updates.Version}); err != nil {
+		// The world-map tiles are served straight out of open pack handles, and the
+		// run rewrites worldmap/ in place — Windows refuses to unlink a file we still
+		// hold open. Release them for the duration; tiles 404 until it finishes.
+		catalog.SuspendAssets()
+		defer catalog.ResumeAssets()
+
+		if err := pipeline.RunAll(pipeline.Options{GameDir: gameDir, DataDir: dataDir, Lang: lang, Region: region, AppVersion: updates.Version}); err != nil {
 			reporter.Error(event_reporter.ErrorPayload{Message: err.Error()})
 			return
 		}

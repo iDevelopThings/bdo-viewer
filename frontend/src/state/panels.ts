@@ -7,6 +7,7 @@ import type {MaybeReadonly} from "@/types.ts";
 import {ItemURN} from "@/lib/urn.ts";
 import {findSourceByType, findSourceByURN, WrappedSource} from "@/state/sources/sources.ts";
 import {navigateToURN, getNavigationNodeByURN} from "@/state/navigation.tsx";
+import {mapState} from "@/components/world-map/map-state.ts";
 
 // Describes a piece of content to show in a panel — not tied to any specific
 // dockview panel id/slot, so any source (items, npcs, zones, ...) can use it.
@@ -225,6 +226,34 @@ export function openSettingsPanel() {
 		component : "settings",
 		title     : "Settings"
 	}, {pinned : true});
+}
+
+export function openMapPanel() {
+	return openPanel({
+		source    : "worldMap",
+		key       : "worldMap",
+		component : "worldMap",
+		title     : "World Map"
+	}, {pinned : true});
+}
+
+/** Open the world map on a place: a vendor's spawn, a grind spot's position, anything with a world
+ *  position. Takes a game [x, y, z] (or a flattened [x, z]). The map picks the request up when it
+ *  mounts, so this works whether or not the panel was already open. */
+export function openMapAt(pos: MaybeReadonly<number[]>, zoom?: number) {
+	const panel = openMapPanel();
+	mapState.focusWorldPos(pos, zoom);
+
+	return panel;
+}
+
+/** Open the world map on a node (an item's gather node, a grind spot's node), selecting it so the
+ *  info panel opens with it. */
+export function openMapAtNode(urn: string, zoom?: number) {
+	const panel = openMapPanel();
+	void mapState.focusNodeURN(urn, zoom);
+
+	return panel;
 }
 
 export function openCraftCalculatorPanel() {

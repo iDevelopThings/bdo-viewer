@@ -16,12 +16,5 @@ func (c *Catalog) Item(u urn.URN) *model.Item {
 // GetItemsByURN resolves a list of item URNs to their items, skipping any that
 // don't resolve. The frontend passes URN strings (urn.URN serializes as one).
 func (c *Catalog) GetItemsByURN(urns []urn.URN) []*model.Item {
-	out := make([]*model.Item, 0, len(urns))
-	for _, u := range urns {
-		if it, ok := models.ResolveUrn[model.Item](u); ok {
-			out = append(out, it)
-		}
-	}
-
-	return out
+	return models.ResolveUrns[model.Item](urns)
 }

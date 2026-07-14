@@ -3,10 +3,13 @@
 
 export {
     BindType,
-    CharacterKind
+    CharacterKind,
+    NPCSpawnType,
+    WorldNodeKind
 } from "./models.js";
 
 export type {
+    Bounds,
     CaphrasCategory,
     CaphrasEnhancement,
     CaphrasLevel,
@@ -24,12 +27,15 @@ export type {
     KnowledgeTheme,
     NPC,
     NPCSpawn,
+    NPCSpawnTypes,
     NodeRef,
     QuestRef,
     Ref,
+    Spawn,
     StatMod,
     TagInfo,
     Territory,
+    WorldNode,
     WorldRegion,
     Zone
 } from "./models.js";

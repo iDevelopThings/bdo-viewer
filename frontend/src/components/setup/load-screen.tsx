@@ -4,11 +4,14 @@ import type {LoadView} from "@/state/load.ts";
 
 // LoadScreen covers the window while the extracted dataset is loaded into memory in
 // the background (the app opens immediately; this fills the gap until it's ready).
-export function LoadScreen({state, onRetry}: {state: LoadView; onRetry: () => void}) {
+export function LoadScreen({state, onRetry}: { state: LoadView; onRetry: () => void }) {
 	if (state.phase === "error") {
 		return (
 			<div className={"flex h-full w-full flex-col items-center justify-center gap-4"}>
-				<p className={"text-sm text-red-400"}>Failed to load data: {state.error}</p>
+				<div>
+					<p className={"text-sm text-red-300 max-w-xl text-center font-bold tracking-wide uppercase"}>Failed to load data:</p>
+					<p className={"text-sm text-red-400 max-w-xl text-center"}>{state.error}</p>
+				</div>
 				<Button variant={"outline"} onClick={onRetry}>Try again</Button>
 			</div>
 		);
@@ -28,7 +31,7 @@ export function LoadScreen({state, onRetry}: {state: LoadView; onRetry: () => vo
 					{hasCount ? (
 						<div
 							className={"h-full bg-primary transition-all"}
-							style={{width: `${Math.max(0, Math.min(1, fraction)) * 100}%`}}
+							style={{width : `${Math.max(0, Math.min(1, fraction)) * 100}%`}}
 						/>
 					) : (
 						<div className={"h-full w-1/3 animate-pulse rounded-full bg-primary"} />
@@ -40,7 +43,7 @@ export function LoadScreen({state, onRetry}: {state: LoadView; onRetry: () => vo
 	);
 }
 
-function LogTail({lines}: {lines: readonly string[]}) {
+function LogTail({lines}: { lines: readonly string[] }) {
 	const ref = useRef<HTMLPreElement>(null);
 	useEffect(() => {
 		const el = ref.current;

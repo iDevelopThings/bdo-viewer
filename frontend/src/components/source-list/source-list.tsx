@@ -6,7 +6,7 @@ import {useIsContentPanelOpen, goToURN} from "@/state/panels.ts";
 import type {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import {SourceKind} from "@bindings/bdo-viewer/internal/sources";
 import type {DeepReadonly} from "@/types.ts";
-import {EntryRowBase, VirtualEntryList} from "@/components/entry-list/entry-list.tsx";
+import {EntryRowBase, EntrySourceBadge, VirtualEntryList} from "@/components/entry-list/entry-list.tsx";
 import {getSourceFilterPanel} from "@/components/entry-list/source-filters.tsx";
 import {findSourceByType} from "@/state/sources/sources.ts";
 import {getNavigationListScope, navigation} from "@/state/navigation.tsx";
@@ -35,8 +35,8 @@ export function SourceList(props: IDockviewPanelProps) {
 	}, []);
 
 	return (
-		<div className={"max-h-full overflow-y-scroll"} ref={parentRef}>
-			<div className={"sticky top-0 z-10 bg-background flex flex-col gap-2 p-6"}>
+		<div className={"max-h-full h-full overflow-y-scroll"} ref={parentRef}>
+			<div className={"sticky top-0 z-10 bg-background flex flex-col gap-2 p-3 border-b  border-l border-rborder-zinc-800"}>
 				<EntryFilterHeader
 					query={query}
 					setQuery={q => {
@@ -72,6 +72,7 @@ export function SourceList(props: IDockviewPanelProps) {
 				loading={l.loading}
 				entries={l.entries}
 				parentRef={parentRef}
+				emptyMessage={l.source === SourceKind.All && !query.trim() ? "Search across every source" : undefined}
 				renderRow={entry => (
 					<SourceEntryRow entry={entry} source={list.source ?? SourceKind.Unknown} />
 				)}
@@ -84,10 +85,14 @@ function SourceEntryRow({entry, source}: { entry: DeepReadonly<ListSourceEntry>,
 	const urn    = entry.urn ?? findSourceByType(source)?.entryURN(entry.id);
 	const isOpen = useIsContentPanelOpen(source, entry.id, urn);
 
+	// Global search mixes sources, so each result carries the source it came from.
+	const entrySource = entry.extra?.source as SourceKind | undefined;
+
 	return (
 		<EntryRowBase
 			entry={entry}
 			active={isOpen}
+			badge={source === SourceKind.All && entrySource ? <EntrySourceBadge source={entrySource} /> : undefined}
 			onClick={e => {
 				goToURN(urn, {title : entry.title, pinned : e.ctrlKey || e.metaKey});
 			}}

@@ -16,7 +16,10 @@ import (
 type SourceKind string
 
 const (
-	Unknown   SourceKind = "unknown"
+	Unknown SourceKind = "unknown"
+	// All is not a source: it asks ListSourceEntries for a cross-source search
+	// instead of dispatching to one source (see SearchAll).
+	All       SourceKind = "all"
 	Item      SourceKind = "item"
 	GrindSpot SourceKind = "grindspot"
 	Recipe    SourceKind = "recipe"
@@ -169,7 +172,18 @@ func (r *SourceRegistry) GetAllSources() []Source {
 	return allSources
 }
 func (r *SourceRegistry) GetNavigationTree() []SourceNavigationNode {
-	tree := make([]SourceNavigationNode, 0, len(r.sourceRegisterOrder))
+	tree := make([]SourceNavigationNode, 0, len(r.sourceRegisterOrder)+1)
+
+	// The cross-source search node — no source owns it, it's the entry point for
+	// SearchAll and the default selection on a fresh launch.
+	tree = append(
+		tree, SourceNavigationNode{
+			Id:     string(All),
+			Path:   string(All),
+			Source: All,
+			Title:  "All",
+		},
+	)
 
 	idRegex := regexp.MustCompile(`[^a-zA-Z0-9_-]`)
 	sanitizeId := func(id string) string {
@@ -276,14 +290,20 @@ func (r *SourceRegistry) getEntryDetails(source Source, ref urn.URN) map[string]
 	return nil
 }
 func (r *SourceRegistry) ListSourceEntries(params ListSourceParams) []ListSourceEntry {
+	// No source resolved (nothing selected, or a stale persisted selection) falls
+	// back to the same cross-source search the All node asks for.
+	if params.Source == All || params.Source == Unknown || params.Source == "" {
+		return r.SearchAll(params)
+	}
+
 	source := r.GetSource(params.Source)
 	if source == nil {
 		log.Printf("ListSourceEntries: unknown source kind %s -> Params: %v", params.Source, params)
 		return nil
 	}
 
-	log.Printf("ListSourceEntries: category=%s sub_category=%s query=%s", params.Category, params.SubCategory, params.Query)
-	log.Printf("ListSourceEntries: PathParts=%v", params.PathParts)
+	// log.Printf("ListSourceEntries: category=%s sub_category=%s query=%s", params.Category, params.SubCategory, params.Query)
+	// log.Printf("ListSourceEntries: PathParts=%v", params.PathParts)
 
 	return source.List(params)
 }

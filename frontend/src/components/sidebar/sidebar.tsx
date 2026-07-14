@@ -5,8 +5,8 @@ import {navigate, navigation, toggleExpanded} from "@/state/navigation.tsx";
 import {cva, type VariantProps} from "class-variance-authority";
 import {cn} from "@/lib/utils.ts";
 import type {DeepReadonly} from "@/types.ts";
-import {Calculator, ChevronRight, GitCompare, Settings, Swords} from "lucide-react";
-import {openCompareItemsPanel, openCraftCalculatorPanel, openGearBuilderPanel, openSettingsPanel} from "@/state/panels.ts";
+import {Calculator, ChevronRight, GitCompare, Map, Settings, Swords} from "lucide-react";
+import {openCompareItemsPanel, openCraftCalculatorPanel, openGearBuilderPanel, openSettingsPanel, openMapPanel} from "@/state/panels.ts";
 import {SourceNavigationNode} from "@bindings/bdo-viewer/internal/sources";
 import {useEffect, useRef} from "react";
 
@@ -50,6 +50,15 @@ export function Sidebar(props: IDockviewPanelProps) {
 			<span className={"truncate"}>Compare Items</span>
 		</div>
 
+		<div
+			className={cn(sidebarNodeVariants({variant : "root"}), "pl-2 mb-1")}
+			data-testid={"sidebar-node"}
+			data-nav-path={"map"}
+			onClick={() => openMapPanel()}
+		>
+			<Map className={"size-3.5 shrink-0 text-zinc-500"} />
+			<span className={"truncate"}>World Map</span>
+		</div>
 		<div
 			className={cn(sidebarNodeVariants({variant : "root"}), "pl-2 mb-1")}
 			data-testid={"sidebar-node"}
@@ -99,7 +108,7 @@ export function SidebarNode({node, parent, depth}: SidebarNodeProps) {
 	const nav = useSnapshot(navigation);
 
 	const nodeRef = useRef<HTMLDivElement>(null);
-	
+
 	const hasChildren = !!node.children?.length;
 	const isActive    = nav.activePath === node.path;
 	const expanded    = nav.expandedPaths.includes(node.path);

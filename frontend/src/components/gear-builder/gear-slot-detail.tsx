@@ -86,7 +86,7 @@ export function GearSlotDetail() {
 	return (
 		<div className={"flex flex-col gap-4 border-t border-zinc-800 p-4"}>
 			<div className={"flex flex-row items-center gap-3"}>
-				<img src={`/icons/icons/${item.id}.png`} alt={item.name} className={"w-8 h-8 shrink-0"} />
+				<img src={`/icons/icons/${item.id}.webp`} alt={item.name} className={"w-8 h-8 shrink-0"} />
 				<div className={"flex flex-col min-w-0"}>
 					<span className={"font-semibold truncate"} style={gradeColor ? {color : gradeColor} : undefined}>
 						{item.name}

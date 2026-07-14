@@ -1,4 +1,5 @@
 import {IDockviewPanelProps} from "dockview-react";
+import type {MaybeReadonly} from "@/types.ts";
 import {type Grade} from "@/types.ts";
 import {Label} from "@/components/ui/label.tsx";
 import {Slider} from "@/components/ui/slider.tsx";
@@ -11,6 +12,12 @@ import {Chip, ChipList, DetailsHeader, DetailsSection, SectionSubtitle} from "@/
 import {useDetail, useDetailItem} from "@/state/detail.tsx";
 import {JsonInspector} from "@rexxars/react-json-inspector";
 import "@rexxars/react-json-inspector/json-inspector.css";
+import {useEffect} from "react";
+import {useSnapshot} from "valtio";
+import {MapPinIcon} from "lucide-react";
+import {mapState} from "@/components/world-map/map-state.ts";
+import {openMapAt, openMapAtNode, goToURN} from "@/state/panels.ts";
+import {ItemVendorData} from "@bindings/bdo-viewer/internal/catalog";
 
 export function DetailsItem(props: IDockviewPanelProps) {
 	const [details, d] = useDetail();
@@ -144,7 +151,13 @@ export function DetailsKnowledge() {
 						<SectionSubtitle title={"Categories"} />
 						<ChipList
 							variant={"md"}
-							items={d.knowledge.entries.map((entry) => ({id : entry.key, name : entry.name}))}
+							onClick={(item, pinned) => {
+								goToURN(item.id.toString(), {
+									title : item.name,
+									pinned
+								});
+							}}
+							items={d.knowledge.entries.map((entry) => ({id : entry.urn, name : entry.name}))}
 						/>
 
 					</div>
@@ -155,7 +168,13 @@ export function DetailsKnowledge() {
 						<SectionSubtitle title={"Themes"} />
 						<ChipList
 							variant={"md"}
-							items={d.knowledge.themes.map((theme) => ({id : theme.key, name : theme.name}))}
+							onClick={(item, pinned) => {
+								goToURN(item.id.toString(), {
+									title : item.name,
+									pinned
+								});
+							}}
+							items={d.knowledge.themes.map((theme) => ({id : theme.urn, name : theme.name}))}
 						/>
 
 					</div>
@@ -165,8 +184,22 @@ export function DetailsKnowledge() {
 	);
 }
 
+/** The distinct places a vendor stands in, across every placement of every NPC with their name. */
+function vendorTowns(vendor: MaybeReadonly<ItemVendorData>): string[] {
+	return [...new Set((vendor.spawns ?? []).map(s => s.regionName).filter(Boolean))] as string[];
+}
+
 export function DetailsAcquisition() {
 	const [details, d] = useDetail();
+	const map          = useSnapshot(mapState);
+
+	// The gather-node chips name their nodes from the map graph, which the user may never have
+	// opened the map to load.
+	useEffect(() => {
+		if (d.gatherNodes.length) {
+			void mapState.ensureLoaded();
+		}
+	}, [d.gatherNodes.length]);
 
 	if (d.vendors?.length === 0 && d.gatheredFrom.length === 0 && d.gatherNodes.length === 0) {
 		return null;
@@ -182,10 +215,20 @@ export function DetailsAcquisition() {
 							{d.vendors.map((vendor, i) => (
 								<Chip
 									key={`vendor-${vendor.name}-${i}`}
-									label={vendor.name}
+									label={(
+										<span className={"flex flex-row items-center gap-1.5"}>
+											{vendor.name}
+											{vendor.title && <span className={"text-zinc-400"}>{vendor.title}</span>}
+											{vendorTowns(vendor).length > 0 && (
+												<span className={"text-zinc-500"}>{vendorTowns(vendor).join(", ")}</span>
+											)}
+											{vendor.spawns?.length > 0 && <MapPinIcon size={11} className={"text-zinc-400"} />}
+										</span>
+									)}
 									variant={"sm"}
-									onClick={() => {
-									}}
+									// A vendor the client's NPC table has no record of has no spawn to fly to
+									// (Item.UnresolvedVendors); the rest go to their first placement.
+									onClick={vendor.spawns?.length ? () => openMapAt(vendor.spawns![0].pos) : undefined}
 								/>
 							))}
 						</div>
@@ -211,15 +254,24 @@ export function DetailsAcquisition() {
 					<div className={"flex flex-col gap-2"}>
 						<p className="text-sm text-zinc-400 font-semibold mb-2 uppercase">Gather Nodes</p>
 						<div className={"flex flex-row gap-2 flex-wrap"}>
-							{d.gatherNodes.map((node) => (
-								<Chip
-									key={`gather-node-${node}`}
-									label={node}
-									variant={"sm"}
-									onClick={() => {
-									}}
-								/>
-							))}
+							{d.gatherNodes.map((urn) => {
+								const node = map.graph.node(urn);
+
+								return (
+									<Chip
+										key={`gather-node-${urn}`}
+										label={(
+											<span className={"flex flex-row items-center gap-1.5"}>
+												{node ? `${node.parent()?.name ?? node.name}` : urn}
+												{node && <span className={"text-zinc-500"}>{node.name}</span>}
+												<MapPinIcon size={11} className={"text-zinc-400"} />
+											</span>
+										)}
+										variant={"sm"}
+										onClick={() => openMapAtNode(urn)}
+									/>
+								);
+							})}
 						</div>
 					</div>
 				)}

@@ -4,6 +4,8 @@ export type URNParts = {
 	domain: string;
 	kind?: string;
 	id: string;
+
+	asNumber(): number | undefined;
 };
 
 export class URNHandler {
@@ -103,12 +105,27 @@ export function parseURN(raw: string): URNParts {
 	if (parts.length === 2) {
 		const [domain, id] = parts;
 		if (!domain || !id) throw new Error(`Invalid URN: ${raw}`);
-		return {domain, id};
+		return {
+			domain,
+			id,
+			asNumber() {
+				const num = Number(id);
+				return isNaN(num) ? undefined : num;
+			}
+		};
 	}
 	if (parts.length === 3) {
 		const [domain, kind, id] = parts;
 		if (!domain || !kind || !id) throw new Error(`Invalid URN: ${raw}`);
-		return {domain, kind, id};
+		return {
+			domain,
+			kind,
+			id,
+			asNumber() {
+				const num = Number(id);
+				return isNaN(num) ? undefined : num;
+			}
+		};
 	}
 
 	throw new Error(`Invalid URN: ${raw}`);

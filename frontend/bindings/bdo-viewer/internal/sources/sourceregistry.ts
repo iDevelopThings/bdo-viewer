@@ -63,3 +63,13 @@ export function ListSourceEntries(params: $models.ListSourceParams): $Cancellabl
 export function LoadAll(reporter: event_reporter$0.EventReporter | null): $CancellablePromise<void> {
     return $Call.ByName("bdo-viewer/internal/sources.SourceRegistry.LoadAll", reporter);
 }
+
+/**
+ * SearchAll fans the query out to every browsable source, then re-ranks the
+ * merged hits against each other — each source ranks (or name-sorts) internally,
+ * so scoring the survivors again is what makes one list out of many.
+ * An empty query returns nothing: without one this would be every entry we own.
+ */
+export function SearchAll(params: $models.ListSourceParams): $CancellablePromise<$models.ListSourceEntry[] | null> {
+    return $Call.ByName("bdo-viewer/internal/sources.SourceRegistry.SearchAll", params);
+}

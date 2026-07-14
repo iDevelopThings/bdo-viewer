@@ -29,18 +29,20 @@ type WorldRegionSource struct {
 	// Heavy fields json:"-" — GetAllSources only ships BaseSource to the frontend.
 	Territories []model.Territory   `json:"-"`
 	Regions     []model.WorldRegion `json:"-"`
+	Nodes       []model.WorldNode   `json:"-"`
 
-	TerritoriesByID    map[uint32]*model.Territory     `json:"-"`
-	RegionsByID        map[uint32]*model.WorldRegion   `json:"-"`
-	TerritoryToRegions map[uint32][]*model.WorldRegion `json:"-"` // territory index -> members, sorted by name
+	TerritoriesByURN   map[urn.URN]*model.Territory     `json:"-"` // territory urn -> territory
+	RegionsByURN       map[urn.URN]*model.WorldRegion   `json:"-"` // region urn -> region
+	TerritoryToRegions map[urn.URN][]*model.WorldRegion `json:"-"` // territory urn -> members, sorted by name
+	NodesByURN         map[urn.URN]*model.WorldNode     `json:"-"` // node urn -> node
 
 	// regionVariants groups phase variants of a place, keyed by the canonical
-	// region's key (VariantOf); only multi-record places have an entry.
-	regionVariants map[uint32][]*model.WorldRegion
+	// region's urn (from VariantOf); only multi-record places have an entry.
+	regionVariants map[urn.URN][]*model.WorldRegion
 
-	// RegionNPCs maps a region key to the NPCs spawning there (deduped, sorted by
+	// RegionNPCs maps a region urn to the NPCs spawning there (deduped, sorted by
 	// name). Built in Load from the NPC source, which loads first.
-	RegionNPCs map[uint32][]*model.NPC `json:"-"`
+	RegionNPCs map[urn.URN][]*model.NPC `json:"-"`
 }
 
 var (
@@ -61,7 +63,9 @@ func NewWorldRegionSource() *WorldRegionSource {
 	return WorldRegions
 }
 
-func (s *WorldRegionSource) GetSourceKind() sources.SourceKind { return s.Kind }
+func (s *WorldRegionSource) GetSourceKind() sources.SourceKind {
+	return s.Kind
+}
 
 func (s *WorldRegionSource) Load() error {
 	var world model.World
@@ -71,29 +75,37 @@ func (s *WorldRegionSource) Load() error {
 
 	s.Territories = world.Territories
 	s.Regions = world.Regions
+	s.Nodes = world.Nodes
 
-	s.TerritoriesByID = make(map[uint32]*model.Territory, len(s.Territories))
+	s.NodesByURN = make(map[urn.URN]*model.WorldNode, len(s.Nodes))
+	for i := range s.Nodes {
+		s.NodesByURN[s.Nodes[i].GetURN()] = &s.Nodes[i]
+	}
+
+	s.TerritoriesByURN = make(map[urn.URN]*model.Territory, len(s.Territories))
 	for i := range s.Territories {
 		t := &s.Territories[i]
-		s.TerritoriesByID[uint32(t.Index)] = t
+		s.TerritoriesByURN[t.GetURN()] = t
 	}
 
-	s.RegionsByID = make(map[uint32]*model.WorldRegion, len(s.Regions))
-	s.TerritoryToRegions = make(map[uint32][]*model.WorldRegion)
+	s.RegionsByURN = make(map[urn.URN]*model.WorldRegion, len(s.Regions))
+	s.TerritoryToRegions = make(map[urn.URN][]*model.WorldRegion)
 	for i := range s.Regions {
 		r := &s.Regions[i]
-		s.RegionsByID[uint32(r.Key)] = r
-		s.TerritoryToRegions[uint32(r.Territory)] = append(s.TerritoryToRegions[uint32(r.Territory)], r)
+		s.RegionsByURN[r.GetURN()] = r
+		if r.Territory != nil {
+			s.TerritoryToRegions[r.Territory.URN] = append(s.TerritoryToRegions[r.Territory.URN], r)
+		}
 	}
 
-	// phase-variant groups by canonical key (VariantOf from world.json)
-	s.regionVariants = make(map[uint32][]*model.WorldRegion)
+	// phase-variant groups by canonical region urn (VariantOf from world.json)
+	s.regionVariants = make(map[urn.URN][]*model.WorldRegion)
 	for i := range s.Regions {
 		r := &s.Regions[i]
 		if r.VariantOf != 0 {
-			canon := uint32(r.VariantOf)
+			canon := regionURN(r.VariantOf)
 			if len(s.regionVariants[canon]) == 0 {
-				if cr := s.RegionsByID[canon]; cr != nil {
+				if cr := s.RegionsByURN[canon]; cr != nil {
 					s.regionVariants[canon] = append(s.regionVariants[canon], cr)
 				}
 			}
@@ -116,13 +128,17 @@ func (s *WorldRegionSource) Load() error {
 
 // indexNPCSpawns fills the region NPC index from NPC spawn data.
 func (s *WorldRegionSource) indexNPCSpawns(npcs []*model.NPC) {
-	s.RegionNPCs = make(map[uint32][]*model.NPC)
+	s.RegionNPCs = make(map[urn.URN][]*model.NPC)
 	for _, n := range npcs {
-		regionSeen := map[uint32]bool{}
+		regionSeen := map[urn.URN]bool{}
 		for _, sp := range n.Spawns {
-			if !regionSeen[sp.Region] {
-				regionSeen[sp.Region] = true
-				s.RegionNPCs[sp.Region] = append(s.RegionNPCs[sp.Region], n)
+			if sp.Region == nil {
+				continue
+			}
+			ru := sp.Region.URN
+			if !regionSeen[ru] {
+				regionSeen[ru] = true
+				s.RegionNPCs[ru] = append(s.RegionNPCs[ru], n)
 			}
 		}
 	}
@@ -131,16 +147,32 @@ func (s *WorldRegionSource) indexNPCSpawns(npcs []*model.NPC) {
 	}
 }
 
-// RegionByKey resolves a region key (world regions, npcs.json spawn regions,
-// regions.json placements all share this key space).
-func (s *WorldRegionSource) RegionByKey(key uint32) *model.WorldRegion { return s.RegionsByID[key] }
+// regionURN bridges extractor data that still exposes plain region keys
+// (WarehouseGroup, VariantOf, NPCSpawn.Region) to the urn-keyed indexes.
+func regionURN(key int) urn.URN {
+	return urn.World.New("region", key)
+}
+
+func territoryURN(index int) urn.URN {
+	return urn.World.New("territory", index)
+}
+
+// RegionByURN resolves a region by its urn (urn::world:region:<key>).
+func (s *WorldRegionSource) RegionByURN(u urn.URN) *model.WorldRegion {
+	return s.RegionsByURN[u]
+}
+
+// NodeByURN resolves a worldmap node by its urn (urn::world:node:<key>).
+func (s *WorldRegionSource) NodeByURN(u urn.URN) *model.WorldNode {
+	return s.NodesByURN[u]
+}
 
 // RegionTerritory returns a region's territory, or nil.
 func (s *WorldRegionSource) RegionTerritory(r *model.WorldRegion) *model.Territory {
-	if r == nil {
+	if r == nil || r.Territory == nil {
 		return nil
 	}
-	return s.TerritoriesByID[uint32(r.Territory)]
+	return s.TerritoriesByURN[r.Territory.URN]
 }
 
 // WarehouseGroup resolves a place's warehouse/transport group to regions — the
@@ -151,7 +183,7 @@ func (s *WorldRegionSource) WarehouseGroup(r *model.WorldRegion) []*model.WorldR
 	}
 	out := make([]*model.WorldRegion, 0, len(r.WarehouseGroup))
 	for _, k := range r.WarehouseGroup {
-		if t := s.RegionsByID[uint32(k)]; t != nil {
+		if t := s.RegionByURN(regionURN(k)); t != nil {
 			out = append(out, t)
 		}
 	}
@@ -164,9 +196,9 @@ func (s *WorldRegionSource) RegionVariants(r *model.WorldRegion) []*model.WorldR
 	if r == nil {
 		return nil
 	}
-	canon := uint32(r.Key)
+	canon := r.GetURN()
 	if r.VariantOf != 0 {
-		canon = uint32(r.VariantOf)
+		canon = regionURN(r.VariantOf)
 	}
 	return s.regionVariants[canon]
 }
@@ -186,12 +218,12 @@ func (s *WorldRegionSource) RegionNPCsFor(r *model.WorldRegion) []*model.NPC {
 	}
 	group := s.RegionVariants(r)
 	if len(group) == 0 {
-		return s.RegionNPCs[uint32(r.Key)]
+		return s.RegionNPCs[r.GetURN()]
 	}
 	seen := map[uint32]bool{}
 	var out []*model.NPC
 	for _, vr := range group {
-		for _, n := range s.RegionNPCs[uint32(vr.Key)] {
+		for _, n := range s.RegionNPCs[vr.GetURN()] {
 			if !seen[n.ID] {
 				seen[n.ID] = true
 				out = append(out, n)
@@ -215,14 +247,14 @@ func (s *WorldRegionSource) GetNavigationTree() sources.SourceNavigationNodeSimp
 
 	for i := range s.Territories {
 		t := &s.Territories[i]
-		regions := s.TerritoryToRegions[uint32(t.Index)]
+		regions := s.TerritoryToRegions[t.GetURN()]
 		if len(regions) == 0 {
 			continue
 		}
 		s.navigation.Children = append(
 			s.navigation.Children, sources.SourceNavigationNodeSimple{
 				Id:    strconv.Itoa(t.Index),
-				URN:   urn.World.New("territory", t.Index).String(),
+				URN:   t.GetURN().String(),
 				Title: t.Name,
 				Count: len(regions),
 			},
@@ -233,27 +265,19 @@ func (s *WorldRegionSource) GetNavigationTree() sources.SourceNavigationNodeSimp
 }
 
 func (s *WorldRegionSource) GetEntry(ref urn.URN) sources.ISourceEntry {
-	id, err := ref.Uint32()
-	if err != nil {
-		return nil
-	}
-	v := s.RegionByKey(id)
+	v := s.RegionByURN(ref)
 	if v == nil {
 		return nil
 	}
 	return &sources.SourceEntry[*model.WorldRegion]{
 		Type:  s.Kind,
-		URN:   urn.World.New("region", id).String(),
+		URN:   v.GetURN().String(),
 		Value: v,
 	}
 }
 
 func (s *WorldRegionSource) GetEntryDetails(ref urn.URN, outDetails *map[string]any) bool {
-	id, err := ref.Uint32()
-	if err != nil {
-		return false
-	}
-	v := s.RegionByKey(id)
+	v := s.RegionByURN(ref)
 	if v == nil {
 		return false
 	}
@@ -307,7 +331,7 @@ func (s *WorldRegionSource) regionsForPath(pathIds []string) []*model.WorldRegio
 		log.Printf("List: bad territory path %v", pathIds)
 		return nil
 	}
-	return s.TerritoryToRegions[uint32(idx)]
+	return s.TerritoryToRegions[territoryURN(idx)]
 }
 
 func (s *WorldRegionSource) List(params sources.ListSourceParams) []sources.ListSourceEntry {
@@ -328,7 +352,7 @@ func (s *WorldRegionSource) List(params sources.ListSourceParams) []sources.List
 	for i, it := range items {
 		out[i] = sources.ListSourceEntry{
 			ID:    uint32(it.Key),
-			URN:   urn.World.New("region", it.Key).String(),
+			URN:   it.GetURN().String(),
 			Title: it.Name,
 		}
 		if t := s.RegionTerritory(it); t != nil {

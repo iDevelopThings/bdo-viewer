@@ -25,6 +25,11 @@ type Config struct {
 	Player           *PlayerInfo  `json:"player,omitempty"`
 
 	MarketRegion *string `json:"market_region,omitempty"`
+	// DataRegion is the region-variant the extractor loads client data for
+	// (regionclientdata_<region>_.xml, e.g. "na"). It is distinct from MarketRegion
+	// (the price-API region) and applies on the next extraction. Empty means "use
+	// the localization language".
+	DataRegion *string `json:"data_region,omitempty"`
 }
 
 // appDir is the viewer's per-user folder name.
@@ -165,5 +170,21 @@ func (c *Config) GetMarketRegion() string {
 // SetMarketRegion updates the central-market region and persists it.
 func (c *Config) SetMarketRegion(region string) error {
 	c.MarketRegion = &region
+	return SaveIfChanged()
+}
+
+// GetDataRegion returns the extractor's region variant, or "" when unset (meaning
+// the localization language is used as the region).
+func (c *Config) GetDataRegion() string {
+	if c == nil || c.DataRegion == nil {
+		return ""
+	}
+	return *c.DataRegion
+}
+
+// SetDataRegion persists the region variant the extractor loads client data for.
+// It takes effect on the next extraction.
+func (c *Config) SetDataRegion(region string) error {
+	c.DataRegion = &region
 	return SaveIfChanged()
 }

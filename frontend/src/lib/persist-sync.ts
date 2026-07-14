@@ -23,9 +23,7 @@ export class JSONSerializationStrategy<T> implements SerializationStrategy<T, fa
 	public canProcess: (value: unknown, path?: string) => boolean = () => true;
 
 	serialize(state: Snapshot<T>): string {
-		console.time("serialize");
 		const processed = this.processForSerialization(state, undefined);
-		console.timeEnd("serialize");
 		return JSON.stringify(processed);
 	}
 
@@ -221,7 +219,7 @@ export class JSONSerializationStrategy<T> implements SerializationStrategy<T, fa
 			if (!this.canProcess(result, path)) {
 				return undefined;
 			}
-			
+
 			return result;
 		}
 	}
@@ -473,7 +471,7 @@ export function persistSync<T extends object>(
 		      typeof o.serializationStrategy === "function"
 			      ? new o.serializationStrategy()
 			      : o.serializationStrategy;
-	
+
 	serializer.canProcess = o.canSerialize.bind(serializer)
 
 	const merger =

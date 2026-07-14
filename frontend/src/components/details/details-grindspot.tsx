@@ -9,6 +9,8 @@ import {DetailsAcquisition, DetailsEffects, DetailsEnhancements, DetailsJsonInsp
 import {isGrindSpot} from "@/state/sources/grindspot-source.tsx";
 import {numberFormat, parseARGB} from "@/utils.tsx";
 import {QuestRef, Ref} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import {MapPinIcon} from "lucide-react";
+import {openMapAt, openMapAtNode} from "@/state/panels.ts";
 
 export function GrindSpotDetails(props: IDockviewPanelProps) {
 	const [details, d] = useDetail();
@@ -38,6 +40,25 @@ export function GrindSpotDetails(props: IDockviewPanelProps) {
 				}}
 			/>
 			<div className={"gap-8 pb-8"}>
+
+				{(e.node?.urn || e.node?.pos?.length) && (
+					<DetailsSection title={"Location"} borderTop>
+						<div className="flex flex-row items-center flex-wrap gap-2">
+							<Chip
+								label={(
+									<span className={"flex flex-row items-center gap-1.5"}>
+										{e.node.name ?? e.name}
+										<MapPinIcon size={11} className={"text-zinc-400"} />
+									</span>
+								)}
+								variant={"sm"}
+								// 6 of the 105 zones point at a key with no worldmap node — fall back to the raw
+								// nav position so those still open the map somewhere useful.
+								onClick={() => (e.node!.urn ? openMapAtNode(e.node!.urn) : openMapAt(e.node!.pos!))}
+							/>
+						</div>
+					</DetailsSection>
+				)}
 
 				{e.tags?.length && (
 					<DetailsSection title={"Tags"} borderTop>

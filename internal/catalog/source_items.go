@@ -3,7 +3,6 @@ package catalog
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -175,7 +174,7 @@ func (s *ItemSource) Load() error {
 	// Update image paths relative to viewer
 	s.Store.AddHook(
 		func(it *model.Item) error {
-			it.Icon = "/icons/icons/" + strconv.FormatUint(uint64(it.ID), 10) + ".png"
+			it.Icon = "/icons/icons/" + strconv.FormatUint(uint64(it.ID), 10) + ".webp"
 			return nil
 		},
 	)
@@ -194,26 +193,20 @@ func (s *ItemSource) Load() error {
 		},
 	)
 
-	// Build the ItemVendors index (NPC ID -> items sold by that NPC) from the Vendors list in each item.
+	// Build the ItemVendors index (NPC ID -> items sold by that NPC) from each item's
+	// vendor refs.
 	s.Store.AddHook(
 		func(it *model.Item) error {
-			if len(it.Vendors) <= 0 {
+			if it.Vendors == nil {
 				return nil
 			}
-			for _, vendor := range it.Vendors {
-				npcIds := Npcs.ByName.Get()[vendor]
-				if len(npcIds) == 0 {
+			for _, u := range it.Vendors.URNs {
+				npc, ok := models.ResolveUrn[model.NPC](u)
+				if !ok || npc == nil {
 					continue
 				}
-				for _, npc := range npcIds {
-					_, ok := s.ItemVendors[npc.ID]
-					if !ok {
-						s.ItemVendors[npc.ID] = make([]*model.Item, 0)
-					}
-
-					if !slices.ContainsFunc(s.ItemVendors[npc.ID], func(existing *model.Item) bool { return existing.ID == it.ID }) {
-						s.ItemVendors[npc.ID] = append(s.ItemVendors[npc.ID], it)
-					}
+				if !slices.ContainsFunc(s.ItemVendors[npc.ID], func(existing *model.Item) bool { return existing.ID == it.ID }) {
+					s.ItemVendors[npc.ID] = append(s.ItemVendors[npc.ID], it)
 				}
 			}
 
@@ -470,8 +463,6 @@ func (s *ItemSource) List(params sources.ListSourceParams) []sources.ListSourceE
 	var f itemFilters
 	_ = json.Unmarshal(params.Filters, &f) // empty/absent Filters = zero value = no constraint
 
-	log.Printf("ItemSource.List: filters=%+v", f)
-
 	ef := strings.ToLower(strings.TrimSpace(f.Effect))
 	pass := func(it *model.Item) bool {
 		if it.Name == "" {
@@ -549,11 +540,13 @@ func (s *ItemSource) List(params sources.ListSourceParams) []sources.ListSourceE
 	out := make([]sources.ListSourceEntry, len(items))
 	for i, it := range items {
 		out[i] = sources.ListSourceEntry{
-			ID:       it.ID,
-			URN:      urn.Item.New(it.ID).String(),
-			Title:    it.Name,
-			Subtitle: it.Grade,
-			Icon:     it.Icon,
+			ID:    it.ID,
+			URN:   it.GetURN().String(),
+			Title: it.Name,
+			Icon:  it.Icon,
+			Extra: map[string]any{
+				"grade": it.Grade,
+			},
 		}
 	}
 

@@ -1,4 +1,5 @@
 // @ts-ignore
+import type {Plugin} from "vite";
 import {defineConfig} from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -13,19 +14,17 @@ import {createRequire} from "node:module";
 
 const require = createRequire(import.meta.url);
 
-import type { Plugin } from "vite";
-
 function wailsCallLogger(): Plugin {
 	return {
-		name: "wails-call-logger",
-		apply: "serve",        // dev only, never in prod build
-		enforce: "pre",
+		name    : "wails-call-logger",
+		apply   : "serve",        // dev only, never in prod build
+		enforce : "pre",
 		transform(code, id) {
 			if (!id.includes("/bindings/")) return;        // scope to generated bindings
 			if (!code.includes("@wailsio/runtime")) return;
 			// only the bare specifier — the closing quote right after `runtime`
 			// means "@wailsio/runtime/events" etc. are left alone
-			return code.replace(/(['"])@wailsio\/runtime\1/g, '"@/lib/wails-runtime-shim"');
+			return code.replace(/(['"])@wailsio\/runtime\1/g, "\"@/lib/wails-runtime-shim\"");
 		},
 	};
 }
@@ -37,12 +36,30 @@ export default defineConfig(({mode}) => ({
 		// @ts-ignore
 		port       : Number(process.env.WAILS_VITE_PORT) || 9245,
 		strictPort : true,
+		hmr        : true,
 	},
 	plugins : [
 		react(),
 		wails("./bindings"),
 		// wailsCallLogger(), // DONT REMOVE, this will enable wails runtime calls to be logged in the console, useful for debugging
 		tailwindcss(),
+
+		{
+			name               : "inject-react-devtools",
+			apply              : "serve",
+			transformIndexHtml : {
+				order   : "pre",
+				handler : () => [
+					{
+						// Must be a classic script in head: it has to install the devtools hook
+						// before React Refresh's preamble installs its own stub and wins.
+						tag      : "script",
+						attrs    : {src : "http://localhost:8097"},
+						injectTo : "head-prepend",
+					},
+				],
+			},
+		}
 	],
 	resolve : {
 		alias : [
@@ -50,6 +67,7 @@ export default defineConfig(({mode}) => ({
 			{find : "@bindings", replacement : path.resolve(__dirname, "./bindings")},
 		],
 	},
+
 
 	build : {
 		rolldownOptions : {
