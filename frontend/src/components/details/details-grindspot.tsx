@@ -1,14 +1,8 @@
 import {IDockviewPanelProps} from "dockview-react";
 import {useDetail, useDetailItem} from "@/state/detail.tsx";
 import {Chip, ChipList, DetailsHeader, DetailsItemList, DetailsSection} from "@/components/details/details-components.tsx";
-import type {Grade} from "@/types.ts";
-import {GameText} from "@/lib/game-text.tsx";
-import {DetailsStats} from "@/components/details/stats.tsx";
-import {DetailsRecipes, DetailsUsedIn} from "@/components/details/recipes.tsx";
-import {DetailsAcquisition, DetailsEffects, DetailsEnhancements, DetailsJsonInspector, DetailsKnowledge} from "@/components/details/details-item.tsx";
 import {isGrindSpot} from "@/state/sources/grindspot-source.tsx";
 import {numberFormat, parseARGB} from "@/utils.tsx";
-import {QuestRef, Ref} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {MapPinIcon} from "lucide-react";
 import {openMapAt, openMapAtNode} from "@/state/panels.ts";
 

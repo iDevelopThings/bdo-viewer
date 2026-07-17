@@ -44,20 +44,21 @@ export default defineConfig(({mode}) => ({
 		// wailsCallLogger(), // DONT REMOVE, this will enable wails runtime calls to be logged in the console, useful for debugging
 		tailwindcss(),
 
+
 		{
 			name               : "inject-react-devtools",
 			apply              : "serve",
 			transformIndexHtml : {
 				order   : "pre",
-				handler : () => [
+				handler : () => process.env.REACT_DEVTOOLS === "true" ? [
 					{
 						// Must be a classic script in head: it has to install the devtools hook
 						// before React Refresh's preamble installs its own stub and wins.
 						tag      : "script",
-						attrs    : {src : "http://localhost:8097"},
+						attrs    : {src : "http://127.0.0.1:8097"},
 						injectTo : "head-prepend",
 					},
-				],
+				] : [],
 			},
 		}
 	],

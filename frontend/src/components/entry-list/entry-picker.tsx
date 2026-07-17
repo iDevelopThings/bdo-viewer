@@ -34,6 +34,7 @@ export type EntryPickerProps = {
 	defaultSortDir?: SortDir;
 	onPick: (entry: DeepReadonly<ListSourceEntry>) => void;
 	onClose: () => void;
+	defaultFocus?:boolean
 };
 
 export function EntryPicker({
@@ -45,6 +46,7 @@ export function EntryPicker({
 	defaultSortDir = "asc",
 	onPick,
 	onClose,
+	defaultFocus
 }: EntryPickerProps) {
 	const parentRef = useRef<HTMLDivElement>(null);
 
@@ -136,6 +138,7 @@ export function EntryPicker({
 								setSortDir(dir);
 							},
 						}}
+						defaultFocus={defaultFocus}
 					/>
 
 					{fields.length > 0 && (

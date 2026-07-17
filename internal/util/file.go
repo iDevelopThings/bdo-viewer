@@ -49,4 +49,5 @@ func ReadJSON(path string, v any) error {
 	}
 
 	return json.Unmarshal(data, v)
+
 }

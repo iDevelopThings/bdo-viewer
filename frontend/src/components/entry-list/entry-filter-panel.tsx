@@ -23,6 +23,8 @@ export function EntryFilterHeader(
 		onClearFilters,
 
 		sortControls,
+
+		defaultFocus,
 	}: {
 		query: string
 		setQuery: (q: string) => void
@@ -31,6 +33,8 @@ export function EntryFilterHeader(
 		onClearFilters?: () => void
 
 		sortControls?: SortControlsProps
+
+		defaultFocus?:boolean
 	}
 ) {
 	return (
@@ -40,6 +44,7 @@ export function EntryFilterHeader(
 					<Input
 						id={"source-list-search"}
 						placeholder="Search..."
+						autoFocus={defaultFocus}
 						value={query}
 						onChange={(e) => {
 							setQuery(e.target.value);

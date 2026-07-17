@@ -3,11 +3,12 @@ import {CheckIcon, ChevronRightIcon, Repeat2} from "lucide-react";
 import {cn} from "@/lib/utils.ts";
 import {RecipeSelection, RecipeTree, RecipeTreeNode} from "@bindings/bdo-viewer/internal/recipe";
 import {RECIPE_TYPE_COLOR, recipeTypeLabel} from "@/lib/recipe-labels.ts";
-import {type DeepReadonly, type Grade, grades} from "@/types.ts";
+import {type DeepReadonly} from "@/types.ts";
 import {openItemPanel} from "@/state/panels.ts";
 import {ItemIcon} from "@/lib/item-icon.tsx";
 import type {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from "@/components/ui/dialog.tsx";
+import {tryGetGradeColor, ItemGradeInfos, ItemGrades} from "@/lib/types/item-grades.ts";
 
 // This is the reusable crafting-tree renderer. It's driven entirely by the
 // RecipeTree data the backend resolves (only the selected path is expanded; every
@@ -38,13 +39,6 @@ function useRecipeTree(): RecipeTreeCtx {
 
 export function itemOf(items: RItems, itemUrn: string): DeepReadonly<ListSourceEntry> | undefined {
 	return (items as Record<string, DeepReadonly<ListSourceEntry> | null | undefined>)?.[itemUrn] ?? undefined;
-}
-
-// The recipe tree carries slim ListSourceEntry rows (see internal/recipe.itemEntry),
-// so the grade lives in `subtitle` rather than a full item's `grade`.
-export function gradeColor(item: DeepReadonly<ListSourceEntry> | undefined): string | undefined {
-	const grade = item?.subtitle as Grade | undefined;
-	return grade && grades[grade] ? grades[grade].color : undefined;
 }
 
 // Alt is one concrete way to craft a node — a specific recipe cluster and one
@@ -168,7 +162,7 @@ function NodeAltsButton({node, items, className}: { node: RNode, items: RItems, 
 											return (
 												<span key={`${inp.item}:${si}`} className={"flex flex-row items-center gap-1 bg-zinc-700/50 rounded px-1.5 py-0.5"}>
 													<ItemIcon urn={inp.item} className={"shrink-0"} imageClass={"w-4 h-4"} />
-													<span className={"text-sm"} style={{color: gradeColor(it)}}>{it?.title ?? inp.item}</span>
+													<span className={"text-sm"} style={{color: tryGetGradeColor(it?.extra?.grade)?.toString()}}>{it?.title ?? inp.item}</span>
 													<span className={"text-xs text-zinc-400"}>×{inp.count}</span>
 												</span>
 											);
@@ -237,7 +231,7 @@ function RecipeRow({node, items, depth}: { node: RNode, items: RItems, depth: nu
 	const item      = itemOf(items, node.item);
 	const craftable = !!node.craftable && !node.gathered;
 	const crafted   = !!node.children?.length;
-	const color     = gradeColor(item);
+	const color     = tryGetGradeColor(item?.extra?.grade)?.toString();
 	const cluster   = crafted ? (node.clusters![node.selected?.cluster ?? 0] ?? node.clusters![0]) : undefined;
 
 	return (
@@ -276,7 +270,7 @@ function RecipeRow({node, items, depth}: { node: RNode, items: RItems, depth: nu
 				<span className={"text-sm min-w-0 truncate"} style={color ? {color} : undefined}>{item?.title}</span>
 				{!!node.count && <span className={"text-sm text-zinc-500 shrink-0"}>×{node.count}</span>}
 				{node.gathered ? (
-					<span className={"text-sm shrink-0"} style={{color: grades.green.color}}>gathered</span>
+					<span className={"text-sm shrink-0"} style={{color: ItemGradeInfos[ItemGrades.Green].color}}>gathered</span>
 				) : node.cycle ? (
 					<span className={"text-sm text-zinc-500 shrink-0"}>…</span>
 				) : crafted && cluster ? (

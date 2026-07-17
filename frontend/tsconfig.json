@@ -20,8 +20,9 @@
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    
+
     "noImplicitAny": false,
+    "noImplicitThis": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@/*": [

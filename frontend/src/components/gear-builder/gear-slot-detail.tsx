@@ -2,9 +2,6 @@ import {useEffect, useState} from "react";
 import {CancelError} from "@wailsio/runtime";
 import {GetStatsByURN} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
 import type {StatGroup} from "@bindings/bdo-viewer/internal/stats";
-import {GEAR_SLOTS_BY_ID} from "@/state/gear/gear-slots.ts";
-import {useGearBuild} from "@/state/gear/gear.tsx";
-import {type Grade, grades} from "@/types.ts";
 import {ItemURN} from "@/lib/urn.ts";
 import {flatStats, namedGroups} from "@/lib/stat-groups.ts";
 import {StatCard} from "@/components/details/stats.tsx";
@@ -12,12 +9,13 @@ import {EffectSections} from "@/components/details/effects.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Label} from "@/components/ui/label.tsx";
 import {Slider} from "@/components/ui/slider.tsx";
+import {useGearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
+import {ItemIcon} from "@/lib/item-icon.tsx";
+import {getGradeColor} from "@/lib/types/item-grades.ts";
+import {useDebounce} from "@/utils.tsx";
 
-// SlotStats pulls the fully-resolved stats for an item at a given enhance level +
-// Caphras step from the backend (GetStatsByURN) — the same source and rendering the
-// details panel uses, so the numbers match and reflect Caphras. Its own child so the
-// fetch hooks sit past GearSlotDetail's guards.
-function SlotStats({itemId, level, caphras}: {itemId: number; level: number; caphras: number}) {
+
+function SlotStats({itemId, level, caphras}: { itemId: number; level: number; caphras: number }) {
 	const [groups, setGroups] = useState<StatGroup[]>([]);
 
 	useEffect(() => {
@@ -63,48 +61,64 @@ function SlotStats({itemId, level, caphras}: {itemId: number; level: number; cap
 }
 
 export function GearSlotDetail() {
-	const [store, snap] = useGearBuild();
+	const [builder, s] = useGearBuilderStore();
 
-	const slotId = snap.selectedSlot;
-	if (!slotId) {
+
+	const upgrade = useDebounce(l => s.upgrade(slot.id, l), 50);
+
+	const applyUpgrade = (l: number) => {
+		s.slots[slot.id].enhanceLevel = l;
+		upgrade(l);
+	};
+
+	const slot = builder.selectedSlot;
+	if (!slot) {
 		return null;
 	}
 
-	const def  = GEAR_SLOTS_BY_ID[slotId];
-	const item = snap.itemFor(slotId);
-	if (!def || !item) {
+	const item = slot.item;
+	if (!item) {
 		return null;
 	}
 
-	const slot       = snap.slots[slotId];
-	const enchant    = snap.enchantFor(slotId);
-	const minLevel   = snap.minLevelFor(slotId);
-	const maxLevel   = snap.maxLevelFor(slotId);
-	const maxCaphras = snap.maxCaphrasFor(slotId);
-	const gradeColor = item.grade ? grades[item.grade as Grade]?.color : undefined;
+	const enchant    = slot.enhancement;
+	const minLevel   = item?.enhancement?.minLevel ?? 0;
+	const maxLevel   = item?.enhancement?.maxLevel ?? 0;
+	const minCaphras = enchant?.caphrasMinLevel;
+	const maxCaphras = enchant?.caphrasMaxLevel ?? 0;
+
+	const gradeColor = getGradeColor(item?.grade);
+
 
 	return (
 		<div className={"flex flex-col gap-4 border-t border-zinc-800 p-4"}>
 			<div className={"flex flex-row items-center gap-3"}>
-				<img src={`/icons/icons/${item.id}.webp`} alt={item.name} className={"w-8 h-8 shrink-0"} />
+				<ItemIcon
+					urn={item}
+					grade={item.grade}
+					imageClass={"w-8 h-8 shrink-0"}
+					className={"flex-none"}
+					clickable
+				/>
+
 				<div className={"flex flex-col min-w-0"}>
-					<span className={"font-semibold truncate"} style={gradeColor ? {color : gradeColor} : undefined}>
+					<span className={"font-semibold truncate"} style={gradeColor ? {color : gradeColor.toString()} : undefined}>
 						{item.name}
 					</span>
-					<span className={"text-xs text-zinc-400"}>{def.label}</span>
+					<span className={"text-xs text-zinc-400"}>{slot.info.Title}</span>
 				</div>
 				<div className={"flex flex-row gap-1 ml-auto"}>
 					<Button
 						variant={"outline"}
 						size={"xs"}
-						onClick={() => store.openPicker(slotId)}
+						onClick={() => s.openPicker(slot.id)}
 					>
 						Change
 					</Button>
 					<Button
 						variant={"ghost"}
 						size={"xs"}
-						onClick={() => store.unequip(slotId)}
+						onClick={() => s.unequip(slot.id)}
 					>
 						Unequip
 					</Button>
@@ -116,13 +130,13 @@ export function GearSlotDetail() {
 					<div className="flex items-center gap-6">
 						<Label>Enhance Level</Label>
 						<span className="text-sm text-muted-foreground">
-							{enchant?.name ?? "Base"} ({slot.level})
+							{enchant?.name ?? "Base"} ({slot.enhanceLevel})
 						</span>
 					</div>
 					<Slider
-						value={slot.level}
+						value={slot.enhanceLevel}
 						onValueChange={(value) => {
-							store.setLevel(slotId, value as number);
+							applyUpgrade(value as number);
 						}}
 						min={minLevel}
 						max={maxLevel}
@@ -131,27 +145,27 @@ export function GearSlotDetail() {
 				</div>
 			)}
 
-			{maxCaphras > 0 && (
+			{minCaphras > 0 && maxCaphras > 0 && (
 				<div className={"flex flex-col gap-4 max-w-4/6"}>
 					<div className="flex items-center gap-6">
 						<Label>Caphras</Label>
 						<span className="text-sm text-muted-foreground">
-							Level {slot.caphras} / {maxCaphras}
+							Level {slot.caphrasLevel} / {maxCaphras}
 						</span>
 					</div>
 					<Slider
-						value={slot.caphras}
+						value={slot.caphrasLevel}
 						onValueChange={(value) => {
-							store.setCaphras(slotId, value as number);
+							void s.upgrade(slot.id, undefined, value as number);
 						}}
-						min={0}
+						min={minCaphras}
 						max={maxCaphras}
 						step={1}
 					/>
 				</div>
 			)}
 
-			<SlotStats itemId={item.id} level={slot.level} caphras={slot.caphras} />
+			<SlotStats itemId={item.id} level={slot.enhanceLevel} caphras={slot.caphrasLevel} />
 		</div>
 	);
 }

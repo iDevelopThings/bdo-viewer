@@ -3,9 +3,9 @@ import {useVirtualizer} from "@tanstack/react-virtual";
 import {ArrowDown, ArrowUp} from "lucide-react";
 import {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import type {DeepReadonly} from "@/types.ts";
-import {type Grade, grades} from "@/types.ts";
 import {cn} from "@/lib/utils.ts";
 import {ItemIcon} from "@/lib/item-icon.tsx";
+import {tryGetGradeColor} from "@/lib/types/item-grades.ts";
 
 // Sorting itself happens in the backend (ListSourceParams.sort) so each source
 // can support and extend its own orderings; "default" sends the empty string,
@@ -108,7 +108,7 @@ export type EntryRowBaseProps = {
 };
 
 export function EntryRowBase({entry, active, badge, onClick, onAuxClick}: EntryRowBaseProps) {
-	const gradeColor = entry.extra?.grade ? grades[entry.extra?.grade as Grade]?.color : undefined;
+	const gradeColor = tryGetGradeColor(entry?.extra?.grade);
 
 	return (
 		<div
@@ -133,7 +133,7 @@ export function EntryRowBase({entry, active, badge, onClick, onAuxClick}: EntryR
 		>
 			{entry.icon && <ItemIcon urn={entry.urn} className={"min-w-0 gap-2"} imageClass={"w-6 h-6 shrink-0"} />}
 			<div className={"flex flex-col flex-1 min-w-0 gap-1"}>
-				<div className={"flex-1 truncate"} style={gradeColor ? {color : gradeColor} : undefined}>
+				<div className={"flex-1 truncate"} style={gradeColor ? {color : gradeColor.toString()} : undefined}>
 					{entry.title}
 				</div>
 				{entry.subtitle && (

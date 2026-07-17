@@ -2,16 +2,15 @@ import {type PropsWithChildren, useState} from "react";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip.tsx";
 import {SourceKind} from "@bindings/bdo-viewer/internal/sources";
 import type {Item as ItemModel} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
-import {type Grade, grades} from "@/types.ts";
 import {GameText} from "@/lib/game-text.tsx";
 import {cn} from "@/lib/utils.ts";
-import {darkenHex} from "@/utils.tsx";
 import {findSourceByURN} from "@/state/sources/sources.ts";
 import {EffectSections} from "@/components/details/effects.tsx";
 import {flatStats, namedGroups} from "@/lib/stat-groups.ts";
 import {Tooltip as TooltipPrimitive} from "@base-ui/react/tooltip";
 import {GetEntryDetailsByURN} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
 import {EntryDetailsData} from "@/state/detail-store.tsx";
+import {getGradeColor, ItemGrades, ItemGrade} from "@/lib/types/item-grades.ts";
 
 // Drop-in tooltip for any entry, given its URN: <EntryTooltip urn={"urn::item:123"}>…</EntryTooltip>.
 // Data loads lazily on first hover (and is cached after that), so wrapping
@@ -96,15 +95,15 @@ function StatRows({stats}: { stats: ReturnType<typeof flatStats> }) {
 }
 
 function ItemTooltipCard({item, stats, effects}: { item: ItemModel, stats: ReturnType<typeof flatStats>, effects: ReturnType<typeof namedGroups> }) {
-	const grade      = item.grade as Grade | undefined;
-	const gradeColor = grade && grades[grade] ? grades[grade].color : grades.white.color;
+	const grade      = item.grade as ItemGrade | undefined;
+	const gradeColor = getGradeColor(grade, ItemGrades.White);
 	const equipLabel = item.equipInfo?.type || item.equipInfo?.slot || item.equipInfo?.kind;
 
 	return (
 		<div className={"w-80 overflow-hidden rounded-sm border border-amber-800/40 bg-zinc-950/95 shadow-xl"}>
 			<div
 				className={"relative flex flex-row items-center gap-3 px-3 py-2.5"}
-				style={{background : `linear-gradient(to bottom, ${darkenHex(gradeColor, 0.35)}, ${darkenHex(gradeColor, 0.7)})`}}
+				style={{background : `linear-gradient(to bottom, ${gradeColor.darken(0.35)}, ${gradeColor.darken(0.7)})`}}
 			>
 				{equipLabel && (
 					<span className={"absolute top-1.5 right-2 text-[10px] text-amber-200/70"}>Equipment({equipLabel})</span>

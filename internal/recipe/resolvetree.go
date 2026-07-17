@@ -14,11 +14,13 @@ import (
 // enhancement curve, which a wide tree multiplies into tens of MB the UI never uses.
 func itemEntry(it *model.Item) sources.ListSourceEntry {
 	return sources.ListSourceEntry{
-		ID:       it.ID,
-		URN:      urn.Item.New(it.ID).String(),
-		Title:    it.Name,
-		Subtitle: it.Grade,
-		Icon:     it.Icon,
+		ID:    it.ID,
+		URN:   urn.Item.New(it.ID).String(),
+		Title: it.Name,
+		Icon:  it.Icon,
+		Extra: map[string]any{
+			"grade": it.Grade,
+		},
 	}
 }
 

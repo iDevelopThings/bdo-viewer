@@ -1,3 +1,5 @@
+import {useRef, useCallback, useEffect} from "react";
+
 export const numberFormat = new Intl.NumberFormat("en-US", {
 	style                    : "decimal",
 	maximumFractionDigits    : 2,
@@ -113,21 +115,79 @@ export function useMiddleClickProps(
 	};
 }
 
-export function wrap<T, S extends symbol, M, MR = M extends (value: T) => infer R ? R : M extends object ? M : never>(
+export type Fold<T> = T extends object ? { [K in keyof T]: Fold<T[K]> } : T;
+
+export function wrap<T extends object, S extends symbol, M extends object>(
+	object: T,
+	symbol: S,
+	merge: M | ((obj: T) => M)
+): Fold<T & Record<S, true> & M>;
+export function wrap<T extends object, S extends symbol, M extends object>(
 	object: T | undefined,
 	symbol: S,
-	merge: M | ((value: T) => MR)
+	merge: M | ((obj: T) => M)
+): (Fold<T & Record<S, true> & M>) | undefined;
+export function wrap<T extends object, S extends symbol, M extends object>(
+	object: T | undefined,
+	symbol: S,
+	merge: M | ((obj: T) => M)
+) {
+	if (!object) return undefined;
+
+	const extra = typeof merge === "function" ? merge(object) : merge;
+
+	Object.defineProperty(object, symbol, { value: true });
+	Object.defineProperties(object, Object.getOwnPropertyDescriptors(extra));
+
+	return object as Fold<T & Record<S, true> & M>;
+	// return Object.assign(object, { [symbol]: true } as Record<S, true>, extra);
+}
+/*
+export function wrap<T, S extends symbol, M extends ((obj: T) => object), MM extends M extends (obj: T) => infer R ? R : M
+>(
+	object: T | undefined,
+	symbol: S,
+	merge: MM
 ) {
 
 	if (!object) {
 		return undefined;
 	}
-	/* if ((object as any)[symbol]) {
+	/!* if ((object as any)[symbol]) {
 		return object as unknown as ReturnType<typeof wrap<T>>;
-	} */
+	} *!/
 
 	return Object.assign(object, {
 		[symbol] : true,
-		...(typeof merge === "function" ? (merge as (value: T) => MR)(object) : merge)
+		...(
+			(typeof merge === "function"
+			 ? (merge)(object)
+			 : merge
+			)
+		)
 	});
+} */
+
+
+export function useDebounce<T extends (...args: any[]) => void>(callback: T, delay: number) {
+	const timer = useRef<NodeJS.Timeout | null>(null);
+
+	const debouncedCallback = useCallback((...args: Parameters<T>) => {
+		if (timer.current) {
+			clearTimeout(timer.current);
+		}
+		timer.current = setTimeout(() => {
+			callback(...args);
+		}, delay);
+	}, [callback, delay]);
+
+	useEffect(() => {
+		return () => {
+			if (timer.current) {
+				clearTimeout(timer.current);
+			}
+		};
+	}, []);
+
+	return debouncedCallback;
 }

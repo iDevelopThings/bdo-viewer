@@ -1,11 +1,8 @@
-import {type DeepReadonly, grades} from "@/types.ts";
+import {type DeepReadonly} from "@/types.ts";
 import type {StatGroup} from "@bindings/bdo-viewer/internal/stats";
+import {ItemGradeInfos, ItemGrades} from "@/lib/types/item-grades.gen.ts";
 
-// Renders titled StatGroups (Enhancement Effect, Set Effect, Stats, Hidden,
-// Caphras Enhancement, ...) as a 2-column table per section: label, then
-// value in the game's yellow highlight color. Untitled groups (Card/the main
-// AP-DP-etc. Effects group) aren't meant for this renderer - see
-// lib/stat-groups.ts's namedGroups/flatStats split.
+
 export function EffectSections({groups}: { groups: DeepReadonly<StatGroup[]> }) {
 	if (groups.length === 0) {
 		return null;
@@ -16,14 +13,14 @@ export function EffectSections({groups}: { groups: DeepReadonly<StatGroup[]> }) 
 			{groups.map((group, i) => (
 				<div key={`${group.title}-${i}`}>
 					<div className={"text-sm font-semibold text-zinc-300 mb-1"}>{group.title}</div>
-					<table className={"border-separate border-spacing-x-4 border-spacing-y-0.5"}>
+					<table className={"w-full border-separate border-spacing-x-4 border-spacing-y-0.5"}>
 						<tbody>
-							{(group.stats ?? []).map((stat, i) => (
-								<tr key={i}>
-									<td className={"text-sm text-zinc-400 whitespace-nowrap"}>{stat.title}</td>
-									<td className={"text-sm font-medium"} style={{color : grades.yellow.color}}>{stat.value}</td>
-								</tr>
-							))}
+						{(group.stats ?? []).map((stat, i) => (
+							<tr key={i}>
+								<td className={"text-sm text-zinc-400 break-words"}>{stat.title}</td>
+								<td className={"text-sm font-medium whitespace-nowrap text-right align-top"} style={{color : ItemGradeInfos[ItemGrades.Yellow].color}}>{stat.value}</td>
+							</tr>
+						))}
 						</tbody>
 					</table>
 				</div>

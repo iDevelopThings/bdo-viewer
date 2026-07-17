@@ -7,7 +7,8 @@ import {ItemIcon} from "@/lib/item-icon.tsx";
 import {DetailsSection} from "@/components/details/details-components.tsx";
 import {useDetail} from "@/state/detail.tsx";
 import {useMiddleClickProps} from "@/utils.tsx";
-import {gradeColor, itemOf, type RItems, RecipeTreeView} from "@/components/details/recipe-tree.tsx";
+import {itemOf, type RItems, RecipeTreeView} from "@/components/details/recipe-tree.tsx";
+import {tryGetGradeColor} from "@/lib/types/item-grades.ts";
 
 // DetailsRecipes is the item-detail wrapper around the shared RecipeTreeView: it
 // backs selection with the detail store (selectRecipe re-resolves the tree) and
@@ -71,7 +72,7 @@ function ByproductsSection({byproducts, items}: { byproducts: DeepReadonly<Recip
 
 function ByproductEntry({bp, items}: { bp: DeepReadonly<RecipeTreeByproduct>, items: RItems }) {
 	const out   = itemOf(items, bp.realOutput);
-	const color = gradeColor(out) ?? "#d4d4d8";
+	const color = tryGetGradeColor(out?.extra?.grade)?.toString() ?? "#d4d4d8";
 
 	return (
 		<div className={"flex flex-col gap-1.5 bg-zinc-800 rounded-md p-2"}>

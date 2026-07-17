@@ -53,7 +53,6 @@ export function areEntriesEqual(a: UntypedSourceEntry | undefined, b: UntypedSou
 	const aKey = getEntryKey(a)?.toString();
 	const bKey = getEntryKey(b)?.toString();
 
-	// console.log("Comparing entries", a, b, aKey, bKey);
 
 	return aKey === bKey;
 }
@@ -113,14 +112,12 @@ export class DetailStore {
 			throw new Error("DetailStore must be initialized with an entry");
 		}
 
-		// console.log("Init entry: ", this.entry, entry);
 
 		if (!areEntriesEqual(this.entry, entry)) {
 			this._loaded = false;
 			this.loading = true;
 			this.entry   = entry;
 
-			// console.log("DetailStore: entry changed, resetting loaded state", entry);
 		}
 
 		this.ensureSource();
@@ -139,7 +136,6 @@ export class DetailStore {
 			return;
 		}
 
-		// console.log("Loading details for entry", this.entry);
 
 		this.loading = true;
 
@@ -151,7 +147,6 @@ export class DetailStore {
 					this.entry.type,
 					parseInt(getEntryKey(this.entry))
 				);
-			// console.log("Loaded details for entry", this.entry, data);
 
 			this.entry.value = data[this.source.kind];
 

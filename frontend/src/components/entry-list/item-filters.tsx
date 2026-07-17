@@ -1,22 +1,24 @@
 import {ChevronRightIcon} from "lucide-react";
-import {type MaybeReadonly, grades} from "@/types.ts";
-import {CHARACTER_CLASSES} from "@/state/gear/gear-slots.gen.ts";
+import {type MaybeReadonly} from "@/types.ts";
 import {Input} from "@/components/ui/input.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList} from "@/components/ui/combobox.tsx";
 import {useSnapshot} from "valtio/react";
 import {global, toggleExpanded} from "@/state/global.tsx";
 import {FilterRow} from "@/components/entry-list/entry-filter-panel.tsx";
+import {SlotName} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import {iterTitle} from "@/lib/types/character-classes.gen.ts";
+import {ItemGrade, ItemGradeInfos} from "@/lib/types/item-grades.gen.ts";
 
 // Mirrors the Go-side itemFilters struct (internal/sources/item_source.go) -
 // equipSlots isn't exposed here since callers that care about it (item picker)
 // derive it from context rather than letting the user pick it.
 export type ItemFilters = {
-	grade?: string;
+	grade?: ItemGrade;
 	itemType?: string;
 	equipType?: string;
 	effect?: string;
-	equipSlots?: string[];
+	equipSlots?: SlotName[];
 	class?: string;
 	craftable?: boolean;
 };
@@ -37,6 +39,13 @@ export function ItemFiltersPanel({value, onChange, fields = ALL_FIELDS}: {
 
 	const id       = `item-filters-panel`;
 	const expanded = globalState.expandedSources.has(id);
+
+	const grades = Object.values(ItemGradeInfos)
+		.sort((a, b) => a.value - b.value)
+		.filter(g => g.value >= 0)
+		.map(g => {
+			return {name : g.name[0].toUpperCase() + g.name.slice(1), value : g.value};
+		});
 
 
 	return (
@@ -59,13 +68,18 @@ export function ItemFiltersPanel({value, onChange, fields = ALL_FIELDS}: {
 							>
 								<SelectTrigger size={"sm"} className={"w-full"}>
 									<SelectValue placeholder={"Any grade"}>
-										{(v: string | null) => v ? v[0].toUpperCase() + v.slice(1) : "Any grade"}
+										{(v: number | null) => {
+											if (v == null) return "Any grade";
+											return grades.find(g => g.value === v)?.name ?? "Any grade";
+										}}
 									</SelectValue>
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value={null}>Any grade</SelectItem>
-									{Object.keys(grades).map(g => (
-										<SelectItem key={g} value={g}>{g[0].toUpperCase() + g.slice(1)}</SelectItem>
+									{grades.map(g => (
+										<SelectItem key={g.name} value={g.value}>
+											{g.name}
+										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
@@ -75,7 +89,7 @@ export function ItemFiltersPanel({value, onChange, fields = ALL_FIELDS}: {
 					{fields.includes("class") && (
 						<FilterRow label={"Class"}>
 							<Combobox
-								items={CHARACTER_CLASSES}
+								items={[...iterTitle()]}
 								value={value.class ?? null}
 								onValueChange={v => set("class", v ?? undefined)}
 							>

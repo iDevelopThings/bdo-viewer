@@ -21,9 +21,6 @@ export function DetailProvider({entry, children}: DetailProviderProps) {
 				merge   : (initialState, restoredState) => {
 					const result = Object.assign(initialState, restoredState);
 					result.postLoad();
-					// console.log("merge -> ", result);
-					// console.log("merge -> initialState", initialState);
-					// console.log("merge -> restoredState", restoredState);
 					return result;
 				},
 			},
@@ -50,20 +47,17 @@ export function DetailProvider({entry, children}: DetailProviderProps) {
 					if (!data || data === "{}") {
 						return {} as unknown as DetailStore;
 					}
-					// console.log("DetailProvider: deserialized store", parsed, storageKey);
 					return JSON.parse(data);
 				}
 			}
 		});
 
-//		console.log("DetailProvider: store initialized", result.store, storageKey);
 
 		return result.store as DetailStore;
 	}, [storageKey]);
 
 
 	useEffect(() => {
-//		console.log("DetailProvider: entry changed, re-initializing store", entry);
 		store?.initialize(entry);
 	}, [entry, storageKey]);
 

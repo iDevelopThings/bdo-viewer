@@ -7,6 +7,7 @@ import (
 
 	"bdo-viewer/internal/catalog"
 	"bdo-viewer/internal/config"
+	"bdo-viewer/internal/gear"
 	"bdo-viewer/internal/market"
 	"bdo-viewer/internal/recipe"
 	"bdo-viewer/internal/setup"
@@ -78,6 +79,7 @@ func main() {
 				application.NewService(resolver),
 				application.NewService(sources.Registry),
 				application.NewService(marketService),
+				application.NewService(gear.NewBuilderService()),
 			},
 			Assets: application.AssetOptions{
 				Handler: application.AssetFileServerFS(assets),

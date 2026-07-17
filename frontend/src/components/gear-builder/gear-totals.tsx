@@ -1,7 +1,5 @@
-import {useMemo} from "react";
-import {useGearBuild} from "@/state/gear/gear.tsx";
-import {aggregateGearStats} from "@/state/gear/gear-stats.ts";
 import {cn} from "@/lib/utils.ts";
+import {useGearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
 
 function Total({label, value, highlight}: { label: string, value: number, highlight?: boolean }) {
 	return (
@@ -17,19 +15,18 @@ function Total({label, value, highlight}: { label: string, value: number, highli
 }
 
 export function GearTotals() {
-	const [, snap] = useGearBuild();
+	const [builder, s] = useGearBuilderStore();
 
-	const {totals} = useMemo(
-		() => aggregateGearStats(snap),
-		[snap.slots, snap.loading]
-	);
-	const score = Math.round((totals.ap + totals.aap) / 2 + totals.dp);
+	const ap    = builder?.stats?.ap ?? 0;
+	const aap   = builder?.stats?.aap ?? 0;
+	const dp    = builder?.stats?.dp ?? 0;
+	const score = builder?.stats?.score ?? 0;
 
 	return (
 		<div className={"flex flex-row items-center justify-center gap-10 py-2"}>
-			<Total label={"AP"} value={totals.ap} />
-			<Total label={"AAP"} value={totals.aap} />
-			<Total label={"DP"} value={totals.dp} />
+			<Total label={"AP"} value={ap} />
+			<Total label={"AAP"} value={aap} />
+			<Total label={"DP"} value={dp} />
 			<Total label={"Score"} value={score} highlight />
 		</div>
 	);

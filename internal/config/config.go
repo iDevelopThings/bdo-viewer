@@ -126,6 +126,40 @@ func writeBytes(data []byte) error {
 	return nil
 }
 
+func WriteJsonConfig[T any](value *T, filename string) error {
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return fmt.Errorf("encode config file error: %w", err)
+	}
+
+	path := filepath.Join(Dir(), filename)
+	if err := os.MkdirAll(Dir(), 0o755); err != nil {
+		return fmt.Errorf("create config dir: %w", err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		return fmt.Errorf("write config file error: %w", err)
+	}
+
+	return nil
+}
+func ReadJsonConfig[T any](filename string) (*T, error) {
+	path := filepath.Join(Dir(), filename)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("read config file error: %w", err)
+	}
+
+	var value T
+	if err := json.Unmarshal(data, &value); err != nil {
+		return nil, fmt.Errorf("parse config file error: %w", err)
+	}
+
+	return &value, nil
+}
+
 // defaultDataDir is where extraction lands when the user hasn't chosen a location:
 // the data subdirectory of the viewer's base dir.
 func defaultDataDir() string {

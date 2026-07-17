@@ -1,29 +1,31 @@
-import {type Grade, grades, type MaybeReadonly} from "@/types.ts";
+import {type MaybeReadonly} from "@/types.ts";
 import {useSnapshot} from "valtio/react";
 import {type PropsWithChildren, type ReactNode, useEffect, useState} from "react";
 import {global, toggleExpanded} from "@/state/global.tsx";
 import {ChevronDownIcon, ChevronUpIcon, ChevronLeftIcon} from "lucide-react";
 import {cn} from "@/lib/utils.ts";
-import {darkenHex, useMiddleClickProps} from "@/utils.tsx";
+import {useMiddleClickProps} from "@/utils.tsx";
 import {Item, NPC} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {GetItemsByURN, GetNpcsByURN} from "@bindings/bdo-viewer/internal/catalog/catalog.ts";
 import {openItemPanel, goToURN} from "@/state/panels.ts";
 import {EntryTooltip} from "@/components/details/entry-tooltip.tsx";
 import {cva, type VariantProps} from "class-variance-authority";
 import {NpcURN} from "@/lib/urn.ts";
+import {getGradeColor, ItemGrade, ItemGrades} from "@/lib/types/item-grades.ts";
 
 export type DetailsHeaderProps = {
 	title: string
 	icon?: string
-	grade?: Grade
+	grade?: ItemGrade
 	lines?: { [key: string]: string | (() => string | undefined) }
 }
 
 export function DetailsHeader({title, icon, grade, lines}: DetailsHeaderProps) {
+	const gradeColor = grade ? getGradeColor(grade, ItemGrades.White) : undefined;
 	return (
 		<div className={"flex flex-row gap-8 items-center p-8"}
 		     style={{
-			     background : grade ? `linear-gradient(to bottom, ${darkenHex(grades[grade ?? "white"].color, 0.5)}, ${darkenHex(grades[grade ?? "white"].color, 0.8)})` : undefined,
+			     background : grade ? `linear-gradient(to bottom, ${gradeColor.darken(0.5)}, ${gradeColor.darken(0.8)})` : undefined,
 		     }}>
 			{icon && <img src={icon.startsWith("/icons") ? icon : `/icons/${icon}`} alt={title} className={"w-16 h-16"} />}
 			<div className={"flex flex-col gap-2"}>

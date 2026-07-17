@@ -56,16 +56,27 @@ func NewEventReporter(
 var logReporter = pipeline.GetLogReporter()
 
 func (r *EventReporter) Error(payload ErrorPayload) {
+	if r == nil {
+		logReporter.Log(payload.Message)
+		return
+	}
 	application.Get().Event.Emit(r.errorEventName, payload)
 	logReporter.Log(payload.Message)
 }
 
 func (r *EventReporter) Done() {
+	if r == nil {
+		return
+	}
 	application.Get().Event.Emit(r.doneEventName, struct{}{})
 	logReporter.Log("Done")
 }
 
 func (r *EventReporter) Step(index, total int, phase string) {
+	if r == nil {
+		logReporter.Step(index, total, phase)
+		return
+	}
 	r.mu.Lock()
 	r.step, r.steps, r.phase = index, total, phase
 	p := Progress{Step: index, Steps: total, Phase: phase}
@@ -77,6 +88,10 @@ func (r *EventReporter) Step(index, total int, phase string) {
 }
 
 func (r *EventReporter) Phase(name string) {
+	if r == nil {
+		logReporter.Phase(name)
+		return
+	}
 	r.mu.Lock()
 	r.phase = name
 	p := Progress{Step: r.step, Steps: r.steps, Phase: name}
@@ -88,6 +103,9 @@ func (r *EventReporter) Phase(name string) {
 }
 
 func (r *EventReporter) Progress(done, total int64) {
+	if r == nil {
+		return
+	}
 	r.mu.Lock()
 	final := total > 0 && done >= total
 	if !final && time.Since(r.lastEmit) < 100*time.Millisecond {
@@ -102,6 +120,10 @@ func (r *EventReporter) Progress(done, total int64) {
 }
 
 func (r *EventReporter) Log(line string) {
+	if r == nil {
+		logReporter.Log(line)
+		return
+	}
 	r.mu.Lock()
 	p := Progress{Step: r.step, Steps: r.steps, Phase: r.phase, Log: line}
 	r.mu.Unlock()

@@ -87,7 +87,23 @@ export interface CaphrasLevel {
     "level": number;
     "stones": number;
     "totalStones": number;
+    "stats": CaphrasStats;
     "effects"?: EffectGroup[] | null;
+}
+
+/**
+ * CaphrasStats is the eight-column cumulative stat block stored for one
+ * Caphras level.
+ */
+export interface CaphrasStats {
+    "ap"?: number;
+    "accuracy"?: number;
+    "evasion"?: number;
+    "hiddenEvasion"?: number;
+    "damageReduction"?: number;
+    "hiddenDamageReduction"?: number;
+    "maxHp"?: number;
+    "maxMp"?: number;
 }
 
 /**
@@ -119,6 +135,67 @@ export interface Character {
     "kind"?: CharacterKind;
     "npcs"?: models$0.EntityRefList<NPC> | null;
     "entities"?: CharacterEntity[] | null;
+}
+
+/**
+ * CharacterClassType is a int8-wide identifier. The zero-cost conversion CharacterClassType(x) is
+ * intentional: the underlying value is the wire value.
+ */
+export enum CharacterClassType {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = 0,
+
+    CharacterClassTypeUnknown = -1,
+    CharacterClassTypeWarrior = 0,
+    CharacterClassTypeHashashin = 1,
+    CharacterClassTypeSage = 2,
+    CharacterClassTypeWukong = 3,
+    CharacterClassTypeRanger = 4,
+    CharacterClassTypeGuardian = 5,
+    CharacterClassTypeScholar = 6,
+    CharacterClassTypeDrakania = 7,
+    CharacterClassTypeSorceress = 8,
+    CharacterClassTypeNova = 9,
+    CharacterClassTypeCorsair = 10,
+    CharacterClassTypeLahn = 11,
+    CharacterClassTypeBerserker = 12,
+    CharacterClassTypeReserved13 = 13,
+    CharacterClassTypeReserved14 = 14,
+    CharacterClassTypeMaegu = 15,
+    CharacterClassTypeTamer = 16,
+    CharacterClassTypeShai = 17,
+    CharacterClassTypeReserved18 = 18,
+    CharacterClassTypeStriker = 19,
+    CharacterClassTypeMusa = 20,
+    CharacterClassTypeMaehwa = 21,
+    CharacterClassTypeReserved22 = 22,
+    CharacterClassTypeMystic = 23,
+    CharacterClassTypeValkyrie = 24,
+    CharacterClassTypeKunoichi = 25,
+    CharacterClassTypeNinja = 26,
+    CharacterClassTypeDarkKnight = 27,
+    CharacterClassTypeWizard = 28,
+    CharacterClassTypeArcher = 29,
+    CharacterClassTypeWoosa = 30,
+    CharacterClassTypeWitch = 31,
+    CharacterClassTypeSeraph = 32,
+    CharacterClassTypeDosa = 33,
+    CharacterClassTypeDeadeye = 34,
+    CharacterClassTypeReserved35 = 35,
+    CharacterClassTypeReserved36 = 36,
+    CharacterClassTypeMAX = 37,
+};
+
+/**
+ * CharacterClassTypeInfo is the static metadata attached to a CharacterClassType.
+ */
+export interface CharacterClassTypeInfo {
+    "CharacterClassType": CharacterClassType;
+    "Name": string;
+    "Reserved": boolean;
+    "Title": string;
 }
 
 /**
@@ -197,6 +274,8 @@ export interface CrystalGroup {
 
 export interface EffectGroup {
     "title": string;
+    "marker"?: string;
+    "pieces"?: number;
     "stats": StatMod[] | null;
 }
 
@@ -217,6 +296,42 @@ export interface Effects {
     "durationMs"?: number;
     "stats"?: EffectGroup;
     "hidden"?: EffectGroup;
+}
+
+/**
+ * EnchantCombatStat is one damage-type lane from an enchant-curve row.
+ */
+export interface EnchantCombatStat {
+    "apMin"?: number;
+    "apMax"?: number;
+    "ap"?: number;
+    "accuracy"?: number;
+    "accuracyDice"?: string;
+    "evasion"?: number;
+    "addedEvasion"?: number;
+    "damageReduction"?: number;
+    "addedDamageReduction"?: number;
+    "unknownAttack167"?: number;
+    "unknownAttack179"?: number;
+}
+
+/**
+ * EnchantCombatStats preserves the melee, ranged, and magic lanes stored in an
+ * enchant-curve row. The top-level EnchantLevel fields are their display maxima.
+ */
+export interface EnchantCombatStats {
+    "melee"?: EnchantCombatStat | null;
+    "ranged"?: EnchantCombatStat | null;
+    "magic"?: EnchantCombatStat | null;
+}
+
+/**
+ * EnchantIndexedStat preserves a populated slot from a fixed stat array whose
+ * client enum index is not fully mapped yet.
+ */
+export interface EnchantIndexedStat {
+    "index": number;
+    "value": number;
 }
 
 /**
@@ -286,64 +401,177 @@ export interface EnchantLevel {
     "effects"?: EffectGroup[] | null;
 
     /**
+     * SourceDescription is the optional source-language enhancement description
+     * embedded before the effect DSL. Ship equipment uses it for formatted stat text.
+     */
+    "sourceDescription"?: string;
+
+    /**
+     * CombatStats preserves the melee, ranged, and magic values independently.
+     */
+    "combatStats"?: EnchantCombatStats | null;
+
+    /**
+     * SpeciesAP preserves populated slots from the fixed species-damage array.
+     */
+    "speciesAp"?: EnchantIndexedStat[] | null;
+
+    /**
+     * EnhancementAids lists alternative enhancement items accepted at this level,
+     * such as J's Hammer of Loyalty, Primordial Hammer, and Crystals of Origin.
+     */
+    "enhancementAids"?: models$0.EntityRefList<Item>;
+
+    /**
+     * the lowest enhancement level that can carry Caphras
+     */
+    "caphrasMinLevel"?: number;
+
+    /**
+     * the highest enhancement level that can carry Caphras
+     */
+    "caphrasMaxLevel"?: number;
+
+    /**
      * Caphras steps at this level (18/19/20 only)
      */
     "caphras"?: CaphrasLevel[] | null;
 
     /**
-     * @4  u32 per-record value (hash/id-like)
+     * @4 u32; high-cardinality internal value
      */
     "unknown4"?: number | null;
 
     /**
-     * @8  u32
+     * @8 u32
      */
     "unknown8"?: number | null;
 
     /**
-     * @25 u32 (rises with enhancement — likely material/cron cost)
+     * @12 u32
+     */
+    "unknown12"?: number | null;
+
+    /**
+     * @16 u32
+     */
+    "unknown16"?: number | null;
+
+    /**
+     * @20 u32
+     */
+    "unknown20"?: number | null;
+
+    /**
+     * @24 u8
+     */
+    "unknown24"?: number | null;
+
+    /**
+     * @25 u32; rises with enhancement
      */
     "unknown25"?: number | null;
 
     /**
-     * @45 u32 (often 1,000,000 — rate-like)
+     * @29 u32
+     */
+    "unknown29"?: number | null;
+
+    /**
+     * @33 u32
+     */
+    "unknown33"?: number | null;
+
+    /**
+     * @37 u32
+     */
+    "unknown37"?: number | null;
+
+    /**
+     * @45 u32; commonly rate-like
      */
     "unknown45"?: number | null;
 
     /**
-     * @55 u16 (10, steps to 20 at PRI — enhancement param)
+     * @49 u32
+     */
+    "unknown49"?: number | null;
+
+    /**
+     * @55 u16; enhancement parameter
      */
     "unknown55"?: number | null;
 
     /**
-     * @57 u16 (constant 10)
+     * @57 u16; commonly 10
      */
     "unknown57"?: number | null;
 
     /**
-     * @60 u16 (rises +8→+15 then caps at 100 — enhancement param)
+     * @59 u8
+     */
+    "unknown59"?: number | null;
+
+    /**
+     * @60 u16; rises with enhancement
      */
     "unknown60"?: number | null;
 
     /**
-     * @70 f32 — the one populated slot of the @66-165 per-species-AP band (5-10 on ~336 records, specific gear at TRI/PEN)
+     * @166 u8; combat-stat lane flag
      */
-    "unknown70"?: number | null;
+    "unknown166"?: number | null;
 
     /**
-     * @167 tri-block (tracks minAP-1)
+     * @251 u32; packed field before descriptions
      */
-    "unknown167"?: number | null;
+    "unknown251"?: number | null;
 
     /**
-     * post-DSL constant (usually 1,000,000)
+     * display tail +0 u8
+     */
+    "unknownDisplay0"?: number | null;
+
+    /**
+     * display tail +1 u8
+     */
+    "unknownDisplay1"?: number | null;
+
+    /**
+     * display tail +2 u32; normally 1,000,000
      */
     "unknownRate1"?: number | null;
 
     /**
-     * post-DSL constant (usually 700,000)
+     * display tail +6 u32; normally 700,000
      */
     "unknownRate2"?: number | null;
+
+    /**
+     * display tail +10 u8
+     */
+    "unknownDisplay10"?: number | null;
+
+    /**
+     * display tail +11 u8
+     */
+    "unknownDisplay11"?: number | null;
+
+    /**
+     * display tail +12 u8
+     */
+    "unknownDisplay12"?: number | null;
+
+    /**
+     * UnknownTail12 is the 65-byte structured block after three -1 sentinels and
+     * before the counted enhancement-aid item list. JSON encodes it as base64.
+     */
+    "unknownTail12"?: string | null;
+
+    /**
+     * UnknownFooter is the final six bytes after the enhancement-aid item list.
+     */
+    "unknownFooter"?: string | null;
 }
 
 /**
@@ -390,9 +618,10 @@ export interface EquipInfo {
     /**
      * Slot is the normalized, class-independent
      * equip slot (@14) — the only slot source for artifacts, life/gathering tools and
-     * costume accessories whose Type is blank;
+     * costume accessories whose Type is blank. Not omitempty: Main Weapon is slot 0,
+     * and EquipInfo only exists for equippables, so the zero value is meaningful.
      */
-    "slot"?: string;
+    "slot": SlotName;
 
     /**
      * Kind is the broad gear class (Weapon/Armor/Other, itemenchant @15);
@@ -408,7 +637,7 @@ export interface EquipInfo {
      * Slots lists every slot the item occupies (@14 + @16-18)
      * for multi-slot items like functional costumes; absent = single-slot.
      */
-    "slots"?: string[] | null;
+    "slots"?: SlotName[] | null;
 }
 
 /**
@@ -461,7 +690,7 @@ export interface Item {
     /**
      * itemenchant.dbss  GradeType
      */
-    "grade"?: string;
+    "grade": ItemGrade;
 
     /**
      * itemenchant.dbss  ItemClassify (game category)
@@ -479,12 +708,12 @@ export interface Item {
     "equipInfo"?: EquipInfo | null;
 
     /**
-     * central-market main category (@188, or derived — see Marketable)
+     * central-market main category (@200, or derived — see Marketable)
      */
     "marketCategory"?: string;
 
     /**
-     * central-market sub category (@189, or derived)
+     * central-market sub category (@201, or derived)
      */
     "marketSubCategory"?: string;
 
@@ -569,7 +798,7 @@ export interface Item {
      * staff weapons 40, longbow 42, kunai 51, classic boss armor 71 vs other
      * armor 72, accessories by slot (necklace 73, ring 74, earring 75,
      * belt 76), horse gear 123. Named by reference-dictionary correlation
-     * (99% match; previously misattributed to NewEquipType — see FORMATS §3).
+     * with 99% agreement; see FORMATS §3.
      */
     "itemMaterial"?: number;
 
@@ -722,37 +951,58 @@ export interface Item {
     "unknown144"?: number | null;
 
     /**
-     * header @146-150 — @148 small enum; @149/@150 default 255.
+     * Header @146-157 is a four-field block between event data and the
+     * item-property flags: u32, u16, u16, u32. The first two use all-ones
+     * sentinels; unknown152 is commonly 1000.
      */
     "unknown146"?: number | null;
-    "unknown148"?: number | null;
-    "unknown149"?: number | null;
     "unknown150"?: number | null;
-
-    /**
-     * header @154-155 (@155 weakly matched isGuildStockable, 74%), @157 default 1.
-     */
+    "unknown152"?: number | null;
     "unknown154"?: number | null;
-    "unknown155"?: number | null;
-    "unknown157"?: number | null;
 
     /**
-     * header @161, @168-169, @176-178. unknown168 + unknown176 are a PAIRED field
+     * Header @158-162 — @159/@161/@162 use 255 sentinels; @160 is a small enum.
+     */
+    "unknown158"?: number | null;
+    "unknown159"?: number | null;
+    "unknown160"?: number | null;
+    "unknown161"?: number | null;
+    "unknown162"?: number | null;
+
+    /**
+     * Header @166-167 (@167 weakly matched isGuildStockable, 74%), @169 default 1.
+     */
+    "unknown166"?: number | null;
+    "unknown167"?: number | null;
+    "unknown169"?: number | null;
+
+    /**
+     * Header @170-171 is an unidentified u16 value.
+     */
+    "unknown170"?: number | null;
+
+    /**
+     * Header @173-181 and @188-190. unknown180 + unknown188 are a PAIRED field
      * — they fire on the exact same 16,655 items (8 bytes apart, ~20 values each),
      * a strong candidate for a two-part record.
      */
-    "unknown161"?: number | null;
-    "unknown168"?: number | null;
-    "unknown169"?: number | null;
+    "unknown173"?: number | null;
+    "unknown174"?: number | null;
     "unknown176"?: number | null;
-    "unknown177"?: number | null;
     "unknown178"?: number | null;
+    "unknown180"?: number | null;
+    "unknown181"?: number | null;
+    "unknown182"?: number | null;
+    "unknown188"?: number | null;
+    "unknown189"?: number | null;
+    "unknown190"?: number | null;
+    "unknown192"?: number | null;
 
     /**
-     * header @187, @191 (default 1) — flags.
+     * Header @199, @203 (default 1) — flags.
      */
-    "unknown187"?: number | null;
-    "unknown191"?: number | null;
+    "unknown199"?: number | null;
+    "unknown203"?: number | null;
 
     /**
      * icon-block +1..+3 — small enums; unknownIcon2 defaults to 9 (its only
@@ -786,8 +1036,29 @@ export interface Item {
      * item resource/source class.
      */
     "unknownIcon16"?: number | null;
-    "unknownIcon19"?: number | null;
-    "unknownIcon27"?: number | null;
+
+    /**
+     * UnknownAfterMarketLimit0 begins the fixed property prefix after the three
+     * variable strings and market registration limit.
+     */
+    "unknownAfterMarketLimit0"?: number | null;
+    "unknownAfterMarketLimit1"?: number | null;
+    "unknownAfterMarketLimit5"?: number | null;
+    "unknownAfterMarketLimit55"?: number | null;
+    "unknownAfterMarketLimit56"?: number | null;
+    "unknownAfterMarketLimit58"?: number | null;
+    "unknownAfterMarketLimit59"?: number | null;
+    "unknownAfterMarketLimit60"?: number | null;
+    "unknownAfterMarketLimit64"?: number | null;
+    "unknownAfterMarketLimit68"?: number | null;
+    "unknownAfterMarketLimit72"?: number | null;
+    "unknownAfterMarketLimit76"?: number | null;
+    "unknownAfterMarketLimit80"?: number | null;
+
+    /**
+     * UnknownFooter6 is the final u16 after the crystal group.
+     */
+    "unknownFooter6"?: number | null;
 
     /**
      * Acquisition, from the per-item info XML (ui_html/xml/<lang>/<id>.xml). The XML
@@ -834,7 +1105,69 @@ export interface Item {
      * enchantstaticstatus.dbss curve
      */
     "enhancement"?: Enhancement | null;
+    "itemSets"?: models$0.EntityRefList<ItemSet> | null;
 }
+
+/**
+ * ItemGrade is a int8-wide identifier. The zero-cost conversion ItemGrade(x) is
+ * intentional: the underlying value is the wire value.
+ */
+export enum ItemGrade {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = 0,
+
+    ItemGradeNone = -1,
+    ItemGradeWhite = 0,
+    ItemGradeGreen = 1,
+    ItemGradeBlue = 2,
+    ItemGradeYellow = 3,
+    ItemGradeRed = 4,
+    ItemGradePurple = 5,
+};
+
+/**
+ * ItemSet is one skillpiece definition and the items linked to it.
+ */
+export interface ItemSet {
+    "urn": urn$0.URN;
+    "skillNo": number;
+    "bonuses": ItemSetBonus[] | null;
+    "items"?: models$0.EntityRefList<Item> | null;
+    "membershipSources"?: ItemSetMembershipSource[] | null;
+}
+
+/**
+ * ItemSetBonus is one piece-count tier displayed by the client.
+ */
+export interface ItemSetBonus {
+    "pieces": number;
+    "apply": number;
+    "groupTitle"?: string;
+    "descriptionTitle"?: string;
+    "description"?: string;
+}
+
+/**
+ * ItemSetMembershipSource describes how an item-to-set relation was recovered.
+ */
+export enum ItemSetMembershipSource {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * ItemSetMembershipDSL is a relation carried by an enhancement DSL function.
+     */
+    ItemSetMembershipDSL = "dsl",
+
+    /**
+     * ItemSetMembershipExplicit is a confirmed family with no recovered client-side foreign key.
+     */
+    ItemSetMembershipExplicit = "explicit",
+};
 
 /**
  * KnowledgeEntry is one knowledge card (mentalcard.dbss): an entry under a theme,
@@ -889,6 +1222,34 @@ export interface KnowledgeTheme {
     "parent"?: models$0.EntityRef<KnowledgeTheme> | null;
     "item"?: models$0.EntityRef<Item> | null;
 }
+
+/**
+ * LifeSkillType is a uint8-wide identifier. The zero-cost conversion LifeSkillType(x) is
+ * intentional: the underlying value is the wire value.
+ */
+export enum LifeSkillType {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = 0,
+
+    LifeSkillTypeGathering = 0,
+    LifeSkillTypeFishing = 1,
+    LifeSkillTypeHunting = 2,
+    LifeSkillTypeCooking = 3,
+    LifeSkillTypeAlchemy = 4,
+    LifeSkillTypeProcessing = 5,
+    LifeSkillTypeTraining = 6,
+    LifeSkillTypeTrading = 7,
+    LifeSkillTypeFarming = 8,
+    LifeSkillTypeSailing = 9,
+    LifeSkillTypeQuest = 10,
+    LifeSkillTypeBartering = 11,
+    LifeSkillTypeReserved12 = 12,
+    LifeSkillTypeReserved13 = 13,
+    LifeSkillTypeReserved14 = 14,
+    LifeSkillTypeCount = 15,
+};
 
 /**
  * NPC is an NPC character template keyed by the character key shared by
@@ -1223,6 +1584,73 @@ export interface Ref {
 }
 
 /**
+ * SlotName is a byte-wide identifier. The zero-cost conversion SlotName(x) is
+ * intentional: the underlying value is the wire value.
+ */
+export enum SlotName {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = 0,
+
+    SlotNameMainWeapon = 0,
+    SlotNameSubWeapon = 1,
+    SlotNameFishingChair = 2,
+    SlotNameArmor = 3,
+    SlotNameGloves = 4,
+    SlotNameShoes = 5,
+    SlotNameHelmet = 6,
+    SlotNameNecklace = 7,
+    SlotNameRingI = 8,
+    SlotNameRingII = 9,
+    SlotNameEarringI = 10,
+    SlotNameEarringII = 11,
+    SlotNameBelt = 12,
+    SlotNameLantern = 13,
+    SlotNameCostumeArmor = 14,
+    SlotNameCostumeGloves = 15,
+    SlotNameCostumeShoes = 16,
+    SlotNameCostumeHelmet = 17,
+    SlotNameCostumeMainWeapon = 18,
+    SlotNameCostumeSubWeapon = 19,
+    SlotNameUnderwear = 20,
+    SlotNameCostumeEarring = 21,
+    SlotNameCostumeHeadpiece = 22,
+    SlotNameCostumePiercing = 23,
+    SlotNameShipGear = 25,
+    SlotNameShipGear2 = 26,
+    SlotNameAlchemyStone = 27,
+    SlotNameAwakeningWeapon = 29,
+    SlotNameCostumeAwakeningWeapon = 30,
+    SlotNameTome = 31,
+    SlotNameArtifactI = 32,
+    SlotNameArtifactII = 33,
+    SlotNameLumberingAxe = 34,
+    SlotNameFluidCollector = 35,
+    SlotNameHoe = 36,
+    SlotNameButcherKnife = 37,
+    SlotNameTanningKnife = 38,
+    SlotNamePickaxe = 39,
+    SlotNameFishingRod = 40,
+    SlotNameFishingFloat = 41,
+    SlotNameFishingHarpoon = 42,
+    SlotNameGatheringCarrier = 45,
+    SlotNameNone = 46,
+    SlotNameMAX = 47,
+};
+
+/**
+ * SlotNameInfo is the static metadata attached to a SlotName.
+ */
+export interface SlotNameInfo {
+    "SlotName": SlotName;
+    "Name": string;
+    "Title": string;
+    "Desc": string;
+    "OtherSlot": number;
+}
+
+/**
  * Spawn is one NPC/monster placement within a region: its character id, world
  * position, and dialog/spawn variant index. Placements live on WorldRegion.Spawns.
  */
@@ -1231,6 +1659,176 @@ export interface Spawn {
     "pos": number[];
     "dialogIndex"?: number;
 }
+
+/**
+ * StatId is a string-wide identifier. The zero-cost conversion StatId(x) is
+ * intentional: the underlying value is the wire value.
+ */
+export enum StatId {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    StatIdMonsterAp = "monsterAp",
+    StatIdAdventurerAp = "adventurerAp",
+    StatIdHumanAp = "humanAp",
+    StatIdDemihumanAp = "demihumanAp",
+    StatIdKamasylvianAp = "kamasylvianAp",
+    StatIdAllSpeciesAp = "allSpeciesAp",
+    StatIdHiddenAp = "hiddenAp",
+    StatIdDp = "dp",
+    StatIdMeleeAp = "meleeAp",
+    StatIdRangedAp = "rangedAp",
+    StatIdMagicAp = "magicAp",
+    StatIdCritDamage = "critDamage",
+    StatIdSpecialAttackDamage = "specialAttackDamage",
+    StatIdBackAttackDamage = "backAttackDamage",
+    StatIdDownAttackDamage = "downAttackDamage",
+    StatIdHuntingDamage = "huntingDamage",
+    StatIdAccuracy = "accuracy",
+    StatIdMeleeAccuracy = "meleeAccuracy",
+    StatIdRangedAccuracy = "rangedAccuracy",
+    StatIdMagicAccuracy = "magicAccuracy",
+    StatIdMeleeEvasion = "meleeEvasion",
+    StatIdRangedEvasion = "rangedEvasion",
+    StatIdMagicEvasion = "magicEvasion",
+    StatIdMeleeDamageReduction = "meleeDamageReduction",
+    StatIdRangedDamageReduction = "rangedDamageReduction",
+    StatIdMagicDamageReduction = "magicDamageReduction",
+    StatIdDamageReductionRate = "damageReductionRate",
+    StatIdAllResistance = "allResistance",
+    StatIdStunResistance = "stunResistance",
+    StatIdKnockdownResistance = "knockdownResistance",
+    StatIdKnockbackResistance = "knockbackResistance",
+    StatIdAttackSpeed = "attackSpeed",
+    StatIdCastingSpeed = "castingSpeed",
+    StatIdMoveSpeed = "moveSpeed",
+    StatIdLuck = "luck",
+    StatIdMaxHp = "maxHp",
+    StatIdHpRecovery = "hpRecovery",
+    StatIdResourceRecovery = "resourceRecovery",
+    StatIdBlackSpiritRage = "blackSpiritRage",
+    StatIdAllMastery = "allMastery",
+    StatIdGatheringMastery = "gatheringMastery",
+    StatIdHoeMastery = "hoeMastery",
+    StatIdLumberingMastery = "lumberingMastery",
+    StatIdFluidCollectorMastery = "fluidCollectorMastery",
+    StatIdTanningMastery = "tanningMastery",
+    StatIdButcherMastery = "butcherMastery",
+    StatIdPickaxeMastery = "pickaxeMastery",
+    StatIdFishingMastery = "fishingMastery",
+    StatIdHuntingMastery = "huntingMastery",
+    StatIdCookingMastery = "cookingMastery",
+    StatIdAlchemyMastery = "alchemyMastery",
+    StatIdProcessingMastery = "processingMastery",
+    StatIdTrainingMastery = "trainingMastery",
+    StatIdSailingMastery = "sailingMastery",
+    StatIdLifeExp = "lifeExp",
+    StatIdCombatExp = "combatExp",
+    StatIdSkillExp = "skillExp",
+    StatIdGatheringExp = "gatheringExp",
+    StatIdHuntingExp = "huntingExp",
+    StatIdCookingExp = "cookingExp",
+    StatIdAlchemyExp = "alchemyExp",
+    StatIdFishingExp = "fishingExp",
+    StatIdProcessingExp = "processingExp",
+    StatIdTrainingExp = "trainingExp",
+    StatIdSailingExp = "sailingExp",
+    StatIdBarteringExp = "barteringExp",
+    StatIdTradingExp = "tradingExp",
+    StatIdFarmingExp = "farmingExp",
+    StatIdMountExp = "mountExp",
+    StatIdMountSkillExp = "mountSkillExp",
+    StatIdStrengthExp = "strengthExp",
+    StatIdBreathExp = "breathExp",
+    StatIdGatheringTime = "gatheringTime",
+    StatIdCookingTime = "cookingTime",
+    StatIdAlchemyTime = "alchemyTime",
+    StatIdGatheringDropRate = "gatheringDropRate",
+    StatIdAutoFishingTime = "autoFishingTime",
+    StatIdRareFishChance = "rareFishChance",
+    StatIdHorseCaptureRate = "horseCaptureRate",
+    StatIdProcessingSuccessRate = "processingSuccessRate",
+    StatIdAmity = "amity",
+    StatIdDeathPenaltyResistance = "deathPenaltyResistance",
+    StatIdDurabilityLossResistance = "durabilityLossResistance",
+    StatIdFallDamage = "fallDamage",
+    StatIdItemDropRate = "itemDropRate",
+    StatIdJumpHeight = "jumpHeight",
+    StatIdKnowledgeChance = "knowledgeChance",
+    StatIdMermaidsWish = "mermaidsWish",
+    StatIdUnderwaterBreathing = "underwaterBreathing",
+    StatIdWeightLimit = "weightLimit",
+    StatIdAp = "ap",
+    StatIdAwakeningAp = "awakeningAp",
+    StatIdTotalAp = "totalAp",
+    StatIdTotalAwakeningAp = "totalAwakeningAp",
+    StatIdBracketAp = "bracketAp",
+    StatIdBracketAwakeningAp = "bracketAwakeningAp",
+    StatIdBracketMonsterAp = "bracketMonsterAp",
+    StatIdBracketMonsterAwakeningAp = "bracketMonsterAwakeningAp",
+    StatIdApVsMonster = "apVsMonster",
+    StatIdApVsAdventurer = "apVsAdventurer",
+    StatIdApVsHuman = "apVsHuman",
+    StatIdApVsDemihuman = "apVsDemihuman",
+    StatIdApVsKamasylvian = "apVsKamasylvian",
+    StatIdApVsEdania = "apVsEdania",
+    StatIdApVsNormal = "apVsNormal",
+    StatIdAwakeningApVsMonster = "awakeningApVsMonster",
+    StatIdAwakeningApVsAdventurer = "awakeningApVsAdventurer",
+    StatIdAwakeningApVsHuman = "awakeningApVsHuman",
+    StatIdAwakeningApVsDemihuman = "awakeningApVsDemihuman",
+    StatIdAwakeningApVsKamasylvian = "awakeningApVsKamasylvian",
+    StatIdAwakeningApVsEdania = "awakeningApVsEdania",
+    StatIdAwakeningApVsNormal = "awakeningApVsNormal",
+    StatIdNormalAp = "normalAp",
+    StatIdEdaniaAp = "edaniaAp",
+    StatIdDamageReduction = "damageReduction",
+    StatIdTotalDamageReduction = "totalDamageReduction",
+    StatIdHiddenDamageReduction = "hiddenDamageReduction",
+    StatIdMonsterDamageReduction = "monsterDamageReduction",
+    StatIdMeleeMonsterDamageReduction = "meleeMonsterDamageReduction",
+    StatIdRangedMonsterDamageReduction = "rangedMonsterDamageReduction",
+    StatIdMagicMonsterDamageReduction = "magicMonsterDamageReduction",
+    StatIdHiddenMeleeDamageReduction = "hiddenMeleeDamageReduction",
+    StatIdHiddenRangedDamageReduction = "hiddenRangedDamageReduction",
+    StatIdHiddenMagicDamageReduction = "hiddenMagicDamageReduction",
+    StatIdEvasion = "evasion",
+    StatIdHiddenEvasion = "hiddenEvasion",
+    StatIdEvasionRate = "evasionRate",
+    StatIdMeleeEvasionRate = "meleeEvasionRate",
+    StatIdRangedEvasionRate = "rangedEvasionRate",
+    StatIdMagicEvasionRate = "magicEvasionRate",
+    StatIdHiddenMeleeEvasion = "hiddenMeleeEvasion",
+    StatIdHiddenRangedEvasion = "hiddenRangedEvasion",
+    StatIdHiddenMagicEvasion = "hiddenMagicEvasion",
+    StatIdGrappleResistance = "grappleResistance",
+    StatIdAirAttackDamage = "airAttackDamage",
+    StatIdCounterAttackDamage = "counterAttackDamage",
+    StatIdSpeedAttackDamage = "speedAttackDamage",
+    StatIdFarmingMastery = "farmingMastery",
+    StatIdTradingMastery = "tradingMastery",
+    StatIdFilteringMastery = "filteringMastery",
+    StatIdDryingMastery = "dryingMastery",
+    StatIdGrindingMastery = "grindingMastery",
+    StatIdHeatingMastery = "heatingMastery",
+    StatIdChoppingMastery = "choppingMastery",
+    StatIdShakingMastery = "shakingMastery",
+    StatIdMaxResource = "maxResource",
+    StatIdMaxStamina = "maxStamina",
+    StatIdApMin = "apMin",
+    StatIdApMax = "apMax",
+    StatIdAwakeningApMin = "awakeningApMin",
+    StatIdAwakeningApMax = "awakeningApMax",
+    StatIdCritLevel = "critLevel",
+    StatIdCritChance = "critChance",
+    StatIdFishingSpeed = "fishingSpeed",
+    StatIdAttackSpeedLevel = "attackSpeedLevel",
+    StatIdCastingSpeedLevel = "castingSpeedLevel",
+    StatIdMovementSpeedLevel = "movementSpeedLevel",
+    StatIdGatheringSpeed = "gatheringSpeed",
+};
 
 /**
  * StatMod is one parsed effect line, e.g. "Fishing EXP +10%" ->
@@ -1243,6 +1841,7 @@ export interface StatMod {
     "op"?: string;
     "value"?: number;
     "unit"?: string;
+    "curveFields"?: string[] | null;
 
     /**
      * source buff Index (traceability)
@@ -1258,6 +1857,11 @@ export interface StatMod {
      * optional consumer-facing note (e.g. "hidden stat")
      */
     "note"?: string;
+
+    /**
+     * DerivedFrom identifies the raw DSL marker that implies a canonical effect.
+     */
+    "derivedFrom"?: string;
 }
 
 /**
@@ -1425,9 +2029,14 @@ export interface WorldNode {
     "products"?: models$0.EntityRefList<Item> | null;
 
     /**
-     * Flag is the const-1 byte at +4;
+     * Enabled is false on unused, unlocalized node records.
      */
-    "flag": number;
+    "enabled": boolean;
+
+    /**
+     * Unknown17 closely tracks Main but is false on three active main nodes.
+     */
+    "unknown17"?: boolean;
 
     /**
      * SubKey2 (a key at +27, == SubKey for 997/1037 nodes)
@@ -1444,7 +2053,7 @@ export interface WorldNode {
     /**
      * The +16..+22 bytes are a small "location/zone class" subsystem, mapped by testing values
      * against shrddr's dump and the in-game world map. The names are best-guess (the exact game
-     * terms aren't confirmed), and +17/+18 — which are just copies of Main — are dropped.
+     * terms aren't confirmed. +18 is an exact copy of Main and is dropped.
      * 
      * Special marks the 119 non-network "special locations" (byte +16 == 0): every town
      * (kind 2), investment bank (kind 10), sea zone (Margoria/Ross/Juur), trade district and
@@ -1600,14 +2209,428 @@ export enum WorldNodeKind {
  */
 export interface WorldRegion {
     "urn": urn$0.URN;
+
+    /**
+     * Unknown11 is a small region-mode enum (observed 0, 1, 3 and 4).
+     */
+    "unknown11": number;
+
+    /**
+     * Unknown12 is an early region capability flag.
+     */
+    "unknown12": boolean;
+
+    /**
+     * Unknown13 is an early region capability flag.
+     */
+    "unknown13": boolean;
+
+    /**
+     * Unknown18 is part of the environment/capability flag bank.
+     */
+    "unknown18": boolean;
+
+    /**
+     * Unknown19 is part of the environment/capability flag bank.
+     */
+    "unknown19": boolean;
+
+    /**
+     * Unknown20 is part of the environment/capability flag bank.
+     */
+    "unknown20": boolean;
+
+    /**
+     * Unknown21 is part of the environment/capability flag bank.
+     */
+    "unknown21": boolean;
+
+    /**
+     * Unknown22 is part of the environment/capability flag bank.
+     */
+    "unknown22": boolean;
+
+    /**
+     * Unknown23 is part of the environment/capability flag bank.
+     */
+    "unknown23": boolean;
+
+    /**
+     * Unknown24 is part of the environment/capability flag bank.
+     */
+    "unknown24": boolean;
+
+    /**
+     * Unknown25 is part of the environment/capability flag bank.
+     */
+    "unknown25": boolean;
+
+    /**
+     * Unknown26 is part of the environment/capability flag bank.
+     */
+    "unknown26": boolean;
+
+    /**
+     * Unknown28 is a flag adjacent to the locator setting.
+     */
+    "unknown28": boolean;
+
+    /**
+     * Unknown29 is a short locator/region configuration value.
+     */
+    "unknown29": number;
+
+    /**
+     * Unknown31 is a locator-adjacent region flag.
+     */
+    "unknown31": boolean;
+
+    /**
+     * Unknown32 is a client configuration token, constant in the sampled build.
+     */
+    "unknown32": number;
+
+    /**
+     * Unknown37 is a flag adjacent to the primary respawn position.
+     */
+    "unknown37": boolean;
+
+    /**
+     * Unknown54 is part of the respawn/configuration flag bank.
+     */
+    "unknown54": boolean;
+
+    /**
+     * Unknown55 is part of the respawn/configuration flag bank.
+     */
+    "unknown55": boolean;
+
+    /**
+     * Unknown56 is part of the respawn/configuration flag bank.
+     */
+    "unknown56": boolean;
+
+    /**
+     * Unknown57 is part of the respawn/configuration flag bank.
+     */
+    "unknown57": boolean;
+
+    /**
+     * Unknown58 is part of the respawn/configuration flag bank.
+     */
+    "unknown58": boolean;
+
+    /**
+     * Unknown60 is a respawn/configuration reference or parameter.
+     */
+    "unknown60": number;
+
+    /**
+     * Unknown66 qualifies the configuration value at offset 68.
+     */
+    "unknown66": boolean;
+
+    /**
+     * Unknown68 is a region configuration reference or parameter.
+     */
+    "unknown68": number;
+
+    /**
+     * Unknown82 qualifies the configuration value at offset 84.
+     */
+    "unknown82": boolean;
+
+    /**
+     * Unknown84 is a region configuration reference or parameter.
+     */
+    "unknown84": number;
+
+    /**
+     * Unknown107 is a relation key near the town and exploration references.
+     */
+    "unknown107": number;
+
+    /**
+     * Unknown115 is a locality flag observed on Velia and Velia Beach.
+     */
+    "unknown115": boolean;
+
+    /**
+     * Unknown147 is a flag preceding the client configuration block.
+     */
+    "unknown147": boolean;
+
+    /**
+     * Unknown149 is an opaque client-build/configuration value.
+     */
+    "unknown149": number;
+
+    /**
+     * Unknown153 holds five world/environment scalar parameters.
+     */
+    "unknown153": number[];
+
+    /**
+     * Unknown173 is a world/environment configuration reference.
+     */
+    "unknown173": number;
+
+    /**
+     * Unknown177 is a world/environment configuration reference.
+     */
+    "unknown177": number;
+
+    /**
+     * Unknown181 is a sentinel field (0xffffffff in the sampled build).
+     */
+    "unknown181": number;
+
+    /**
+     * Unknown185 holds six optional town/configuration references.
+     */
+    "unknown185": number[];
+
+    /**
+     * Unknown209 is the final flag in the variable record head.
+     */
+    "unknown209": boolean;
+
+    /**
+     * UnknownTail1 is the first short parameter in the fixed tail.
+     */
+    "unknownTail1": number;
+
+    /**
+     * UnknownTail3 is the second short parameter in the fixed tail.
+     */
+    "unknownTail3": number;
+
+    /**
+     * UnknownTail5 is a world-space vector or three scalar parameters.
+     */
+    "unknownTail5": number[];
+
+    /**
+     * UnknownTail17 is a tail configuration reference or parameter.
+     */
+    "unknownTail17": number;
+
+    /**
+     * UnknownTail21 is the first byte in a four-byte mode/flag group.
+     */
+    "unknownTail21": number;
+
+    /**
+     * UnknownTail22 is the second byte in a four-byte mode/flag group.
+     */
+    "unknownTail22": number;
+
+    /**
+     * UnknownTail23 is the third byte in a four-byte mode/flag group.
+     */
+    "unknownTail23": number;
+
+    /**
+     * UnknownTail24 is the flag terminating the four-byte mode group.
+     */
+    "unknownTail24": boolean;
+
+    /**
+     * UnknownTail25 holds two world-space vectors or six scalar parameters.
+     */
+    "unknownTail25": number[];
+
+    /**
+     * UnknownTail49 is an opaque 64-bit key or bitfield.
+     */
+    "unknownTail49": number;
+
+    /**
+     * UnknownTail57 is a world/environment scalar parameter.
+     */
+    "unknownTail57": number;
+
+    /**
+     * UnknownTail61 is a world/environment scalar parameter.
+     */
+    "unknownTail61": number;
+
+    /**
+     * UnknownTail65 is a tail configuration reference or parameter.
+     */
+    "unknownTail65": number;
+
+    /**
+     * UnknownTail69 is a tail capability flag.
+     */
+    "unknownTail69": boolean;
+
+    /**
+     * UnknownTail70 is a tail capability flag.
+     */
+    "unknownTail70": boolean;
+
+    /**
+     * UnknownTail71 is a tail configuration reference or parameter.
+     */
+    "unknownTail71": number;
+
+    /**
+     * UnknownTail75 is a short tail configuration value.
+     */
+    "unknownTail75": number;
+
+    /**
+     * UnknownTail77 is a short tail configuration value.
+     */
+    "unknownTail77": number;
+
+    /**
+     * UnknownTail79 is a small mode or enum value.
+     */
+    "unknownTail79": number;
+
+    /**
+     * UnknownTail81 is a world/environment scalar parameter.
+     */
+    "unknownTail81": number;
+
+    /**
+     * UnknownTail85 holds six optional configuration references.
+     */
+    "unknownTail85": number[];
+
+    /**
+     * UnknownTail109 qualifies the following vector fields.
+     */
+    "unknownTail109": boolean;
+
+    /**
+     * UnknownTail110 is a world-space vector or three scalar parameters.
+     */
+    "unknownTail110": number[];
+
+    /**
+     * UnknownTail122 is a world-space vector or three scalar parameters.
+     */
+    "unknownTail122": number[];
+
+    /**
+     * UnknownTail134 is the first byte in a short mode/flag group.
+     */
+    "unknownTail134": number;
+
+    /**
+     * UnknownTail135 is the second byte in a short mode/flag group.
+     */
+    "unknownTail135": number;
+
+    /**
+     * UnknownTail136 is a flag in the short mode group.
+     */
+    "unknownTail136": boolean;
+
+    /**
+     * UnknownTail137 is the final byte in the short mode group.
+     */
+    "unknownTail137": number;
+
+    /**
+     * UnknownTail145 is a small tail mode or enum value.
+     */
+    "unknownTail145": number;
+
+    /**
+     * UnknownTail154 is a trailing configuration reference or parameter.
+     */
+    "unknownTail154": number;
+
+    /**
+     * UnknownTail158 is a trailing configuration reference or parameter.
+     */
+    "unknownTail158": number;
+
+    /**
+     * UnknownTail162 is a trailing configuration reference or parameter.
+     */
+    "unknownTail162": number;
     "key": number;
     "name": string;
     "type": number;
 
     /**
+     * MapColor is the record's RGB world-map color.
+     */
+    "mapColor": number[];
+
+    /**
+     * VillageSiegeDay uses CppEnums.VillageSiegeType; 7 means no node-war day.
+     */
+    "villageSiegeDay": number;
+
+    /**
+     * Ocean marks an open-ocean region.
+     */
+    "ocean": boolean;
+
+    /**
+     * Desert marks a desert region.
+     */
+    "desert": boolean;
+
+    /**
+     * Prison marks a prison region.
+     */
+    "prison": boolean;
+
+    /**
+     * Sea marks a sea region.
+     */
+    "sea": boolean;
+
+    /**
+     * Locator reports whether the client locator includes this region.
+     */
+    "locator": boolean;
+
+    /**
      * Territory is the world territory this region belongs to (urn::world:territory:<idx>).
      */
     "territory": models$0.EntityRef<Territory> | null;
+
+    /**
+     * AffiliatedTown is the town responsible for this region.
+     */
+    "affiliatedTown"?: models$0.EntityRef<WorldRegion> | null;
+
+    /**
+     * RegionGroupKey joins regiongroupinfo.bss.
+     */
+    "regionGroupKey"?: number;
+
+    /**
+     * Exploration is the world-map node associated with this region.
+     */
+    "exploration"?: models$0.EntityRef<WorldNode> | null;
+
+    /**
+     * VillainRespawn is the fallback node used for outlaw/death respawns.
+     */
+    "villainRespawn"?: models$0.EntityRef<WorldNode> | null;
+
+    /**
+     * VillainRespawnPosition is the position paired with VillainRespawn.
+     */
+    "villainRespawnPosition": number[];
+
+    /**
+     * WaypointPosition is the region's waypoint-interface position.
+     */
+    "waypointPosition": number[];
+
+    /**
+     * Position is the region's world position.
+     */
     "position": number[];
 
     /**
@@ -1625,6 +2648,11 @@ export interface WorldRegion {
      * (Iliya Island, Lema Island, Arehaza, Oquilla's Eye).
      */
     "warehouseGroup"?: number[] | null;
+
+    /**
+     * GuildWharfManager is the region's guild wharf service NPC.
+     */
+    "guildWharfManager"?: models$0.EntityRef<NPC> | null;
 
     /**
      * VariantOf groups spawn-phase variants of the same place: the game keeps

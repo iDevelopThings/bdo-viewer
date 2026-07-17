@@ -1,6 +1,5 @@
 import {IDockviewPanelProps} from "dockview-react";
 import type {MaybeReadonly} from "@/types.ts";
-import {type Grade} from "@/types.ts";
 import {Label} from "@/components/ui/label.tsx";
 import {Slider} from "@/components/ui/slider.tsx";
 import {EffectSections} from "@/components/details/effects.tsx";
@@ -30,7 +29,7 @@ export function DetailsItem(props: IDockviewPanelProps) {
 			<DetailsHeader
 				title={item.name}
 				icon={item.icon}
-				grade={item.grade as Grade}
+				grade={item.grade}
 				lines={{
 					"ID"              : item.id.toString(),
 					"Type"            : item.itemType,

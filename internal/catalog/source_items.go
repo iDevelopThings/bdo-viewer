@@ -41,6 +41,7 @@ type ItemSource struct {
 	// stores/indexes would ship the entire dataset to the webview (OOM).
 	Store            *models.Store[model.Item]        `json:"-"`
 	EnhancementStore *models.Store[model.Enhancement] `json:"-"`
+	ItemSetStore     *models.Store[model.ItemSet]     `json:"-"`
 
 	// canonical item URN -> its reissued copies (variantOf links from items.json)
 	ItemVariants map[urn.URN][]*model.Item `json:"-"`
@@ -141,6 +142,22 @@ func (s *ItemSource) Load() error {
 		}
 	}
 	models.RegisterStore(s.EnhancementStore)
+
+	var sets []model.ItemSet
+	if err := util.ReadJSON(filepath.Join(config.GetExtractedDataDir(), "item_sets.json"), &sets); err != nil {
+		return errors.Wrap(err, "read item_sets.json")
+	}
+	s.ItemSetStore = models.NewStore[model.ItemSet](
+		len(sets),
+		func(u urn.URN) bool { return u.Domain == urn.ItemSet.Domain() },
+	)
+	for i := range sets {
+		set := &sets[i]
+		if err := s.ItemSetStore.Add(set.GetURN(), set); err != nil {
+			return fmt.Errorf("registering item set %s: %w", set.GetURN().String(), err)
+		}
+	}
+	models.RegisterStore(s.ItemSetStore)
 
 	s.Store = models.NewStore[model.Item](
 		len(items), func(u urn.URN) bool {
@@ -444,12 +461,12 @@ func (s *ItemSource) GetStats(ref urn.URN, level int, caphrasStep int) []stats.S
 // itemFilters are the item-specific fields carried in ListSourceParams.Filters;
 // Category/SubCategory are handled generically by ListSourceParams itself.
 type itemFilters struct {
-	Grade     string `json:"grade,omitempty"`
-	ItemType  string `json:"itemType,omitempty"`
-	EquipType string `json:"equipType,omitempty"`
-	Effect    string `json:"effect,omitempty"`
+	Grade     *model.ItemGrade `json:"grade,omitempty"`
+	ItemType  string           `json:"itemType,omitempty"`
+	EquipType string           `json:"equipType,omitempty"`
+	Effect    string           `json:"effect,omitempty"`
 	// EquipSlots matches items whose EquipInfo.Slot is one of the listed values
-	EquipSlots []string `json:"equipSlots,omitempty"`
+	EquipSlots []model.SlotName `json:"equipSlots,omitempty"`
 	// Class matches items whose Classes list contains it; empty Classes = usable by all.
 	Class string `json:"class,omitempty"`
 	// Craftable, when true, keeps only items that have a recipe (the crafting
@@ -462,6 +479,13 @@ type itemFilters struct {
 func (s *ItemSource) List(params sources.ListSourceParams) []sources.ListSourceEntry {
 	var f itemFilters
 	_ = json.Unmarshal(params.Filters, &f) // empty/absent Filters = zero value = no constraint
+
+	// We need to handle earing2,artifact2,ring2 etc, mapping to the first slot of the pair.
+	for i, slot := range f.EquipSlots {
+		if slot.OtherSlot() > 0 {
+			f.EquipSlots[i] = model.SlotName(slot.OtherSlot())
+		}
+	}
 
 	ef := strings.ToLower(strings.TrimSpace(f.Effect))
 	pass := func(it *model.Item) bool {
@@ -488,7 +512,7 @@ func (s *ItemSource) List(params sources.ListSourceParams) []sources.ListSourceE
 		if params.SubCategory != "" && it.MarketSubCategory != params.SubCategory {
 			return false
 		}
-		if f.Grade != "" && it.Grade != f.Grade {
+		if f.Grade != nil && it.Grade != *f.Grade {
 			return false
 		}
 		if f.ItemType != "" && it.ItemType != f.ItemType {
@@ -506,10 +530,10 @@ func (s *ItemSource) List(params sources.ListSourceParams) []sources.ListSourceE
 				return false
 			}
 
-			// We only want to match the actual slot name
 			if !slices.Contains(f.EquipSlots, it.EquipInfo.Slot) {
 				return false
 			}
+
 		}
 		if f.Craftable && (recipe.Instance == nil || !recipe.Instance.IsCraftable(it.GetURN())) {
 			return false
@@ -560,14 +584,11 @@ func itemLess(by, dir string) func(a, b *model.Item) bool {
 	var less func(a, b *model.Item) bool
 	switch by {
 	case "grade":
-		rank := make(map[string]int, len(GradeOrder))
-		for i, g := range GradeOrder {
-			rank[g] = i
-		}
 		less = func(a, b *model.Item) bool {
-			if ra, rb := rank[a.Grade], rank[b.Grade]; ra != rb {
-				return ra < rb
+			if a.Grade != b.Grade {
+				return a.Grade < b.Grade
 			}
+
 			return a.Name < b.Name
 		}
 	case "weight":

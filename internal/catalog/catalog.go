@@ -12,9 +12,6 @@ import (
 	"github.com/idevelopthings/bdo-data-extractor/src/model"
 )
 
-// GradeOrder lists item grades from common to rare, for the grade filter.
-var GradeOrder = []string{"white", "green", "blue", "yellow", "red", "purple"}
-
 // MarketCategoryWithCount is one central-market category (or sub-category) with
 // its item count — the item source's navigation structure.
 type MarketCategoryWithCount struct {

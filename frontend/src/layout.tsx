@@ -29,10 +29,6 @@ const NoCloseTab = (props: IDockviewPanelHeaderProps) => {
 			break;
 	}
 
-	// const handler = tryMatchURN(props.api.id);
-	// const closable =
-	// if(handler?.is(ItemURN))
-	// console.log(`DockTab: "${props.api.id}"`, handler)
 	return <DockviewDefaultTab {...props} hideClose={!closable} />;
 };
 
@@ -188,7 +184,6 @@ export function AppLayout() {
 			className="dockview-theme-shadcn"
 			onReady={onReady}
 			scrollbars={"native"}
-			//			singleTabMode="fullwidth"
 			components={components}
 			defaultTabComponent={NoCloseTab}
 		/>

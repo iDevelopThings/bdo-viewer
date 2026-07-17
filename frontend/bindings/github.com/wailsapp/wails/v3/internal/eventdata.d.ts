@@ -8,10 +8,14 @@ import type { Events } from "@wailsio/runtime";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import type * as event_reporter$0 from "../../../../../bdo-viewer/internal/event_reporter/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import type * as gear$0 from "../../../../../bdo-viewer/internal/gear/models.js";
 
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
+            "gear-builder:loadout-updated": gear$0.EventLoadoutUpdatedPayload;
             "load:done": {};
             "load:error": event_reporter$0.ErrorPayload;
             "load:progress": event_reporter$0.Progress;

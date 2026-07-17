@@ -4,7 +4,7 @@ import {getDefaultNavigationPath, getNavigationListScope, getNavigationNode, nav
 import {CancelError, CancellablePromise} from "@wailsio/runtime";
 import {subscribeKey} from "valtio/utils";
 import {ListSourceEntries} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
-import {type ListSourceEntry, ListSourceParams, SourceKind} from "@bindings/bdo-viewer/internal/sources";
+import {type ListSourceEntry, SourceKind} from "@bindings/bdo-viewer/internal/sources";
 import type {SortDir} from "@/components/entry-list/entry-list.tsx";
 
 // Loose bag rather than ItemFilters specifically - each source has its own
@@ -127,7 +127,7 @@ function syncListFromActiveNode(path: string | undefined) {
 subscribeKey(navigation, "activePath", syncListFromActiveNode);
 
 const unsubscribeInitialActiveSync = subscribeKey(navigation, "nodesByPath", () => {
-	if(!navigation.activePath) {
+	if (!navigation.activePath) {
 		return;
 	}
 	if (!getNavigationNode(navigation.activePath)) {
@@ -138,7 +138,6 @@ const unsubscribeInitialActiveSync = subscribeKey(navigation, "nodesByPath", () 
 	syncListFromActiveNode(navigation.activePath);
 	unsubscribeInitialActiveSync();
 
-//	console.log("Initial navigation active node sync completed for path: ", navigation.activePath);
 });
 
 
@@ -160,7 +159,7 @@ export function loadList(): CancellablePromise<void> {
 		filters      : list.filters ?? {}
 	}).then(
 		entries => {
-			list.entries = ref(entries);
+			list.entries = ref(entries || []);
 		},
 		e => {
 			if (!(e instanceof CancelError)) {

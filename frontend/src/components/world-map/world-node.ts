@@ -183,7 +183,7 @@ export class NodeGraph {
 				}
 				return total;
 			},
-		})) as WrappedWorldNode;
+		})) as unknown as WrappedWorldNode;
 	}
 
 	// Wrapping runs in graph order, so a child/link ref can point at a node that isn't wrapped yet

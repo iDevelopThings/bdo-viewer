@@ -5,7 +5,7 @@ import {Plus, X} from "lucide-react";
 import type {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import {Requirement} from "@bindings/bdo-viewer/internal/recipe";
 import {addTarget, calc, type CalcTarget, calcRuntime, recompute, removeTarget, selectRecipe, setQty, toggleCraft} from "@/state/calc/calc-store.ts";
-import {gradeColor, itemOf, RecipeTreeView} from "@/components/details/recipe-tree.tsx";
+import {itemOf, RecipeTreeView} from "@/components/details/recipe-tree.tsx";
 import {EntryPicker} from "@/components/entry-list/entry-picker.tsx";
 import {fetchMarket, market, marketLoaded, marketStatus} from "@/lib/market-data.tsx";
 import {Button} from "@/components/ui/button.tsx";
@@ -14,6 +14,7 @@ import {ItemIcon} from "@/lib/item-icon.tsx";
 import {moneyLabel} from "@/utils.tsx";
 import {openItemPanel} from "@/state/panels.ts";
 import type {DeepReadonly} from "@/types.ts";
+import {tryGetGradeColor} from "@/lib/types/item-grades.ts";
 
 // CraftCalculatorPanel: a craft list of target items, each shown as a self-
 // contained block — title + quantity, its (mastery-yield-scaled) recipe tree, and
@@ -114,7 +115,7 @@ function TargetBlock({target, items}: { target: DeepReadonly<CalcTarget>, items:
 				<ItemIcon urn={target.urn} className={"shrink-0"} imageClass={"w-6 h-6"} />
 				<span
 					className={"flex-1 min-w-0 truncate text-sm font-semibold cursor-pointer hover:underline"}
-					style={{color: gradeColor(item)}}
+					style={{color: tryGetGradeColor(item?.extra?.grade)?.toString()}}
 					onClick={() => item && openItemPanel({id: item.id, name: item.title}, false)}
 				>
 					{item?.title ?? target.urn}
@@ -198,7 +199,7 @@ function ShoppingRow({urn, count, cost, item}: {
 			onClick={() => item && openItemPanel({id: item.id, name: item.title}, false)}
 		>
 			<ItemIcon urn={urn} className={"shrink-0"} imageClass={"w-5 h-5"} />
-			<span className={"flex-1 min-w-0 truncate text-sm"} style={{color: gradeColor(item)}}>
+			<span className={"flex-1 min-w-0 truncate text-sm"} style={{color: tryGetGradeColor(item?.extra?.grade)?.toString()}}>
 				{item?.title ?? urn}
 			</span>
 			<span className={"text-sm text-zinc-400 shrink-0"}>×{count}</span>

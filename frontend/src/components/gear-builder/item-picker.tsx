@@ -1,40 +1,33 @@
-import {GEAR_SLOTS_BY_ID} from "@/state/gear/gear-slots.ts";
-import {useGearBuild} from "@/state/gear/gear.tsx";
 import {EntryPicker} from "@/components/entry-list/entry-picker.tsx";
+import {useGearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
 
 // ItemPicker is the gear-builder's slot picker: a thin wrapper over the generic
 // EntryPicker that scopes results to the slot's equip slots + the build's class.
 export function ItemPicker() {
-	const [store, snap] = useGearBuild();
+	const [builder, s] = useGearBuilderStore();
 
-	const slotId = snap.pickerSlot;
-	if (!slotId) {
+	const slot = builder.pickerSlot;
+	if(!slot) {
 		return null;
 	}
-
-	const def = GEAR_SLOTS_BY_ID[slotId];
-	if (!def) {
-		return null;
-	}
-
-	console.log('item picker', def)
 
 	return (
 		<EntryPicker
-			key={slotId}
-			title={`Choose ${def.label}`}
+			key={slot.id}
+			title={`Choose ${slot.info.Title}`}
 			fields={["grade", /* "equipType", */ "effect"]}
 			defaultSort={"grade"}
 			defaultSortDir={"desc"}
+			defaultFocus={true}
 			baseFilters={{
-				equipSlots : def.equipSlots,
-				class      : snap.characterClass ?? "",
+				equipSlots : [slot.info.SlotName],
+				class      : builder.selectedClass.Name,
 			}}
 			onPick={entry => {
-				void store.equip(slotId, entry.id);
-				store.closePicker();
+				void s.equip(slot.id, entry.urn);
+				s.closePicker();
 			}}
-			onClose={() => store.closePicker()}
+			onClose={() => s.closePicker()}
 		/>
 	);
 }
