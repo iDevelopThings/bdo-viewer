@@ -95,7 +95,19 @@ export function SetupWizard({onComplete, firstRun, reason}: {onComplete: () => v
 		};
 	}, [gameDir]);
 
-	const extracting = state.status === "running" || state.status === "done";
+	const busy    = state.status === "running" || state.status === "done";
+	const errored = state.status === "error";
+
+	// On a re-extraction (data already exists on disk), let the user open the app with
+	// their current data instead of being trapped if extraction won't complete — e.g. a
+	// game patch the bundled extractor can't yet parse. Not offered on first run: there's
+	// nothing to fall back to. Loading stale data may show outdated values; that's the
+	// user's call, and they can re-extract or update from inside the app.
+	const skipButton = !firstRun ? (
+		<Button variant={"ghost"} size={"sm"} onClick={onComplete}>
+			Skip — open with existing data
+		</Button>
+	) : null;
 
 	return (
 		<div className={"flex h-full w-full items-center justify-center overflow-auto bg-zinc-950 p-6"}>
@@ -111,7 +123,7 @@ export function SetupWizard({onComplete, firstRun, reason}: {onComplete: () => v
 					</p>
 				</div>
 
-				{!firstRun && !extracting && (
+				{!firstRun && !busy && !errored && (
 					<div className={"flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3"}>
 						<RefreshCw className={"mt-0.5 size-5 shrink-0 text-amber-400"} />
 						<div className={"flex flex-col gap-0.5"}>
@@ -121,7 +133,7 @@ export function SetupWizard({onComplete, firstRun, reason}: {onComplete: () => v
 					</div>
 				)}
 
-				{!extracting && (
+				{!busy && !errored && (
 					<>
 						<DirPicker
 							label={"Game install directory"}
@@ -189,28 +201,36 @@ export function SetupWizard({onComplete, firstRun, reason}: {onComplete: () => v
 							</Select>
 						</div>
 
-						<Button
-							disabled={!meta || validating || !dataDir}
-							onClick={() => run(gameDir, dataDir, lang, region)}
-						>
-							{firstRun ? "Extract game data" : "Re-extract game data"}
-						</Button>
+						<div className={"flex flex-col gap-2"}>
+							<Button
+								disabled={!meta || validating || !dataDir}
+								onClick={() => run(gameDir, dataDir, lang, region)}
+							>
+								{firstRun ? "Extract game data" : "Re-extract game data"}
+							</Button>
+							{skipButton}
+						</div>
 					</>
 				)}
 
-				{extracting && (
+				{busy && (
 					<>
 						<ExtractionProgress state={state} fraction={fraction} />
-						{state.status === "error" && (
-							<div className={"flex flex-col gap-3"}>
-								<p className={"text-sm text-red-400"}>Extraction failed: {state.error}</p>
-								<Button variant={"outline"} onClick={reset}>Back</Button>
-							</div>
-						)}
 						{state.status === "done" && (
 							<p className={"text-sm text-emerald-400"}>Done — loading…</p>
 						)}
 					</>
+				)}
+
+				{errored && (
+					<div className={"flex flex-col gap-3"}>
+						<p className={"text-sm font-medium text-red-300"}>Extraction failed</p>
+						<p className={"text-sm text-red-400"}>{state.error}</p>
+						<div className={"flex items-center gap-2"}>
+							<Button variant={"outline"} onClick={reset}>Back</Button>
+							{skipButton}
+						</div>
+					</div>
 				)}
 			</div>
 		</div>

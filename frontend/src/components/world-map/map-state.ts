@@ -6,7 +6,7 @@ import {GetItemsByURN, GetNpcsByURN, GetPlacedNpcs, GetWorldNodes, GetWorldRegio
 import {NPC_ROLES} from "@/components/world-map/npc-roles.ts";
 import {ref} from "valtio/vanilla";
 import {WorldMeta, fetchWorldMeta, MAP_LABEL_MIN_Z, WORLD_LAYER, INITIAL_ZOOM, FOCUS_ZOOM, worldToTile} from "@/components/world-map/map-config.ts";
-import {OrthographicViewState, ViewStateChangeParameters} from "@deck.gl/core";
+import type {OrthographicViewState, ViewStateChangeParameters} from "@deck.gl/core";
 import {NodeGraph, WrappedWorldNode} from "@/components/world-map/world-node.ts";
 import {MaybeReadonly} from "@/types.ts";
 

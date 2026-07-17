@@ -1,10 +1,13 @@
 import {IDockviewPanelProps} from "dockview-react";
 import {useSnapshot} from "valtio";
-import {GameMap} from "./game-map";
 import {mapState} from "@/components/world-map/map-state.ts";
-import {useEffect} from "react";
+import {lazy, Suspense, useEffect} from "react";
 import {MapSettingsPanel} from "@/components/world-map/map-settings-panel.tsx";
 import {NodeInfoPanel} from "@/components/world-map/node-info-panel.tsx";
+
+// deck.gl (~1MB) lives here — kept out of the startup bundle and loaded
+// only when the map panel is first opened.
+const GameMap = lazy(() => import("./game-map").then(m => ({default : m.GameMap})));
 
 export function WorldMapPanel(_props: IDockviewPanelProps) {
 	const map = useSnapshot(mapState);
@@ -26,7 +29,9 @@ export function WorldMapPanel(_props: IDockviewPanelProps) {
 			style={{fontFamily : "system-ui, sans-serif",}}
 			className={"relative inset-0 overflow-hidden w-full h-full"}
 		>
-			<GameMap />
+			<Suspense fallback={null}>
+				<GameMap />
+			</Suspense>
 
 			<NodeInfoPanel />
 

@@ -28,33 +28,41 @@ export function AppRoot() {
 		}
 	}, [status]);
 
+	let body: React.ReactNode;
 	if (status === null) {
-		return (
+		body = (
 			<div className="flex flex-col items-center justify-center h-full w-full">
 				<div className="text-zinc-400 text-sm">Checking…</div>
 			</div>
 		);
-	}
-
-	if (status.needsSetup) {
-		return (
+	} else if (status.needsSetup) {
+		body = (
 			<SetupWizard
 				firstRun={status.firstRun}
 				reason={status.reason}
 				onComplete={() => setStatus({...status, needsSetup : false})}
 			/>
 		);
+	} else if (loadState.phase !== "ready") {
+		body = <LoadScreen state={loadState} onRetry={() => load.reload()} />;
+	} else {
+		body = (
+			<>
+				<AppLayout />
+				<HistoryPanel />
+			</>
+		);
 	}
 
-	if (loadState.phase !== "ready") {
-		return <LoadScreen state={loadState} onRetry={() => load.reload()} />;
-	}
-
+	// The update banner sits above every phase — including the setup wizard and load
+	// screen — so a build whose bundled extractor a game patch has broken can still be
+	// updated out of, instead of trapping the user on a screen that never completes.
 	return (
 		<div className="flex flex-col h-full w-full overflow-hidden">
 			<UpdateBanner />
-			<AppLayout />
-			<HistoryPanel />
+			<div className="flex flex-1 min-h-0 w-full flex-col overflow-hidden">
+				{body}
+			</div>
 		</div>
 	);
 }

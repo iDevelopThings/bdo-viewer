@@ -71,6 +71,9 @@ export default defineConfig(({mode}) => ({
 
 
 	build : {
+		// The only chunk over the default 500 kB is deckgl, which is lazy-loaded
+		// with the world map — see world-map-panel.tsx.
+		chunkSizeWarningLimit : 800,
 		rolldownOptions : {
 			output : {
 				codeSplitting : {
@@ -79,6 +82,22 @@ export default defineConfig(({mode}) => ({
 							name     : "react-vendor",
 							test     : /node_modules[\\/]react/,
 							priority : 20,
+						},
+						{
+							name     : "deckgl",
+							test     : (id: string) => {
+								const packages = [
+									"@deck.gl",
+									"@luma.gl",
+									"@math.gl",
+									"@loaders.gl",
+									"@probe.gl",
+									"gl-matrix",
+								];
+
+								return packages.some(pkg => id.includes(`node_modules/${pkg}`));
+							},
+							priority : 18,
 						},
 						{
 							name     : "ui-vendor",
