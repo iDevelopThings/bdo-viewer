@@ -283,7 +283,7 @@ html, body, #root {
  * of one flat wall. Panel roots are transparent, so the group background does the work.
  */
 .bdo-layout-v2 {
-    --dv-tabs-and-actions-container-height: 24px;
+    --dv-tabs-and-actions-container-height: 34px;
     --dv-group-view-background-color: var(--surface-0);
     --dv-tabs-and-actions-container-background-color: var(--surface-1);
     --dv-separator-border: var(--surface-border);

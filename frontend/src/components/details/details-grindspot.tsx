@@ -5,7 +5,7 @@ import {MapPinIcon} from "lucide-react";
 import {openMapAt, openMapAtNode} from "@/state/panels.ts";
 import {useSnapshot} from "valtio/react";
 import {isGrindSpot} from "@/state/sources/sources.ts";
-import {GameText} from "@/lib/game-text.tsx";
+import {GameText, plainGameText} from "@/lib/game-text.tsx";
 
 export function GrindSpotDetails() {
 	const {entry} = useSnapshot(useDetailStore());
@@ -88,7 +88,7 @@ export function GrindSpotDetails() {
 								/* Should be displayed as a card, rather than chip, with title and desc on separate lines */
 								<div key={t.id} className={"flex flex-col gap-1 p-2 border rounded-md"}>
 									<div className={"text-sm font-semibold"}>{t.name}</div>
-									<GameText text={t.desc?.replace("Title Requirement: ", "")} className={"text-xs text-fg-subtle"} />
+									<GameText text={plainGameText(t.desc)?.replace("Title Requirement: ", "")} className={"text-xs text-fg-subtle"} />
 								</div>
 							))}
 						</div>

@@ -1,6 +1,6 @@
 import {IDockviewPanelProps} from "dockview-react";
 import {DetailsItem} from "@/components/details/details-item.tsx";
-import {DetailProvider, useDetail} from "@/state/detail.tsx";
+import {DetailProvider, useDetailStore} from "@/state/detail.tsx";
 import {SourceKind, UntypedSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import {type ComponentType, useCallback, useEffect, useRef, useState} from "react";
 import {useDebounce} from "@/utils.tsx";
@@ -9,22 +9,25 @@ import {NpcDetails} from "@/components/details/details-npc.tsx";
 import {KnowledgeDetails} from "@/components/details/details-knowledge.tsx";
 import {RegionDetails} from "@/components/details/details-region.tsx";
 import {CharacterDetails} from "@/components/details/details-character.tsx";
+import {useSnapshot} from "valtio/react";
 
 function DetailsPanelInner({entry, props}: { entry: UntypedSourceEntry, props: IDockviewPanelProps }) {
 
 	const containerRef = useRef<HTMLDivElement>(null);
 
-	const [details, d] = useDetail();
+	const d                       = useDetailStore();
+	const {scrollOffset, loading} = useSnapshot(d);
+
 
 	const restoreScroll = useCallback(() => {
 		if (containerRef.current) {
-			containerRef.current.scrollTop = details.scrollOffset;
+			containerRef.current.scrollTop = scrollOffset;
 		}
-	}, [details]);
+	}, [scrollOffset]);
 
 	// Persist only once scrolling settles; each write snapshots the whole detail store.
 	const saveScrollOffset = useDebounce((top: number) => {
-		details.scrollOffset = top;
+		d.scrollOffset = top;
 	}, 150);
 
 	useEffect(() => {
@@ -50,17 +53,18 @@ function DetailsPanelInner({entry, props}: { entry: UntypedSourceEntry, props: I
 	// firing a native scroll event that would otherwise stomp the saved
 	// offset. Re-apply it once the real content is back.
 	useEffect(() => {
-		if (!d.loading) {
+		if (!loading) {
 			restoreScroll();
 		}
-	}, [d.loading, restoreScroll]);
+	}, [loading, restoreScroll]);
 
-	if (d.loading) {
+	if (loading) {
 		return (
 			<div className="flex flex-col grow max-h-full overflow-auto">
-				<div className={"flex flex-row gap-8 items-center"}>
+				{/* Left empty because of flash, code too fast men */}
+				{/* <div className={"flex flex-row gap-8 items-center"}>
 					Loading...
-				</div>
+				</div> */}
 			</div>
 		);
 	}
@@ -94,9 +98,8 @@ function DetailsPanelInner({entry, props}: { entry: UntypedSourceEntry, props: I
 			data-source={entry.type}
 			data-urn={entry.urn}
 			onScroll={e => {
-				// Hiding a dockview tab resets scrollTop to 0 and fires a scroll event; the
-				// active guard stops that from debounce-saving 0 over the real offset.
-				if (d.loading || !props.api.isActive) return;
+				if (d.loading || !props.api.isActive)
+					return;
 				saveScrollOffset(e.currentTarget.scrollTop);
 			}}
 		>
@@ -132,7 +135,7 @@ export const DetailsPanel = (props: IDockviewPanelProps) => {
 		};
 	}, [props.api]);
 
-	if(!props.params?.key || !props.params?.source || !props?.params?.urn) {
+	if (!props.params?.key || !props.params?.source || !props?.params?.urn) {
 		return (
 			<div className="flex flex-col grow max-h-full h-full w-full items-center justify-center overflow-auto p-8">
 				<p className={"text-fg text-lg"}>
