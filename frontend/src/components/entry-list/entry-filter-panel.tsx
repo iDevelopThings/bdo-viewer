@@ -1,7 +1,7 @@
-import {InputGroup} from "@/components/ui/input-group";
-import {XIcon} from "lucide-react";
+import {InputGroup, InputGroupAddon, InputGroupInput} from "@/components/ui/input-group";
+import {SearchIcon, XIcon} from "lucide-react";
 import {SortControls, SortControlsProps} from "@/components/entry-list/entry-list.tsx";
-import {Input} from "@/components/ui/input";
+import {Button} from "@/components/ui/button.tsx";
 import {ReactNode} from "react";
 import {Label} from "@/components/ui/label.tsx";
 
@@ -40,7 +40,10 @@ export function EntryFilterHeader(
 	return (
 		<div className={"flex flex-row gap-1 items-center"}>
 			<InputGroup className={"flex-1 min-w-0"}>
-				<Input
+				<InputGroupAddon>
+					<SearchIcon />
+				</InputGroupAddon>
+				<InputGroupInput
 					id={"source-list-search"}
 					placeholder="Search..."
 					autoFocus={defaultFocus}
@@ -51,18 +54,19 @@ export function EntryFilterHeader(
 				/>
 			</InputGroup>
 			{hasActiveFilters && (
-				<button
+				<Button
 					type={"button"}
+					variant={"outline"}
+					size={"icon"}
 					data-testid={"clear-list"}
 					title={"Clear search and filters"}
 					onClick={() => {
 						setQuery("");
 						onClearFilters?.();
 					}}
-					className={"h-9 w-9 flex items-center justify-center shrink-0 rounded-md border border-input bg-transparent dark:bg-input/30 text-fg-muted outline-none cursor-pointer hover:bg-surface-3 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"}
 				>
-					<XIcon className={"size-4"} />
-				</button>
+					<XIcon />
+				</Button>
 			)}
 			{sortControls && <SortControls {...sortControls} />}
 		</div>

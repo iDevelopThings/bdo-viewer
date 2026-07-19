@@ -34,8 +34,8 @@ export function SourceList() {
 	}, []);
 
 	return (
-		<div className={"max-h-full h-full overflow-y-scroll"} ref={parentRef} data-panel={"list"}>
-			<div className={"sticky top-0 z-10 bg-background flex flex-col gap-2 px-3 py-2.5 border-b border-surface-border"}>
+		<div className={"flex flex-col h-full min-h-0"} data-panel={"list"}>
+			<div className={"flex flex-col gap-2 px-3 py-2.5 border-b border-surface-border shrink-0"}>
 				<EntryFilterHeader
 					query={query}
 					setQuery={q => {
@@ -69,15 +69,17 @@ export function SourceList() {
 				)}
 			</div>
 
-			<VirtualEntryList
-				loading={l.loading}
-				entries={l.entries}
-				parentRef={parentRef}
-				emptyMessage={l.source === SourceKind.All && !query.trim() ? "Search across every source" : undefined}
-				renderRow={entry => (
-					<SourceEntryRow entry={entry} source={l.source ?? SourceKind.Unknown} />
-				)}
-			/>
+			<div className={"flex-1 min-h-0 overflow-y-auto"} ref={parentRef}>
+				<VirtualEntryList
+					loading={l.loading}
+					entries={l.entries}
+					parentRef={parentRef}
+					emptyMessage={l.source === SourceKind.All && !query.trim() ? "Search across every source" : undefined}
+					renderRow={entry => (
+						<SourceEntryRow entry={entry} source={l.source ?? SourceKind.Unknown} />
+					)}
+				/>
+			</div>
 		</div>
 	);
 }

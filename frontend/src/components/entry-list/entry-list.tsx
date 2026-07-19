@@ -6,41 +6,9 @@ import type {DeepReadonly} from "@/types.ts";
 import {cn} from "@/lib/utils.ts";
 import {ItemIcon} from "@/lib/item-icon.tsx";
 import {tryGetGradeColor} from "@/lib/types/item-grades.ts";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
+import {Button} from "@/components/ui/button.tsx";
 
-// Sorting itself happens in the backend (ListSourceParams.sort) so each source
-// can support and extend its own orderings; "default" sends the empty string,
-// keeping the source's query-ranked order.
-export type EntrySort = "default" | "name" | "grade";
-
-
-const sortLabels: Record<EntrySort, string> = {
-	default : "Default",
-	name    : "Name",
-	grade   : "Grade",
-};
-
-export function SortSelect({value, onChange, className}: {
-	value: EntrySort,
-	onChange: (sort: EntrySort) => void,
-	className?: string,
-}) {
-	return (
-		<select
-			value={value}
-			onChange={e => onChange(e.target.value as EntrySort)}
-			className={cn(
-				"h-9 shrink-0 rounded-md border border-input bg-transparent dark:bg-input/30 px-2 text-sm text-zinc-300 outline-none cursor-pointer",
-				"focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [&>option]:bg-zinc-900",
-				className,
-			)}
-			title={"Sort by"}
-		>
-			{(Object.keys(sortLabels) as EntrySort[]).map(key => (
-				<option key={key} value={key}>{sortLabels[key]}</option>
-			))}
-		</select>
-	);
-}
 
 // SortOption mirrors the Go sources.SortOption surfaced on each source's
 // BaseSource.Sorts (GetAllSources); the sort dropdown is driven by these so
@@ -66,31 +34,31 @@ export function SortControls({sorts, sortKey, dir, onChange, className}: SortCon
 
 	const active = sorts.some(s => s.key === sortKey) ? sortKey! : sorts[0].key;
 
-	const control = "h-8 shrink-0 rounded-md border border-input bg-transparent dark:bg-input/30 text-fg-muted outline-none cursor-pointer focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
-
 	return (
 		<div className={cn("flex flex-row items-center gap-1", className)} data-testid={"sort-controls"}>
-			<select
-				value={active}
-				onChange={e => onChange(e.target.value, dir)}
-				data-testid={"sort-key"}
-				className={cn(control, "px-2 text-sm [&>option]:bg-surface-2")}
-				title={"Sort by"}
-			>
-				{sorts.map(s => (
-					<option key={s.key} value={s.key}>{s.label}</option>
-				))}
-			</select>
-			<button
+			<Select value={active} onValueChange={(v) => onChange(v as string, dir)}>
+				<SelectTrigger className={"w-fit"} data-testid={"sort-key"} title={"Sort by"}>
+					<SelectValue>
+						{(v: string) => sorts.find(s => s.key === v)?.label ?? v}
+					</SelectValue>
+				</SelectTrigger>
+				<SelectContent>
+					{sorts.map(s => (
+						<SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+			<Button
 				type={"button"}
+				variant={"outline"}
+				size={"icon"}
 				data-testid={"sort-dir"}
 				data-dir={dir}
 				onClick={() => onChange(active, dir === "asc" ? "desc" : "asc")}
 				title={dir === "asc" ? "Ascending" : "Descending"}
-				className={cn(control, "w-8 flex items-center justify-center hover:bg-surface-3")}
 			>
-				{dir === "asc" ? <ArrowUp className={"size-4"} /> : <ArrowDown className={"size-4"} />}
-			</button>
+				{dir === "asc" ? <ArrowUp /> : <ArrowDown />}
+			</Button>
 		</div>
 	);
 }
@@ -176,7 +144,7 @@ export function VirtualEntryList({loading, entries, parentRef, renderRow, emptyM
 	}, [entries]);
 
 	// eslint-disable-next-line react-hooks/incompatible-library
-	const rowVirtualizer   = useVirtualizer({
+	const rowVirtualizer = useVirtualizer({
 		count                               : entries.length,
 		getScrollElement,
 		estimateSize,
