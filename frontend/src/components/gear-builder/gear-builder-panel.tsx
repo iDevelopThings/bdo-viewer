@@ -62,7 +62,7 @@ function GearBuilderInner() {
 						<div className={"ml-auto flex items-center gap-3"}>
 
 							<Button variant={"chip"} size={"xs"} onClick={() => gearBuilderStore.clearClass()}>
-								Reset class
+								Change class
 							</Button>
 							<Button
 								variant={"chip"}
@@ -79,11 +79,15 @@ function GearBuilderInner() {
 
 					<TabsContent value="combat" className={"flex flex-col min-h-0"}>
 
-						<div className={"relative flex flex-row gap-2 p-4 grow"}>
+						<div className={"relative flex flex-row gap-2 p-4 grow min-h-0"}>
+							{/* Faint class watermark in the corner, à la Unreal's "BLUEPRINT" tag. */}
+							<div className={"pointer-events-none absolute top-2 left-4 z-0 select-none text-4xl font-black uppercase tracking-widest text-fg/10"}>
+								{selectedClass?.Title}
+							</div>
 							<div className={"flex flex-row items-end"}>
 								<ConsumablesRow />
 							</div>
-							<div className={"flex flex-col items-center gap-2 grow"}>
+							<div className={"flex flex-col items-center gap-2 grow min-h-0"}>
 								<GearRing />
 								<GearTotals />
 							</div>

@@ -1,8 +1,5 @@
 import {GearSlotButton, GearSlotButtonVariant} from "@/components/gear-builder/gear-slot-button.tsx";
-import {Button} from "@/components/ui/button.tsx";
 import {SlotName} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
-import {gearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
-import {useSnapshot} from "valtio/react";
 
 // Positions slots evenly on an ellipse inside a relative container. Null
 // entries hold their position but render nothing (spacers).
@@ -90,33 +87,22 @@ const UNDER_RING = [
 const SLOT_STEP = (2 * Math.PI) / OUTER_RING.length;
 
 export function GearRing() {
-
-	const {selectedClass} = useSnapshot(gearBuilderStore);
-
 	return (
-		<div className={"flex flex-col items-center gap-3 w-full relative"}>
+		<div className={"flex flex-col items-center gap-3 w-full flex-1 min-h-0 relative"}>
 
-			<div className={"relative w-full max-w-140 aspect-square"}>
-				<div className={"absolute inset-[12%] rounded-full border border-zinc-800/80"} />
+			<div className={"relative flex-1 min-h-0 aspect-square max-w-full max-h-130"}>
+				<div className={"absolute inset-[17.5%] rounded-full border border-surface-border"} />
+				<div className={"absolute inset-[34%] rounded-full border border-surface-border"} />
+				<div className={"absolute inset-[10%] bg-radial-[at_50%_50%] from-surface-3/30  to-transparent to-70%"} />
 
-				<RingSlots order={OUTER_RING} radiusX={40} radiusY={40} startAngle={-SLOT_STEP} variant={"md"} />
-				<RingSlots order={INNER_RING} radiusX={20} radiusY={20} variant={"sm"} />
+				<RingSlots order={OUTER_RING} radiusX={33} radiusY={33} startAngle={-SLOT_STEP} variant={"sm"} />
+				<RingSlots order={INNER_RING} radiusX={15} radiusY={15} variant={"sm"} />
 
-				<div className={"absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none"}>
+				{/* Alchemy stone stays dead-centre (matching the in-game window); everything else rings around it. */}
+				<div className={"absolute inset-0 flex items-center justify-center pointer-events-none"}>
 					<div className={"pointer-events-auto"}>
 						<GearSlotButton slotId={SlotName.SlotNameAlchemyStone} size={"xs"} />
 					</div>
-					<span className={"text-base font-semibold text-zinc-200"}>{selectedClass?.Title}</span>
-					<Button
-						variant={"ghost"}
-						size={"xs"}
-						className={"pointer-events-auto text-zinc-400"}
-						onClick={() => {
-							gearBuilderStore.selectedClass = null;
-						}}
-					>
-						Change Class
-					</Button>
 				</div>
 			</div>
 
