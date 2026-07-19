@@ -110,7 +110,7 @@ export function GearSlotDetail() {
 
 
 	return (
-		<div className={"flex flex-col gap-4 border-t border-zinc-800 p-4"}>
+		<div className={"flex flex-col gap-4 border-t border-surface-border p-4"}>
 			<div className={"flex flex-row items-center gap-3"}>
 				<ItemIcon
 					urn={{id : item.urn, name : item.title}}
@@ -124,7 +124,7 @@ export function GearSlotDetail() {
 					<span className={"font-semibold truncate"} style={gradeColor ? {color : gradeColor.toString()} : undefined}>
 						{item.title}
 					</span>
-					<span className={"text-xs text-zinc-400"}>{slot.info.Title}</span>
+					<span className={"text-xs text-fg-subtle"}>{slot.info.Title}</span>
 				</div>
 				<div className={"flex flex-row gap-1 ml-auto"}>
 					<Button

@@ -5,10 +5,10 @@ import {useSnapshot} from "valtio/react";
 function Total({label, value, highlight}: { label: string, value: number, highlight?: boolean }) {
 	return (
 		<div className={"flex flex-col items-center gap-0.5"}>
-			<span className={cn("text-xs uppercase tracking-wide", highlight ? "text-white font-semibold" : "text-zinc-400")}>
+			<span className={cn("text-xs uppercase tracking-wide", highlight ? "text-fg font-semibold" : "text-fg-subtle")}>
 				{label}
 			</span>
-			<span className={cn("text-xl font-bold", highlight ? "text-white" : "text-zinc-200")}>
+			<span className={cn("text-xl font-bold", highlight ? "text-fg" : "text-fg")}>
 				{value}
 			</span>
 		</div>

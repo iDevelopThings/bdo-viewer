@@ -133,7 +133,7 @@ export function LifeRing() {
 	return (
 		<div className={"flex flex-col items-center gap-3 w-full"}>
 			<div className={"relative w-full max-w-105 aspect-square"}>
-				<div className={"absolute inset-[14%] rounded-full border border-zinc-800/80"} />
+				<div className={"absolute inset-[14%] rounded-full border border-surface-border/80"} />
 				<RingSlots order={LIFE_RING} radiusX={36} radiusY={38} startAngle={Math.PI / 6} />
 			</div>
 

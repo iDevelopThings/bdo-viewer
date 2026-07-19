@@ -48,20 +48,20 @@ export const ItemSlotButton = memo(function ItemSlotButton(
 
 			className={cj([
 				"relative flex flex-col items-center justify-center gap-1 rounded-md border select-none",
-				"bg-zinc-900 transition-colors",
+				"bg-surface-1 transition-colors",
 				disabled && [
 					"opacity-50 cursor-not-allowed"
 				],
 				!disabled && [
-					"cursor-pointer hover:bg-zinc-800",
-					selected && "ring-2 ring-zinc-500",
+					"cursor-pointer hover:bg-surface-2",
+					selected && "ring-2 ring-fg-subtle",
 				],
 
 				size === "xs" && "w-12 h-12",
 				size === "sm" && "w-13 h-13",
 				size === "md" && "w-16 h-16",
 
-				item ? "border-zinc-700" : "border-dashed border-zinc-700",
+				item ? "border-surface-border" : "border-dashed border-surface-border",
 
 				className
 			])}
@@ -98,12 +98,12 @@ export const ItemSlotButton = memo(function ItemSlotButton(
 					)}
 					{lockedByItem && (
 						<div className={"absolute top-0 left-0 flex items-center justify-center w-full h-full"}>
-							<LucideLock className={"text-[10px] text-zinc-300/70 pointer-events-none"} />
+							<LucideLock className={"text-[10px] text-fg-muted/70 pointer-events-none"} />
 						</div>
 					)}
 					{!disabled && onRemove && (
 						<button
-							className={"absolute top-0.5 right-0.5 p-0.5 rounded text-zinc-300 hover:text-white hover:bg-zinc-500"}
+							className={"absolute top-0.5 right-0.5 p-0.5 rounded text-fg-muted hover:text-fg hover:bg-surface-3"}
 							onClick={e => {
 								e.stopPropagation();
 								onRemove?.(item);
@@ -115,7 +115,7 @@ export const ItemSlotButton = memo(function ItemSlotButton(
 				</div>
 			) : (
 				<span className={cn(
-					"text-zinc-500 text-center px-1 leading-tight",
+					"text-fg-subtle text-center px-1 leading-tight",
 					size === "xs" && "text-[8px]",
 					size === "sm" && "text-[9px]",
 					size === "md" && "text-[11px]",

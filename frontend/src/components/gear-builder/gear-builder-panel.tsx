@@ -27,7 +27,7 @@ function GearBuilderInner() {
 	if (loading) {
 		return (
 			<div className={"flex h-full w-full items-center justify-center"}>
-				<span className={"text-sm text-zinc-400"}>Loading...</span>
+				<span className={"text-sm text-fg-subtle"}>Loading...</span>
 			</div>
 		);
 	}
@@ -70,7 +70,7 @@ function GearBuilderInner() {
 								aria-pressed={maxOnEquip}
 								onClick={() => gearBuilderStore.toggleMaxOnEquip()}
 							>
-								<span className={cn("h-2 w-2 rounded-full", maxOnEquip ? "bg-primary" : "bg-zinc-600")} />
+								<span className={cn("h-2 w-2 rounded-full", maxOnEquip ? "bg-primary" : "bg-surface-3")} />
 								Max on equip
 							</Button>
 

@@ -55,8 +55,8 @@ export function GearBuilderCharacterSettings() {
 		<div className={"flex flex-col gap-6 select-none"}>
 			<section className={"flex flex-col gap-3"}>
 				<div className={"flex flex-col gap-1"}>
-					<h2 className={"text-sm font-semibold text-zinc-200"}>Gear Builder Character</h2>
-					<p className={"text-xs text-zinc-400"}>
+					<h2 className={"text-sm font-semibold text-fg"}>Gear Builder Character</h2>
+					<p className={"text-xs text-fg-subtle"}>
 						Character level and per-life-skill mastery — drives the gear builder's class curves and mastery-point calc.
 					</p>
 				</div>
@@ -71,7 +71,7 @@ export function GearBuilderCharacterSettings() {
 					/>
 				</div>
 				<div className={"grid w-fit grid-cols-[6rem_10rem_6rem] items-center gap-x-2 gap-y-1.5"}>
-					<span className={"col-span-3 mt-1 text-[10px] uppercase tracking-wide text-zinc-500"}>Life Skill Mastery</span>
+					<span className={"col-span-3 mt-1 text-[10px] uppercase tracking-wide text-fg-subtle"}>Life Skill Mastery</span>
 					<span />
 					<Label className={"text-[10px] uppercase tracking-wide text-muted-foreground text-center"}>Grade</Label>
 					<Label className={"text-[10px] uppercase tracking-wide text-muted-foreground text-center"}>Level</Label>

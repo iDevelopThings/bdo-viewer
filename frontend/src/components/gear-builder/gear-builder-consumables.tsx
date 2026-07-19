@@ -151,7 +151,7 @@ export function ConsumablePicker() {
 				className={
 					cn(
 						"flex flex-col items-center justify-center gap-2 rounded-md border cursor-pointer select-none w-14 h-14",
-						"bg-zinc-900 hover:bg-zinc-800 transition-colors border-dashed border-zinc-700",
+						"bg-surface-1 hover:bg-surface-2 transition-colors border-dashed border-surface-border",
 					)
 				}
 			>
@@ -160,7 +160,7 @@ export function ConsumablePicker() {
 			<ComboboxContent className="w-72">
 				<ComboboxInput placeholder="Search items…" showTrigger={false} className="text-xs" />
 				{refreshing && (
-					<Loader2 className="pointer-events-none absolute right-3 top-3 size-4 animate-spin text-zinc-400" />
+					<Loader2 className="pointer-events-none absolute right-3 top-3 size-4 animate-spin text-fg-subtle" />
 				)}
 				<ComboboxEmpty>{search.loading ? "Searching…" : "No items found."}</ComboboxEmpty>
 				<ComboboxVirtualList<ListSourceEntry> open={open} virtualizerRef={virtualizerRef} scrollOffsetRef={scrollOffsetRef}>

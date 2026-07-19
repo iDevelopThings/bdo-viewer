@@ -110,7 +110,7 @@ const StatRow = memo(function StatRow({row, stripe, onHover}: {
 	const hasSources = row.sources && row.sources.length > 0;
 	const rowClass   = cn(
 		"flex flex-row items-center justify-between gap-2 px-2.5 py-1 text-sm", stripe,
-		hasSources && "cursor-help hover:bg-zinc-800/60",
+		hasSources && "cursor-help hover:bg-surface-2/60",
 	);
 
 	return (
@@ -119,8 +119,8 @@ const StatRow = memo(function StatRow({row, stripe, onHover}: {
 			data-hl-src={row.srcUrns}
 			onMouseEnter={e => onHover(hasSources ? row : null, hasSources ? e.currentTarget : null)}
 		>
-			<span className={"text-zinc-400 truncate"}>{row.label}</span>
-			<span className={"text-zinc-100 font-medium shrink-0"}>{row.value}</span>
+			<span className={"text-fg-subtle truncate"}>{row.label}</span>
+			<span className={"text-fg font-medium shrink-0"}>{row.value}</span>
 		</div>
 	);
 });
@@ -198,9 +198,9 @@ export function GearStatsPanel() {
 	);
 
 	return (
-		<div className={"flex flex-col w-64 shrink-0 border-l border-zinc-800 max-h-full overflow-hidden"}>
-			<div className={"relative p-2 border-b border-zinc-800"}>
-				<Search className={"absolute left-4 top-1/2 -translate-y-1/2 size-3.5 text-zinc-500 pointer-events-none"} />
+		<div className={"flex flex-col w-64 shrink-0 border-l border-surface-border max-h-full overflow-hidden"}>
+			<div className={"relative p-2 border-b border-surface-border"}>
+				<Search className={"absolute left-4 top-1/2 -translate-y-1/2 size-3.5 text-fg-subtle pointer-events-none"} />
 				<Input
 					placeholder="Search for Stats"
 					className={"h-8 pl-7 text-sm"}
@@ -214,8 +214,8 @@ export function GearStatsPanel() {
 				onMouseLeave={() => setHovered(null)}
 			>
 				{filtered.map(section => (
-					<div key={section.title} className={"flex flex-col shrink-0 rounded-md overflow-hidden border border-zinc-800"}>
-						<div className={"px-2.5 py-1.5 bg-zinc-900 text-xs font-semibold text-zinc-200"}>
+					<div key={section.title} className={"flex flex-col shrink-0 rounded-md overflow-hidden border border-surface-border"}>
+						<div className={"px-2.5 py-1.5 bg-surface-1 text-xs font-semibold text-fg"}>
 							{section.title}
 						</div>
 						<div className={"flex flex-col"}>
@@ -223,7 +223,7 @@ export function GearStatsPanel() {
 								<StatRow
 									key={row.label}
 									row={row}
-									stripe={i % 2 === 1 ? "bg-zinc-900/40" : ""}
+									stripe={i % 2 === 1 ? "bg-surface-1/40" : ""}
 									onHover={handleHover}
 								/>
 							))}
@@ -231,7 +231,7 @@ export function GearStatsPanel() {
 					</div>
 				))}
 				{filtered.length === 0 && (
-					<div className={"text-sm text-zinc-500 p-2"}>No matching stats</div>
+					<div className={"text-sm text-fg-subtle p-2"}>No matching stats</div>
 				)}
 			</div>
 
@@ -241,12 +241,12 @@ export function GearStatsPanel() {
 					anchor={hovered?.anchor}
 					side="left"
 					sideOffset={8}
-					className={"flex flex-col items-stretch gap-0 w-60 max-w-none p-0 border border-zinc-800 bg-zinc-950 text-zinc-100 shadow-xl rounded-md overflow-hidden"}
+					className={"flex flex-col items-stretch gap-0 w-60 max-w-none p-0 border border-surface-border bg-surface-0 text-fg shadow-xl rounded-md overflow-hidden"}
 				>
 					{hovered && (
 						<>
-							<div className={"flex flex-row items-center justify-between gap-3 px-3 py-2 border-b border-zinc-800 bg-zinc-900/60"}>
-								<span className={"text-sm font-semibold text-zinc-100 truncate"}>{hovered.row.label}</span>
+							<div className={"flex flex-row items-center justify-between gap-3 px-3 py-2 border-b border-surface-border bg-surface-1/60"}>
+								<span className={"text-sm font-semibold text-fg truncate"}>{hovered.row.label}</span>
 								<span className={"text-sm font-semibold tabular-nums text-emerald-400 shrink-0"}>{hovered.row.value}</span>
 							</div>
 							<div className={"flex flex-col py-1 max-h-80 overflow-y-auto"}>
@@ -257,14 +257,14 @@ export function GearStatsPanel() {
 										<div key={j} className={"flex flex-row items-center gap-2 px-3 py-1"}>
 											{item
 												? <ItemIconImage urn={item.urn} grade={item.grade} imageClass={"size-5"} />
-												: <div className={"size-5 shrink-0 rounded-sm bg-zinc-800/80"} />}
+												: <div className={"size-5 shrink-0 rounded-sm bg-surface-2/80"} />}
 											<span
-												className={"flex-1 min-w-0 truncate text-xs text-zinc-300"}
+												className={"flex-1 min-w-0 truncate text-xs text-fg-muted"}
 												style={gradeColor ? {color : gradeColor.toString()} : undefined}
 											>
 												{src.name}
 											</span>
-											<span className={"text-xs font-medium tabular-nums text-zinc-400 shrink-0"}>{src.value}</span>
+											<span className={"text-xs font-medium tabular-nums text-fg-subtle shrink-0"}>{src.value}</span>
 										</div>
 									);
 								})}
