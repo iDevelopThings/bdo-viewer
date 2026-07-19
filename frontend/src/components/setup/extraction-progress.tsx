@@ -18,7 +18,7 @@ export function ExtractionProgress({state, fraction}: {state: ExtractionState; f
 	return (
 		<div className={"flex flex-col gap-4"}>
 			<div className={"flex flex-col gap-1.5"}>
-				<div className={"flex items-center justify-between text-xs text-zinc-400"}>
+				<div className={"flex items-center justify-between text-xs text-fg-subtle"}>
 					<span>
 						{state.step > 0 ? `Step ${state.step}/${state.steps}` : "Starting…"}
 						{state.phase ? ` · ${state.phase}` : ""}
@@ -30,7 +30,7 @@ export function ExtractionProgress({state, fraction}: {state: ExtractionState; f
 
 			{state.total > 0 && (
 				<div className={"flex flex-col gap-1.5"}>
-					<div className={"flex items-center justify-between text-xs text-zinc-500"}>
+					<div className={"flex items-center justify-between text-xs text-fg-subtle"}>
 						<span>{state.phase}</span>
 						<span>{state.done.toLocaleString()} / {state.total.toLocaleString()}</span>
 					</div>
@@ -40,7 +40,7 @@ export function ExtractionProgress({state, fraction}: {state: ExtractionState; f
 
 			<pre
 				ref={logRef}
-				className={"h-40 overflow-auto rounded-md border border-input bg-black/30 p-2 text-[11px] leading-relaxed text-zinc-400 whitespace-pre-wrap"}
+				className={"h-40 overflow-auto rounded-md border border-input bg-black/30 p-2 text-[11px] leading-relaxed text-fg-subtle whitespace-pre-wrap"}
 			>
 				{state.log.join("\n")}
 			</pre>
@@ -50,9 +50,9 @@ export function ExtractionProgress({state, fraction}: {state: ExtractionState; f
 
 function Bar({fraction, muted}: {fraction: number; muted?: boolean}) {
 	return (
-		<div className={"h-2 w-full overflow-hidden rounded-full bg-zinc-800"}>
+		<div className={"h-2 w-full overflow-hidden rounded-full bg-surface-2"}>
 			<div
-				className={muted ? "h-full bg-zinc-500 transition-all" : "h-full bg-primary transition-all"}
+				className={muted ? "h-full bg-surface-3 transition-all" : "h-full bg-primary transition-all"}
 				style={{width: `${Math.max(0, Math.min(1, fraction)) * 100}%`}}
 			/>
 		</div>

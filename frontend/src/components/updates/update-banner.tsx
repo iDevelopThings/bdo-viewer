@@ -15,7 +15,7 @@ export function UpdateBanner() {
 		: 0;
 
 	return (
-		<div className={"flex items-center gap-3 border-b border-zinc-800 bg-zinc-900/80 px-4 py-2 text-sm text-zinc-200"}>
+		<div className={"flex items-center gap-3 border-b border-surface-border bg-surface-1/80 px-4 py-2 text-sm text-fg"}>
 			{state.status === "available" && (
 				<>
 					<span className={"flex-1"}>
@@ -28,7 +28,7 @@ export function UpdateBanner() {
 			{state.status === "downloading" && (
 				<>
 					<span className={"flex-1"}>Downloading update… {pct > 0 ? `${pct}%` : ""}</span>
-					<div className={"h-1.5 w-40 overflow-hidden rounded-full bg-zinc-800"}>
+					<div className={"h-1.5 w-40 overflow-hidden rounded-full bg-surface-2"}>
 						<div className={"h-full bg-primary transition-all"} style={{width: `${pct}%`}} />
 					</div>
 				</>

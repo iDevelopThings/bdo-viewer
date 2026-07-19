@@ -35,7 +35,7 @@ const GripTab = (props: IDockviewPanelHeaderProps) => {
 	if (LEAF_PANELS.has(props.api.id)) {
 		return (
 			<div
-				className={"flex items-center justify-center w-full h-full cursor-grab active:cursor-grabbing text-zinc-500 hover:text-zinc-300 transition-colors px-2"}
+				className={"flex items-center justify-center w-full h-full cursor-grab active:cursor-grabbing text-fg-subtle hover:text-fg-muted transition-colors px-2"}
 				title={`Drag to rearrange · ${props.api.title}`}
 			>
 				<GripHorizontal className={"size-4"} />

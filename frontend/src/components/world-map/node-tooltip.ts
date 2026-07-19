@@ -6,8 +6,8 @@ const MAX_PRODUCTS = 8;
 
 function row(label: string, value: string): string {
 	return `<div class="flex justify-between gap-3">
-		<span class="text-zinc-400">${label}</span>
-		<span class="text-zinc-200">${value}</span>
+		<span class="text-fg-subtle">${label}</span>
+		<span class="text-fg">${value}</span>
 	</div>`;
 }
 
@@ -18,18 +18,18 @@ function productList(n: WrappedWorldNode): string {
 	}
 
 	const shown = products.slice(0, MAX_PRODUCTS).map(i => `
-		<div class="flex items-center gap-1 rounded bg-zinc-700/50 py-0.5 pl-1 pr-1.5">
+		<div class="flex items-center gap-1 rounded bg-surface-3/50 py-0.5 pl-1 pr-1.5">
 			<img src="${i.icon}" alt="" class="h-4 w-4" />
-			<span class="text-zinc-300">${i.name}</span>
+			<span class="text-fg-muted">${i.name}</span>
 		</div>`).join("");
 
 	const more = products.length > MAX_PRODUCTS
-		? `<span class="self-center text-zinc-400">+${products.length - MAX_PRODUCTS} more</span>`
+		? `<span class="self-center text-fg-subtle">+${products.length - MAX_PRODUCTS} more</span>`
 		: "";
 
 	return `
-		<div class="mt-1.5 flex flex-col gap-1 border-t border-zinc-800 pt-1.5">
-			<span class="text-zinc-400">Products (${products.length})</span>
+		<div class="mt-1.5 flex flex-col gap-1 border-t border-surface-border pt-1.5">
+			<span class="text-fg-subtle">Products (${products.length})</span>
 			<div class="flex flex-wrap gap-1">${shown}${more}</div>
 		</div>`;
 }
@@ -39,7 +39,7 @@ function productList(n: WrappedWorldNode): string {
 function card(body: string) {
 	return {
 		html  : `
-			<div class="flex w-max max-w-80 flex-col gap-1 rounded-md border border-zinc-700/70 bg-zinc-900/95 px-2.5 py-2 text-xs shadow-lg">
+			<div class="flex w-max max-w-80 flex-col gap-1 rounded-md border border-surface-border/70 bg-surface-1/95 px-2.5 py-2 text-xs shadow-lg">
 				${body}
 			</div>`,
 		style : {
@@ -60,13 +60,13 @@ export function npcTooltip(m: NpcMarker) {
 
 	return card(`
 		<div class="flex items-baseline gap-1.5">
-			<span class="font-semibold text-zinc-50">${m.name}</span>
-			${m.title ? `<span class="text-zinc-500">${m.title}</span>` : ""}
+			<span class="font-semibold text-fg">${m.name}</span>
+			${m.title ? `<span class="text-fg-subtle">${m.title}</span>` : ""}
 		</div>
 		${m.nodeName ? row(m.role, m.nodeName) : ""}
 		${m.regionName ? row("Location", m.regionName) : ""}
 		${roles ? row("Roles", roles) : ""}
-		<span class="text-zinc-500">Click to open</span>
+		<span class="text-fg-subtle">Click to open</span>
 	`);
 }
 
@@ -86,8 +86,8 @@ export function nodeTooltip(n: WrappedWorldNode) {
 
 	return card(`
 		<div class="flex items-baseline gap-1.5">
-			<span class="font-semibold text-zinc-50">${n.name}</span>
-			<span class="text-zinc-500">${n.kindLabel}</span>
+			<span class="font-semibold text-fg">${n.name}</span>
+			<span class="text-fg-subtle">${n.kindLabel}</span>
 		</div>
 		${rows}
 		${productList(n)}

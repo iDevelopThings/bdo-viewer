@@ -98,10 +98,10 @@ export function EntryPicker({
 		>
 			<div className={"flex-1 bg-black/50"} />
 			<div
-				className={"w-96 max-w-full h-full bg-zinc-900 border-l border-zinc-800 flex flex-col"}
+				className={"w-96 max-w-full h-full bg-surface-1 border-l border-surface-border flex flex-col"}
 				onClick={e => e.stopPropagation()}
 			>
-				<div className={"flex flex-row items-center gap-2 p-2 border-b border-zinc-800"}>
+				<div className={"flex flex-row items-center gap-2 p-2 border-b border-surface-border"}>
 					<span className={"font-semibold text-sm flex-1 truncate"}>{title}</span>
 					<Button variant={"ghost"} size={"icon-xs"} onClick={onClose}>
 						<X />

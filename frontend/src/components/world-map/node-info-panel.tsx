@@ -12,16 +12,16 @@ import {openSourceDetails} from "@/state/panels.ts";
 function Field({label, value}: { label: string; value: string | number }) {
 	return (
 		<div className="flex flex-row items-baseline justify-between gap-3">
-			<span className="text-xs text-zinc-400">{label}</span>
-			<span className="text-xs text-zinc-200 text-right">{value}</span>
+			<span className="text-xs text-fg-subtle">{label}</span>
+			<span className="text-xs text-fg text-right">{value}</span>
 		</div>
 	);
 }
 
 function Section({title, children}: { title: string; children: React.ReactNode }) {
 	return (
-		<div className="flex flex-col gap-1.5 border-t border-zinc-800 pt-2">
-			<span className="text-xs font-semibold text-zinc-400">{title}</span>
+		<div className="flex flex-col gap-1.5 border-t border-surface-border pt-2">
+			<span className="text-xs font-semibold text-fg-subtle">{title}</span>
 			{children}
 		</div>
 	);
@@ -42,7 +42,7 @@ function Production({node}: { node: WrappedWorldNode }) {
 			{groups.map(g => (
 				<div key={g.urn} className="flex flex-col gap-1">
 					<div className="flex flex-row items-center justify-between">
-						<span className="text-xs text-zinc-300">{g.kindLabel}</span>
+						<span className="text-xs text-fg-muted">{g.kindLabel}</span>
 						{g.cp > 0 && <span className="text-xs text-amber-300/80">{g.cp} CP</span>}
 					</div>
 					<div className="flex flex-row flex-wrap gap-1">
@@ -62,11 +62,11 @@ function NpcRow({role, npc}: { role: string; npc: NPC }) {
 
 	return (
 		<div className="flex flex-row items-baseline justify-between gap-2">
-			<span className="text-xs text-zinc-400">{role}</span>
+			<span className="text-xs text-fg-subtle">{role}</span>
 			<div className="flex min-w-0 flex-row items-center gap-1">
 				<button
 					onClick={() => openSourceDetails(SourceKind.Npc, {id : npc.id, name : npc.name, urn : npc.urn})}
-					className="truncate text-xs text-zinc-200 hover:text-zinc-50 hover:underline"
+					className="truncate text-xs text-fg hover:text-fg hover:underline"
 					title={npc.title}
 				>
 					{npc.name}
@@ -75,7 +75,7 @@ function NpcRow({role, npc}: { role: string; npc: NPC }) {
 					<button
 						onClick={() => mapState.focusWorldPos(pos)}
 						title={`Show ${npc.name} on the map`}
-						className="text-zinc-500 hover:text-zinc-200"
+						className="text-fg-subtle hover:text-fg"
 					>
 						<MapPin size={11} />
 					</button>
@@ -114,8 +114,8 @@ function NodeDetails({node}: { node: WrappedWorldNode }) {
 	return (
 		<div className="flex flex-col gap-2">
 			<div className="flex flex-col">
-				<span className="text-sm font-semibold text-zinc-100">{node.name}</span>
-				<span className="text-xs text-zinc-500">
+				<span className="text-sm font-semibold text-fg">{node.name}</span>
+				<span className="text-xs text-fg-subtle">
 					{node.kindLabel} · {node.main ? "Main node" : "Sub-node"} · #{node.key}
 				</span>
 			</div>
@@ -142,7 +142,7 @@ function NodeDetails({node}: { node: WrappedWorldNode }) {
 							<button
 								key={l.urn}
 								onClick={() => mapState.updateNode(l, "select")}
-								className="rounded bg-zinc-800/80 px-1.5 py-0.5 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
+								className="rounded bg-surface-2/80 px-1.5 py-0.5 text-xs text-fg-muted hover:bg-surface-3 hover:text-fg"
 							>
 								{l.name}
 							</button>
@@ -169,18 +169,18 @@ export function NodeInfoPanel() {
 		<div
 			className={cn([
 				"absolute left-3 top-3 z-10 flex max-h-[calc(100%-1.5rem)] w-72 flex-col overflow-hidden",
-				"rounded-md border border-zinc-700/70 bg-zinc-900/95 shadow-lg"
+				"rounded-md border border-surface-border/70 bg-surface-1/95 shadow-lg"
 			])}
 		>
-			<div className="flex flex-row items-center justify-between border-b border-zinc-800 px-2 py-1.5">
-				<span className="flex items-center gap-1.5 text-xs font-semibold text-zinc-200">
+			<div className="flex flex-row items-center justify-between border-b border-surface-border px-2 py-1.5">
+				<span className="flex items-center gap-1.5 text-xs font-semibold text-fg">
 					<MapPin size={13} /> {selected ? "Selected node" : hovered ? "Hovered node" : "Nodes"}
 				</span>
 				{selected && (
 					<button
 						onClick={() => mapState.updateNode(null, "select")}
 						title="Clear selection"
-						className="text-zinc-400 hover:text-zinc-100"
+						className="text-fg-subtle hover:text-fg"
 					>
 						<X size={14} />
 					</button>
@@ -191,9 +191,9 @@ export function NodeInfoPanel() {
 				{shown ? (
 					<NodeDetails node={shown} />
 				) : (
-					 <p className="text-xs text-zinc-400">
+					 <p className="text-xs text-fg-subtle">
 						 Hover a node to preview it, click to pin it here.
-						 <span className="mt-1 block text-zinc-500">{map.nodes.length} nodes · {map.links.length} links</span>
+						 <span className="mt-1 block text-fg-subtle">{map.nodes.length} nodes · {map.links.length} links</span>
 					 </p>
 				 )}
 			</div>

@@ -38,13 +38,13 @@ export function SetupWizard({onComplete, firstRun, reason}: {onComplete: () => v
 	) : null;
 
 	return (
-		<div className={"flex h-full w-full items-center justify-center overflow-auto bg-zinc-950 p-6"}>
-			<div className={"flex w-full max-w-lg flex-col gap-6 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-xl"}>
+		<div className={"flex h-full w-full items-center justify-center overflow-auto bg-surface-0 p-6"}>
+			<div className={"flex w-full max-w-lg flex-col gap-6 rounded-xl border border-surface-border bg-surface-1/60 p-6 shadow-xl"}>
 				<div className={"flex flex-col gap-1"}>
-					<h1 className={"text-lg font-semibold text-zinc-100"}>
+					<h1 className={"text-lg font-semibold text-fg"}>
 						{firstRun ? "Welcome to BDO Viewer" : "Re-extraction needed"}
 					</h1>
-					<p className={"text-sm text-zinc-400"}>
+					<p className={"text-sm text-fg-subtle"}>
 						{firstRun
 							? "Point the viewer at your Black Desert Online install so it can extract the game data. This runs once — after it finishes the app opens normally."
 							: "Confirm your Black Desert Online install and re-extract to refresh your data. After it finishes the app opens normally."}

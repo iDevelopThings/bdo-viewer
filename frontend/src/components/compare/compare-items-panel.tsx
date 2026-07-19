@@ -88,7 +88,7 @@ function CompareColumn({entry, onRemove, onResult}: {
 	const maxCaphrasStep = caphrasLevels.length > 0 ? Math.max(...caphrasLevels.map(c => c.level)) : 0;
 
 	return (
-		<div className={"flex flex-col gap-2 p-2 border-b border-zinc-800 min-w-0"}>
+		<div className={"flex flex-col gap-2 p-2 border-b border-surface-border min-w-0"}>
 			<div className={"flex flex-row items-center gap-1.5"}>
 				{entry.icon && <img src={entry.icon} alt={entry.title} className={"w-6 h-6 shrink-0"} />}
 				<span className={"text-sm font-semibold truncate flex-1"} title={entry.title}>
@@ -101,7 +101,7 @@ function CompareColumn({entry, onRemove, onResult}: {
 
 			{maxLevel > minLevel && (
 				<div className={"flex flex-row items-center gap-2"}>
-					<span className={"text-xs text-zinc-400 shrink-0 w-14"} title={`Lv ${level}`}>
+					<span className={"text-xs text-fg-subtle shrink-0 w-14"} title={`Lv ${level}`}>
 						{enchant?.name ?? "Base"}
 					</span>
 					<Slider value={level} onValueChange={v => setLevel(v as number)} min={minLevel} max={maxLevel} step={1} />
@@ -110,7 +110,7 @@ function CompareColumn({entry, onRemove, onResult}: {
 
 			{maxCaphrasStep > 0 && (
 				<div className={"flex flex-row items-center gap-2"}>
-					<span className={"text-xs text-zinc-400 shrink-0 w-14"}>Caphras {caphrasStep}</span>
+					<span className={"text-xs text-fg-subtle shrink-0 w-14"}>Caphras {caphrasStep}</span>
 					<Slider
 						value={caphrasStep}
 						onValueChange={v => setCaphrasStep(v as number)}
@@ -181,7 +181,7 @@ export function CompareItemsPanel() {
 
 	return (
 		<div className={"relative flex flex-col h-full max-h-full overflow-hidden"}>
-			<div className={"flex flex-row items-center gap-2 p-2 border-b border-zinc-800"}>
+			<div className={"flex flex-row items-center gap-2 p-2 border-b border-surface-border"}>
 				<span className={"font-semibold text-sm"}>Compare Items</span>
 				<Button variant={"outline"} size={"xs"} className={"ml-auto"} onClick={() => setPickerOpen(true)}>
 					<Plus /> Add Item
@@ -195,7 +195,7 @@ export function CompareItemsPanel() {
 
 			<div className={"flex-1 overflow-auto"}>
 				{entries.length === 0 ? (
-					<div className={"p-4 text-sm text-zinc-400"}>
+					<div className={"p-4 text-sm text-fg-subtle"}>
 						No items to compare yet — click "Add Item" to get started.
 					</div>
 				) : (
@@ -204,7 +204,7 @@ export function CompareItemsPanel() {
 							className={"grid"}
 							style={{gridTemplateColumns : `160px repeat(${urns.length}, minmax(160px, 1fr))`}}
 						>
-							<div className={"border-b border-zinc-800"} />
+							<div className={"border-b border-surface-border"} />
 							{entries.map(entry => (
 								<CompareColumn
 									key={entry.urn}
@@ -218,7 +218,7 @@ export function CompareItemsPanel() {
 								const max = maxRawByTitle.get(title);
 								return (
 									<Fragment key={title}>
-										<div className={"text-xs text-zinc-400 p-2 border-b border-zinc-800/50 flex items-center"}>
+										<div className={"text-xs text-fg-subtle p-2 border-b border-surface-border/50 flex items-center"}>
 											{title}
 										</div>
 										{urns.map(urn => {
@@ -227,7 +227,7 @@ export function CompareItemsPanel() {
 												<div
 													key={`${urn}:${title}`}
 													className={cn(
-														"text-sm p-2 border-b border-zinc-800/50 text-center",
+														"text-sm p-2 border-b border-surface-border/50 text-center",
 														max !== undefined && stat?.raw === max && "bg-green-500/10",
 													)}
 												>

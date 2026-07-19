@@ -30,8 +30,8 @@ export function DataExtractionSettings() {
 
 	return (
 		<section className={"flex flex-col gap-3"}>
-			<h2 className={"text-sm font-semibold text-zinc-200"}>Data & Extraction</h2>
-			<p className={"text-xs text-zinc-400"}>
+			<h2 className={"text-sm font-semibold text-fg"}>Data & Extraction</h2>
+			<p className={"text-xs text-fg-subtle"}>
 				Where the game is installed and where extracted data lives. Re-extract after a
 				game patch to refresh the data.
 			</p>

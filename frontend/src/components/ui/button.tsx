@@ -21,8 +21,8 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         // Small bordered pill; add aria-pressed for a toggled (active) state — border/bg/text switch
         // to the primary accent, and hover only applies while not pressed.
-        chip: "cursor-pointer border-input text-zinc-400 not-aria-pressed:hover:bg-zinc-900 not-aria-pressed:hover:text-white aria-pressed:border-primary/60 aria-pressed:bg-primary/15 aria-pressed:text-primary",
-        slot: "cursor-pointer border select-none bg-zinc-900 not-aria-pressed:hover:bg-zinc-800 transition-colors border-dashed border-zinc-700",
+        chip: "cursor-pointer border-input text-fg-subtle not-aria-pressed:hover:bg-surface-1 not-aria-pressed:hover:text-fg aria-pressed:border-primary/60 aria-pressed:bg-primary/15 aria-pressed:text-primary",
+        slot: "cursor-pointer border select-none bg-surface-1 not-aria-pressed:hover:bg-surface-2 transition-colors border-dashed border-surface-border",
       },
       size: {
         default:

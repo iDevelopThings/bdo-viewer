@@ -28,7 +28,7 @@ export function GameInstallFields({
 			/>
 
 			<div className={"min-h-5 text-xs"}>
-				{validating && <span className={"text-zinc-500"}>Checking…</span>}
+				{validating && <span className={"text-fg-subtle"}>Checking…</span>}
 				{!validating && meta && (
 					<span className={"text-emerald-400"}>
 						Valid install — version {meta.version}, {meta.files.toLocaleString()} files.

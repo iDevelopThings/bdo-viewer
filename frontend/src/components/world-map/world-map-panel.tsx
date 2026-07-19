@@ -18,7 +18,7 @@ export function WorldMapPanel() {
 	if (map.loading) {
 		return (
 			<div className={"w-full h-full flex items-center justify-center"}>
-				<p className={"text-zinc-400 text-sm"}>Loading map data...</p>
+				<p className={"text-fg-subtle text-sm"}>Loading map data...</p>
 			</div>
 		);
 	}

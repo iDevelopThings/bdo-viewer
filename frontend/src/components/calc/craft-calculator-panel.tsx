@@ -49,10 +49,10 @@ export function CraftCalculatorPanel() {
 
 	return (
 		<div className={"relative flex flex-col h-full max-h-full overflow-hidden"} data-panel={"calc"}>
-			<div className={"flex flex-row items-center gap-2 p-2 border-b border-zinc-800"}>
+			<div className={"flex flex-row items-center gap-2 p-2 border-b border-surface-border"}>
 				<span className={"font-semibold text-sm flex-1"}>Crafting Calculator</span>
 				{marketLoaded() ? (
-					<span className={"text-xs text-zinc-500"}>{marketStatus()}</span>
+					<span className={"text-xs text-fg-subtle"}>{marketStatus()}</span>
 				) : (
 					<Button size={"sm"} variant={"outline"} disabled={loading} onClick={() => void fetchMarket()}>
 						{loading ? "Loading…" : "Load Prices"}
@@ -65,7 +65,7 @@ export function CraftCalculatorPanel() {
 
 			<div className={"flex-1 overflow-auto flex flex-col"}>
 				{targets.length === 0 ? (
-					<div className={"p-6 text-sm text-zinc-400"}>
+					<div className={"p-6 text-sm text-fg-subtle"}>
 						Add items to combine their recipes into one shopping list.
 					</div>
 				) : (
@@ -74,7 +74,7 @@ export function CraftCalculatorPanel() {
 							<TargetBlock key={t.urn} target={t} items={items} />
 						))}
 						{targets.length > 1 && (
-							<div className={"flex flex-col gap-2 p-3 bg-zinc-900/40"}>
+							<div className={"flex flex-col gap-2 p-3 bg-surface-1/40"}>
 								<MaterialsList title={`Combined Shopping List (${bom.length})`} base={bom} items={items} strong />
 							</div>
 						)}
@@ -108,7 +108,7 @@ function TargetBlock({target, items}: { target: DeepReadonly<CalcTarget>, items:
 
 	return (
 		<div
-			className={"flex flex-col gap-3 p-3 border-b-4 border-zinc-800/80"}
+			className={"flex flex-col gap-3 p-3 border-b-4 border-surface-border/80"}
 			data-testid={"craft-target"}
 			data-urn={target.urn}
 		>
@@ -170,12 +170,12 @@ function MaterialsList({title, base, items, strong}: {
 		<div className={"flex flex-col gap-1"}>
 			<div className={"flex flex-row items-baseline justify-between"}>
 				<span className={strong
-					? "text-xs font-semibold uppercase tracking-wide text-zinc-300"
-					: "text-xs uppercase tracking-wide text-zinc-500"}>
+					? "text-xs font-semibold uppercase tracking-wide text-fg-muted"
+					: "text-xs uppercase tracking-wide text-fg-subtle"}>
 					{title}
 				</span>
 				{marketLoaded() && total > 0 && (
-					<span className={"text-xs text-zinc-400"}>{moneyLabel(total)} silver</span>
+					<span className={"text-xs text-fg-subtle"}>{moneyLabel(total)} silver</span>
 				)}
 			</div>
 			<div className={"flex flex-col"}>
@@ -195,7 +195,7 @@ function ShoppingRow({urn, count, cost, item}: {
 }) {
 	return (
 		<div
-			className={"flex flex-row items-center gap-2 py-1 cursor-pointer hover:bg-zinc-800/50 rounded-sm px-1"}
+			className={"flex flex-row items-center gap-2 py-1 cursor-pointer hover:bg-surface-2/50 rounded-sm px-1"}
 			data-testid={"shopping-row"}
 			data-urn={urn}
 			onClick={() => item && openItemPanel({id : item.id, name : item.title}, false)}
@@ -204,9 +204,9 @@ function ShoppingRow({urn, count, cost, item}: {
 			<span className={"flex-1 min-w-0 truncate text-sm"} style={{color : tryGetGradeColor(item?.extra?.grade)?.toString()}}>
 				{item?.title ?? urn}
 			</span>
-			<span className={"text-sm text-zinc-400 shrink-0"}>×{count}</span>
+			<span className={"text-sm text-fg-subtle shrink-0"}>×{count}</span>
 			{cost !== undefined && (
-				<span className={"text-sm text-zinc-300 shrink-0 w-28 text-right"}>{moneyLabel(cost)}</span>
+				<span className={"text-sm text-fg-muted shrink-0 w-28 text-right"}>{moneyLabel(cost)}</span>
 			)}
 		</div>
 	);

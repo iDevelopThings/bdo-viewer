@@ -26,11 +26,11 @@ export function LoadScreen({onRetry}: { onRetry: () => void }) {
 	return (
 		<div className={"flex h-full w-full items-center justify-center"}>
 			<div className={"flex w-80 flex-col gap-3"}>
-				<div className={"flex items-center justify-between text-xs text-zinc-400"}>
+				<div className={"flex items-center justify-between text-xs text-fg-subtle"}>
 					<span>{stage || "Loading data…"}</span>
 					{hasCount && <span>{done.toLocaleString()} / {total.toLocaleString()}</span>}
 				</div>
-				<div className={"h-2 w-full overflow-hidden rounded-full bg-zinc-800"}>
+				<div className={"h-2 w-full overflow-hidden rounded-full bg-surface-2"}>
 					{hasCount ? (
 						<div
 							className={"h-full bg-primary transition-all"}
@@ -57,7 +57,7 @@ function LogTail({lines}: { lines: readonly string[] }) {
 	return (
 		<pre
 			ref={ref}
-			className={"h-24 overflow-auto rounded-md border border-input bg-black/30 p-2 text-[11px] leading-relaxed text-zinc-500 whitespace-pre-wrap"}
+			className={"h-24 overflow-auto rounded-md border border-input bg-black/30 p-2 text-[11px] leading-relaxed text-fg-subtle whitespace-pre-wrap"}
 		>
 			{lines.join("\n")}
 		</pre>

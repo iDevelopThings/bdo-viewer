@@ -51,14 +51,14 @@ export function SettingsPanel() {
 	};
 
 	if (!loaded) {
-		return <div className={"p-4 text-sm text-zinc-400"}>Loading…</div>;
+		return <div className={"p-4 text-sm text-fg-subtle"}>Loading…</div>;
 	}
 
 	return (
 		<div className={"flex flex-col gap-8 p-4 overflow-auto max-h-full"} data-panel={"settings"}>
 			<section className={"flex flex-col gap-3"}>
-				<h2 className={"text-sm font-semibold text-zinc-200"}>Life-Skill Mastery</h2>
-				<p className={"text-xs text-zinc-400"}>
+				<h2 className={"text-sm font-semibold text-fg"}>Life-Skill Mastery</h2>
+				<p className={"text-xs text-fg-subtle"}>
 					Drives the crafting calculator's yield estimate (proc bonus reduces materials). Applied globally.
 				</p>
 				<MasteryInput label={"Cooking"} value={cooking} onChange={v => saveMastery(v, alchemy, processing)} />
@@ -67,8 +67,8 @@ export function SettingsPanel() {
 			</section>
 
 			<section className={"flex flex-col gap-3"}>
-				<h2 className={"text-sm font-semibold text-zinc-200"}>Central Market</h2>
-				<p className={"text-xs text-zinc-400"}>
+				<h2 className={"text-sm font-semibold text-fg"}>Central Market</h2>
+				<p className={"text-xs text-fg-subtle"}>
 					Live prices from bdolytics (server-side, optional). Used for the crafting shopping list.
 				</p>
 				<div className={"flex items-center gap-3"}>
@@ -77,8 +77,8 @@ export function SettingsPanel() {
 						value={region}
 						onChange={e => saveRegion(e.target.value)}
 						className={cn(
-							"h-9 rounded-md border border-input bg-transparent dark:bg-input/30 px-2 text-sm text-zinc-300 outline-none cursor-pointer",
-							"focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [&>option]:bg-zinc-900",
+							"h-9 rounded-md border border-input bg-transparent dark:bg-input/30 px-2 text-sm text-fg-muted outline-none cursor-pointer",
+							"focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [&>option]:bg-surface-1",
 						)}
 					>
 						{REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
@@ -88,7 +88,7 @@ export function SettingsPanel() {
 					<Button size={"sm"} disabled={marketSnap.loading} onClick={() => void fetchMarket()}>
 						{marketSnap.loading ? "Loading…" : marketLoaded() ? "Refresh Prices" : "Load Market Prices"}
 					</Button>
-					<span className={"text-xs text-zinc-400"}>{marketStatus()}</span>
+					<span className={"text-xs text-fg-subtle"}>{marketStatus()}</span>
 				</div>
 			</section>
 

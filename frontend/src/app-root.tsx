@@ -34,7 +34,7 @@ export function AppRoot() {
 	if (status === null) {
 		body = (
 			<div className="flex flex-col items-center justify-center h-full w-full">
-				<div className="text-zinc-400 text-sm">Checking…</div>
+				<div className="text-fg-subtle text-sm">Checking…</div>
 			</div>
 		);
 	} else if (status.needsSetup) {

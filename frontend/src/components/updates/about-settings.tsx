@@ -28,13 +28,13 @@ export function AboutSettings() {
 
 	return (
 		<section className={"flex flex-col gap-3"}>
-			<h2 className={"text-sm font-semibold text-zinc-200"}>About</h2>
+			<h2 className={"text-sm font-semibold text-fg"}>About</h2>
 			<div className={"flex items-center gap-3"}>
-				<span className={"text-xs text-zinc-400"}>Version {version || "…"}</span>
+				<span className={"text-xs text-fg-subtle"}>Version {version || "…"}</span>
 				<Button size={"sm"} variant={"outline"} disabled={checking} onClick={check}>
 					{checking ? "Checking…" : "Check for updates"}
 				</Button>
-				{result && <span className={"text-xs text-zinc-400"}>{result}</span>}
+				{result && <span className={"text-xs text-fg-subtle"}>{result}</span>}
 			</div>
 		</section>
 	);

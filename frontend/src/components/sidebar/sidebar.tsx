@@ -25,7 +25,7 @@ export function Sidebar() {
 			data-nav-path={"gear-builder"}
 			onClick={() => openGearBuilderPanel()}
 		>
-			<Swords className={"size-3.5 shrink-0 text-zinc-500"} />
+			<Swords className={"size-3.5 shrink-0 text-fg-subtle"} />
 			<span className={"truncate"}>Gear Builder</span>
 		</div>
 
@@ -35,7 +35,7 @@ export function Sidebar() {
 			data-nav-path={"craft-calculator"}
 			onClick={() => openCraftCalculatorPanel()}
 		>
-			<Calculator className={"size-3.5 shrink-0 text-zinc-500"} />
+			<Calculator className={"size-3.5 shrink-0 text-fg-subtle"} />
 			<span className={"truncate"}>Crafting Calculator</span>
 		</div>
 
@@ -45,7 +45,7 @@ export function Sidebar() {
 			data-nav-path={"compare-items"}
 			onClick={() => openCompareItemsPanel()}
 		>
-			<GitCompare className={"size-3.5 shrink-0 text-zinc-500"} />
+			<GitCompare className={"size-3.5 shrink-0 text-fg-subtle"} />
 			<span className={"truncate"}>Compare Items</span>
 		</div>
 
@@ -55,7 +55,7 @@ export function Sidebar() {
 			data-nav-path={"map"}
 			onClick={() => openMapPanel()}
 		>
-			<Map className={"size-3.5 shrink-0 text-zinc-500"} />
+			<Map className={"size-3.5 shrink-0 text-fg-subtle"} />
 			<span className={"truncate"}>World Map</span>
 		</div>
 		<div
@@ -64,7 +64,7 @@ export function Sidebar() {
 			data-nav-path={"settings"}
 			onClick={() => openSettingsPanel()}
 		>
-			<Settings className={"size-3.5 shrink-0 text-zinc-500"} />
+			<Settings className={"size-3.5 shrink-0 text-fg-subtle"} />
 			<span className={"truncate"}>Settings</span>
 		</div>
 
@@ -156,7 +156,7 @@ export const SidebarNode = memo(function SidebarNode({node, parent, depth}: Side
 				{hasChildren ? (
 					<ChevronRight
 						className={cn(
-							"size-3.5 shrink-0 text-zinc-500 transition-transform duration-150",
+							"size-3.5 shrink-0 text-fg-subtle transition-transform duration-150",
 							expanded && "rotate-90"
 						)}
 					/>

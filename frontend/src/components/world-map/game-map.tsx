@@ -83,9 +83,9 @@ interface OrthoViewState {
 
 function MetricKv({title, value}: { title: string; value: any }) {
 	return (
-		<div className="flex justify-between text-xs text-zinc-400">
+		<div className="flex justify-between text-xs text-fg-subtle">
 			<span>{title}</span>
-			<span className="text-zinc-200">{typeof value === "number" && value > 0 ? value.toFixed(2) : String(value)}</span>
+			<span className="text-fg">{typeof value === "number" && value > 0 ? value.toFixed(2) : String(value)}</span>
 		</div>
 	);
 }
@@ -618,16 +618,16 @@ export function GameMap() {
 			/>
 
 			{map.settings.debugOverlay && (
-				<div className="absolute left-3 bottom-3 z-10 w-44 overflow-hidden rounded-md border border-zinc-700/70 bg-zinc-900/95 shadow-lg">
-					<div className="flex flex-row items-center justify-between border-b border-zinc-800 px-2 py-1.5">
-					<span className="flex items-center gap-1.5 text-xs font-semibold text-zinc-200">
+				<div className="absolute left-3 bottom-3 z-10 w-44 overflow-hidden rounded-md border border-surface-border/70 bg-surface-1/95 shadow-lg">
+					<div className="flex flex-row items-center justify-between border-b border-surface-border px-2 py-1.5">
+					<span className="flex items-center gap-1.5 text-xs font-semibold text-fg">
 						Debug Data
 					</span>
 					</div>
 					<div className="p-1 max-h-64 overflow-y-auto ">
 						{health && (
 							<div className="mb-2">
-								<div className="text-xs font-semibold text-zinc-200 mb-1">
+								<div className="text-xs font-semibold text-fg mb-1">
 									Interaction
 								</div>
 								{Object.entries(health).map(([key, value]) => (
@@ -638,7 +638,7 @@ export function GameMap() {
 
 						{metrics && (
 							<div>
-								<div className="text-xs font-semibold text-zinc-200 mb-1">
+								<div className="text-xs font-semibold text-fg mb-1">
 									Metrics
 								</div>
 
@@ -650,7 +650,7 @@ export function GameMap() {
 
 						{map?.selectedNode && (
 							<div>
-								<div className="text-xs font-semibold text-zinc-200 mb-1">
+								<div className="text-xs font-semibold text-fg mb-1">
 									Node
 								</div>
 								<div>
@@ -669,8 +669,8 @@ export function GameMap() {
 			<div className={"absolute z-10 right-3 bottom-3 flex flex-col gap-1"}>
 				<button
 					className={cn([
-						"text-zinc-200 hover:text-zinc-100 bg-zinc-900/90 hover:bg-zinc-800",
-						"border border-zinc-700/70",
+						"text-fg hover:text-fg bg-surface-1/90 hover:bg-surface-2",
+						"border border-surface-border/70",
 						"flex items-center justify-center",
 						"w-8 h-8 text-lg font-bold",
 						"rounded-t-md"
@@ -683,8 +683,8 @@ export function GameMap() {
 
 				<button
 					className={cn([
-						"text-zinc-200 hover:text-zinc-100 bg-zinc-900/90 hover:bg-zinc-800",
-						"border border-zinc-700/70",
+						"text-fg hover:text-fg bg-surface-1/90 hover:bg-surface-2",
+						"border border-surface-border/70",
 						"flex items-center justify-center",
 						"w-8 h-8 text-lg font-bold",
 						"rounded-b-md"

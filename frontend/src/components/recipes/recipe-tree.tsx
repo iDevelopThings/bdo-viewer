@@ -41,7 +41,7 @@ function NodeAltsButton({node, items, className}: { node: RNode, items: RItems, 
 					setOpen(true);
 				}}
 				className={cn(
-					"flex flex-row items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs shrink-0 bg-zinc-800 text-zinc-300 hover:bg-zinc-700",
+					"flex flex-row items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs shrink-0 bg-surface-2 text-fg-muted hover:bg-surface-3",
 					className,
 				)}
 			>
@@ -75,17 +75,17 @@ function NodeAltsButton({node, items, className}: { node: RNode, items: RItems, 
 											setOpen(false);
 										}}
 										className={cn(
-											"flex flex-row flex-wrap gap-1.5 items-center rounded-md p-2 text-left hover:bg-zinc-800",
-											current && "bg-zinc-800 ring-1 ring-primary/60",
+											"flex flex-row flex-wrap gap-1.5 items-center rounded-md p-2 text-left hover:bg-surface-2",
+											current && "bg-surface-2 ring-1 ring-primary/60",
 										)}
 									>
 										{alt.inputs.map((inp, si) => {
 											const it = itemOf(items, inp.item);
 											return (
-												<span key={`${inp.item}:${si}`} className={"flex flex-row items-center gap-1 bg-zinc-700/50 rounded px-1.5 py-0.5"}>
+												<span key={`${inp.item}:${si}`} className={"flex flex-row items-center gap-1 bg-surface-3/50 rounded px-1.5 py-0.5"}>
 													<ItemIcon urn={inp.item} className={"shrink-0"} imageClass={"w-4 h-4"} />
 													<span className={"text-sm"} style={{color : tryGetGradeColor(it?.extra?.grade)?.toString()}}>{it?.title ?? inp.item}</span>
-													<span className={"text-xs text-zinc-400"}>×{inp.count}</span>
+													<span className={"text-xs text-fg-subtle"}>×{inp.count}</span>
 												</span>
 											);
 										})}
@@ -132,7 +132,7 @@ export function RecipeBody({node, items, depth, isRoot}: { node: RNode, items: R
 		<div className={"flex flex-col gap-2"}>
 			{isRoot && (
 				<div className={"flex flex-row items-center gap-2"}>
-					<span className={"text-sm text-zinc-400 font-bold"}>{recipeTypeLabel(cluster.type, cluster.station)}</span>
+					<span className={"text-sm text-fg-subtle font-bold"}>{recipeTypeLabel(cluster.type, cluster.station)}</span>
 					<NodeAltsButton node={node} items={items} />
 				</div>
 			)}
@@ -164,7 +164,7 @@ function RecipeRow({node, items, depth}: { node: RNode, items: RItems, depth: nu
 				data-path={node.path}
 				data-craftable={craftable}
 				data-crafted={crafted}
-				className={"flex flex-row gap-1.5 items-center py-1 px-2 rounded-sm hover:bg-zinc-700/40 cursor-pointer"}
+				className={"flex flex-row gap-1.5 items-center py-1 px-2 rounded-sm hover:bg-surface-3/40 cursor-pointer"}
 				style={{paddingLeft : `${8 + depth * 16}px`}}
 				onClick={() => craftable ? onToggleCraft(node.path, !crafted) : (item && openItemPanel({id : item.id, name : item.title}, false))}
 				onMouseDown={e => {
@@ -181,7 +181,7 @@ function RecipeRow({node, items, depth}: { node: RNode, items: RItems, depth: nu
 				{craftable ? (
 					<ChevronRightIcon
 						className={cn(
-							"size-3.5 shrink-0 text-zinc-500 transition-transform duration-150",
+							"size-3.5 shrink-0 text-fg-subtle transition-transform duration-150",
 							crafted && "rotate-90",
 						)}
 					/>
@@ -190,17 +190,17 @@ function RecipeRow({node, items, depth}: { node: RNode, items: RItems, depth: nu
 				)}
 				<ItemIcon urn={node.item} className={"shrink-0"} imageClass={"w-5 h-5"} />
 				<span className={"text-sm min-w-0 truncate"} style={color ? {color} : undefined}>{item?.title}</span>
-				{!!node.count && <span className={"text-sm text-zinc-500 shrink-0"}>×{node.count}</span>}
+				{!!node.count && <span className={"text-sm text-fg-subtle shrink-0"}>×{node.count}</span>}
 				{node.gathered ? (
 					<span className={"text-sm shrink-0"} style={{color : ItemGradeInfos[ItemGrades.Green].color}}>gathered</span>
 				) : node.cycle ? (
-					<span className={"text-sm text-zinc-500 shrink-0"}>…</span>
+					<span className={"text-sm text-fg-subtle shrink-0"}>…</span>
 				) : crafted && cluster ? (
 					<span className={"text-sm shrink-0"} style={{color : RECIPE_TYPE_COLOR}}>
 						{recipeTypeLabel(cluster.type, cluster.station)}
 					</span>
 				) : craftable ? (
-					<span className={"text-xs shrink-0 text-zinc-500"}>buy · craftable</span>
+					<span className={"text-xs shrink-0 text-fg-subtle"}>buy · craftable</span>
 				) : null}
 				{crafted && <NodeAltsButton node={node} items={items} className={"ml-auto"} />}
 			</div>
