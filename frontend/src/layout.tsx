@@ -1,8 +1,9 @@
-import {DockviewApi, DockviewDefaultTab, DockviewReact, DockviewReadyEvent, IDockviewPanelHeaderProps, IDockviewPanelProps, SerializedDockview} from "dockview-react";
+import {DockviewApi, DockviewDefaultTab, DockviewReact, DockviewReadyEvent, IDockviewPanelHeaderProps, SerializedDockview} from "dockview-react";
 import "dockview-react/dist/styles/dockview.css";
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
+import {GripHorizontal} from "lucide-react";
 import {setDockviewApi} from "@/state/panels.ts";
-import {Sidebar} from "@/components/sidebar/sidebar.tsx";
+import {TreeNav} from "@/components/sidebar/tree-nav.tsx";
 import {SourceList} from "@/components/source-list/source-list.tsx";
 import {DetailsPanel} from "@/components/details/details-panel.tsx";
 import {GearBuilderPanel} from "@/components/gear-builder/gear-builder-panel.tsx";
@@ -10,31 +11,16 @@ import {SettingsPanel} from "@/components/settings/settings-panel.tsx";
 import {CraftCalculatorPanel} from "@/components/calc/craft-calculator-panel.tsx";
 import {CompareItemsPanel} from "@/components/compare/compare-items-panel.tsx";
 import {WorldMapPanel} from "@/components/world-map/world-map-panel.tsx";
+import {ToolRail} from "@/components/rail/tool-rail.tsx";
 
+const LAYOUT_KEY = "layout-v2";
 
-const MyPanel = (props: IDockviewPanelProps) => {
-	return <div style={{padding : 16}}>{props.api.title}</div>;
-};
-
-
-const NoCloseTab = (props: IDockviewPanelHeaderProps) => {
-	let closable = true; // props.api.id.includes("item:") || props.api.id.includes("gear:");
-
-	switch (props.api.id) {
-		case "sidebar":
-		case "list":
-			closable = false;
-			break;
-		default:
-			break;
-	}
-
-	return <DockviewDefaultTab {...props} hideClose={!closable} />;
-};
+// Leaf panels drag from a slim grip instead of a labelled tab; content panels keep the
+// normal closable tab since several stack in the same group.
+const LEAF_PANELS = new Set(["tree", "list"]);
 
 const components = {
-	default      : MyPanel,
-	sidebar      : Sidebar,
+	tree         : TreeNav,
 	list         : SourceList,
 	itemDetails  : DetailsPanel,
 	gearBuilder  : GearBuilderPanel,
@@ -44,61 +30,68 @@ const components = {
 	worldMap     : WorldMapPanel,
 };
 
-/*const RightActions = (props: IDockviewHeaderActionsProps) => {
-	if (props.location?.type !== "edge") {
-		return null;
+const GripTab = (props: IDockviewPanelHeaderProps) => {
+	if (LEAF_PANELS.has(props.api.id)) {
+		return (
+			<div
+				className={"flex items-center justify-center w-full h-full cursor-grab active:cursor-grabbing text-fg-subtle hover:text-fg-muted transition-colors px-2"}
+				title={`Drag to rearrange · ${props.api.title}`}
+			>
+				<GripHorizontal className={"size-4"} />
+			</div>
+		);
 	}
+	return <DockviewDefaultTab {...props} />;
+};
 
-	const [collapsed, setCollapsed] = useState(props.api.isCollapsed());
+function buildDefault(api: DockviewApi) {
+	const mainGroup   = api.addGroup({id : "main", direction : "above"});
+	const centerGroup = api.addGroup({id : "center", direction : "right", referenceGroup : mainGroup.id});
+	const rightGroup  = api.addGroup({id : "right", direction : "right", referenceGroup : centerGroup.id});
 
-	useEffect(() => {
-		const disposable = props.api.onDidCollapsedChange((event) => {
-			setCollapsed(event.isCollapsed);
-		});
-		return () => disposable.dispose();
-	}, [props.api]);
+	const treePanel = api.addPanel({
+		id           : "tree",
+		component    : "tree",
+		title        : "Navigation",
+		initialWidth : 260,
+		minimumWidth : 200,
+		maximumWidth : 420,
+		position     : {referenceGroup : mainGroup},
+	});
+	api.addPanel({
+		id        : "list",
+		component : "list",
+		title     : "List",
+		position  : {referenceGroup : centerGroup, direction : "within"},
+	});
+	api.addPanel({
+		id        : "preview",
+		component : "itemDetails",
+		title     : "Preview",
+		position  : {referenceGroup : rightGroup.id, direction : "within"},
+	});
 
-	return (
-		<button
-			style={{
-				cursor     : "pointer",
-				background : "none",
-				border     : "none",
-				color      : "inherit",
-				padding    : "0 4px",
-			}}
-			onClick={() =>
-				collapsed ? props.api.expand() : props.api.collapse()
-			}
-		>
-			{collapsed ? "+" : "-"}
-		</button>
-	);
-};*/
+	treePanel.api.setSize({width : 260});
+}
 
 export function AppLayout() {
 
 	const [api, setApi] = useState<DockviewApi>();
+	const lastTreeWidth = useRef<number>(260);
+	const [treeVisible, setTreeVisible] = useState(true);
 
-	const useLayoutPersistence = true;
-
-	function tryLoadLayout(api: DockviewApi) {
-		if (!useLayoutPersistence)
+	function tryLoadLayout(api: DockviewApi): boolean {
+		const serialized = localStorage.getItem(LAYOUT_KEY);
+		if (!serialized) {
 			return false;
-
-		const serializedLayout = localStorage.getItem("layout");
-
-		if (serializedLayout) {
-			try {
-				api.fromJSON(JSON.parse(serializedLayout), {reuseExistingPanels : true});
-
-				return true;
-			} catch (err) {
-				console.error("Failed to load layout from localStorage", err);
-			}
 		}
-
-		return false;
+		try {
+			api.fromJSON(JSON.parse(serialized), {reuseExistingPanels : true});
+			return true;
+		} catch (err) {
+			console.error("Failed to load v2 layout from localStorage", err);
+			return false;
+		}
 	}
 
 	const onReady = (event: DockviewReadyEvent) => {
@@ -106,61 +99,39 @@ export function AppLayout() {
 		setDockviewApi(event.api);
 
 		if (!tryLoadLayout(event.api)) {
-			const mainGroup   = event.api.addGroup({
-				id        : "main",
-				direction : "above",
-			});
-			const centerGroup = event.api.addGroup({
-				id             : "center",
-				direction      : "right",
-				referenceGroup : mainGroup.id,
-			});
-			const rightGroup  = event.api.addGroup({
-				id             : "right",
-				direction      : "right",
-				referenceGroup : centerGroup.id,
-			});
-
-			const sidebarPanel = event.api.addPanel({
-				id           : "sidebar",
-				component    : "sidebar",
-				title        : "Sidebar",
-				initialWidth : 350,
-				minimumWidth : 250,
-				maximumWidth : 400,
-				position     : {referenceGroup : mainGroup}
-			});
-			event.api.addPanel({
-				id        : "list",
-				component : "list",
-				title     : "List",
-				position  : {
-					referenceGroup : centerGroup,
-					direction      : "within"
-				}
-			});
-
-			event.api.addPanel({
-				id        : "preview",
-				component : "itemDetails",
-				title     : "Preview",
-				position  : {
-					referenceGroup : rightGroup.id,
-					direction      : "within"
-				}
-			});
-
-
-			sidebarPanel.api.setSize({
-				height : window.innerHeight,
-				width  : 300
-			});
-
-
+			buildDefault(event.api);
 		}
 
+		setTreeVisible(!!event.api.getPanel("tree"));
 	};
 
+	// Collapse reclaims the tree's width for list + detail; the tree's own state
+	// (expanded/active) lives in the navigation store, so removing the panel loses nothing.
+	function toggleTree() {
+		if (!api) {
+			return;
+		}
+
+		const existing = api.getPanel("tree");
+		if (existing) {
+			lastTreeWidth.current = existing.api.width || lastTreeWidth.current;
+			api.removePanel(existing);
+			setTreeVisible(false);
+			return;
+		}
+
+		const listPanel = api.getPanel("list");
+		const panel     = api.addPanel({
+			id        : "tree",
+			component : "tree",
+			title     : "Navigation",
+			position  : listPanel
+				? {referencePanel : listPanel.id, direction : "left"}
+				: undefined,
+		});
+		panel.api.setSize({width : lastTreeWidth.current});
+		setTreeVisible(true);
+	}
 
 	useEffect(() => {
 		if (!api) {
@@ -169,7 +140,7 @@ export function AppLayout() {
 
 		const disposable = api.onDidLayoutChange(() => {
 			const layout: SerializedDockview = api.toJSON();
-			localStorage.setItem("layout", JSON.stringify(layout));
+			localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout));
 		});
 
 		return () => {
@@ -178,14 +149,22 @@ export function AppLayout() {
 		};
 	}, [api]);
 
-
 	return (
-		<DockviewReact
-			className="dockview-theme-shadcn"
-			onReady={onReady}
-			scrollbars={"native"}
-			components={components}
-			defaultTabComponent={NoCloseTab}
-		/>
+		<div className={"flex flex-row h-full w-full min-h-0"}>
+			<ToolRail
+				treeVisible={treeVisible}
+				onToggleTree={toggleTree}
+			/>
+			<div className={"flex-1 min-w-0 h-full"}>
+				<DockviewReact
+					className={"dockview-theme-shadcn bdo-layout-v2"}
+					onReady={onReady}
+					scrollbars={"native"}
+					components={components}
+					defaultTabComponent={GripTab}
+					defaultRenderer={"onlyWhenVisible"}
+				/>
+			</div>
+		</div>
 	);
 }

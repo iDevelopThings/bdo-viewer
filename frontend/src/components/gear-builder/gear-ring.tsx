@@ -90,7 +90,7 @@ export function GearRing() {
 	return (
 		<div className={"flex flex-col items-center gap-3 w-full flex-1 min-h-0 relative"}>
 
-			<div className={"relative flex-1 min-h-0 aspect-square max-w-full max-h-130"}>
+			<div className={"relative flex-1 min-h-0 aspect-square max-w-full min-h-130 max-h-130"}>
 				<div className={"absolute inset-[17.5%] rounded-full border border-surface-border"} />
 				<div className={"absolute inset-[34%] rounded-full border border-surface-border"} />
 				<div className={"absolute inset-[10%] bg-radial-[at_50%_50%] from-surface-3/30  to-transparent to-70%"} />

@@ -1,78 +1,11 @@
 import {useSnapshot} from "valtio/react";
-import {sources} from "@/state/sources/sources.ts";
 import {navigate, navigation, toggleExpanded} from "@/state/navigation.tsx";
 import {cva, type VariantProps} from "class-variance-authority";
 import {cn} from "@/lib/utils.ts";
 import type {DeepReadonly} from "@/types.ts";
-import {Calculator, ChevronRight, GitCompare, Map, Settings, Swords} from "lucide-react";
-import {openCompareItemsPanel, openCraftCalculatorPanel, openGearBuilderPanel, openSettingsPanel, openMapPanel} from "@/state/panels.ts";
+import {ChevronRight} from "lucide-react";
 import {SourceNavigationNode} from "@bindings/bdo-viewer/internal/sources";
 import {memo, useEffect, useMemo, useRef} from "react";
-
-export function Sidebar() {
-
-	const {loading}   = useSnapshot(sources);
-	const {rootNodes} = useSnapshot(navigation);
-
-	if (loading) {
-		return <div>Loading...</div>;
-	}
-
-	return <div className={"flex flex-col p-1 overflow-y-auto"} style={{maxHeight : "100%"}} data-panel={"sidebar"}>
-		<div
-			className={cn(sidebarNodeVariants({variant : "root"}), "pl-2 mb-1")}
-			data-testid={"sidebar-node"}
-			data-nav-path={"gear-builder"}
-			onClick={() => openGearBuilderPanel()}
-		>
-			<Swords className={"size-3.5 shrink-0 text-fg-subtle"} />
-			<span className={"truncate"}>Gear Builder</span>
-		</div>
-
-		<div
-			className={cn(sidebarNodeVariants({variant : "root"}), "pl-2 mb-1")}
-			data-testid={"sidebar-node"}
-			data-nav-path={"craft-calculator"}
-			onClick={() => openCraftCalculatorPanel()}
-		>
-			<Calculator className={"size-3.5 shrink-0 text-fg-subtle"} />
-			<span className={"truncate"}>Crafting Calculator</span>
-		</div>
-
-		<div
-			className={cn(sidebarNodeVariants({variant : "root"}), "pl-2 mb-1")}
-			data-testid={"sidebar-node"}
-			data-nav-path={"compare-items"}
-			onClick={() => openCompareItemsPanel()}
-		>
-			<GitCompare className={"size-3.5 shrink-0 text-fg-subtle"} />
-			<span className={"truncate"}>Compare Items</span>
-		</div>
-
-		<div
-			className={cn(sidebarNodeVariants({variant : "root"}), "pl-2 mb-1")}
-			data-testid={"sidebar-node"}
-			data-nav-path={"map"}
-			onClick={() => openMapPanel()}
-		>
-			<Map className={"size-3.5 shrink-0 text-fg-subtle"} />
-			<span className={"truncate"}>World Map</span>
-		</div>
-		<div
-			className={cn(sidebarNodeVariants({variant : "root"}), "pl-2 mb-1")}
-			data-testid={"sidebar-node"}
-			data-nav-path={"settings"}
-			onClick={() => openSettingsPanel()}
-		>
-			<Settings className={"size-3.5 shrink-0 text-fg-subtle"} />
-			<span className={"truncate"}>Settings</span>
-		</div>
-
-		{rootNodes.map(node => (
-			<SidebarNode key={node.id} node={node} parent={node} depth={0} />
-		))}
-	</div>;
-}
 
 const sidebarNodeVariants = cva(
 	"flex w-full items-center gap-1.5 py-1.5 pr-2 cursor-pointer select-none " +

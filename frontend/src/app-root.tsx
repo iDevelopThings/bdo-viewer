@@ -7,8 +7,6 @@ import {SetupWizard} from "@/components/setup/setup-wizard.tsx";
 import {LoadScreen} from "@/components/setup/load-screen.tsx";
 import {UpdateBanner} from "@/components/updates/update-banner.tsx";
 import {AppLayout} from "@/layout.tsx";
-import {AppLayoutV2} from "@/layout-v2.tsx";
-import {getLayoutMode} from "@/state/layout-mode.ts";
 import {HistoryPanel} from "@/components/history/history-panel.tsx";
 
 export function AppRoot() {
@@ -50,7 +48,7 @@ export function AppRoot() {
 	} else {
 		body = (
 			<>
-				{getLayoutMode() === "v2" ? <AppLayoutV2 /> : <AppLayout />}
+				<AppLayout />
 				<HistoryPanel />
 			</>
 		);

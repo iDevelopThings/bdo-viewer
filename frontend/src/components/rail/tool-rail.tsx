@@ -1,5 +1,5 @@
 import type {ReactNode} from "react";
-import {Calculator, GitCompare, LayoutTemplate, Map, PanelLeftClose, PanelLeftOpen, Settings, Swords} from "lucide-react";
+import {Calculator, GitCompare, Map, PanelLeftClose, PanelLeftOpen, Settings, Swords} from "lucide-react";
 import {openCompareItemsPanel, openCraftCalculatorPanel, openGearBuilderPanel, openMapPanel, openSettingsPanel, useActivePanelId} from "@/state/panels.ts";
 import {cn} from "@/lib/utils.ts";
 
@@ -33,13 +33,12 @@ function RailButton({icon, label, onClick, active}: RailButtonProps) {
 type ToolRailProps = {
 	treeVisible: boolean;
 	onToggleTree: () => void;
-	onExit: () => void;
 }
 
 // Persistent app chrome, rendered outside the dockview container so it never
 // participates in the docking grid. Holds the tool shortcuts that used to sit atop the
 // sidebar (and duplicate the tab strip), plus the nav-tree visibility toggle.
-export function ToolRail({treeVisible, onToggleTree, onExit}: ToolRailProps) {
+export function ToolRail({treeVisible, onToggleTree}: ToolRailProps) {
 	// Highlight whichever tool's panel is the focused one. Ids mirror the pinned panel ids
 	// the open* helpers create (source:key).
 	const activeId = useActivePanelId();
@@ -60,7 +59,6 @@ export function ToolRail({treeVisible, onToggleTree, onExit}: ToolRailProps) {
 			/>
 			<div className={"w-6 h-px bg-surface-border my-1"} />
 			<RailButton icon={<Settings className={"size-5"} />} label={"Settings"} active={activeId === "settings:settings"} onClick={() => openSettingsPanel()} />
-			<RailButton icon={<LayoutTemplate className={"size-5"} />} label={"Classic layout (Ctrl+Alt+L)"} onClick={onExit} />
 		</div>
 	);
 }

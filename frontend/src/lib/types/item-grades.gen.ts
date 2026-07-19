@@ -26,32 +26,32 @@ export const ItemGradeInfos: Record<ItemGrade, ItemGradeInfo> = {
   [ItemGrades.White]: {
     value: ItemGrades.White,
     name: "white",
-    color: "#e8eaed",
+    color: "#e2e5e9",
   },
   [ItemGrades.Green]: {
     value: ItemGrades.Green,
     name: "green",
-    color: "#7dc86e",
+    color: "#79d68f",
   },
   [ItemGrades.Blue]: {
     value: ItemGrades.Blue,
     name: "blue",
-    color: "#5b9dff",
+    color: "#64aaf0",
   },
   [ItemGrades.Yellow]: {
     value: ItemGrades.Yellow,
     name: "yellow",
-    color: "#e6c84e",
+    color: "#e6c45a",
   },
   [ItemGrades.Red]: {
     value: ItemGrades.Red,
     name: "red",
-    color: "#db4d3d",
+    color: "#ef675c",
   },
   [ItemGrades.Purple]: {
     value: ItemGrades.Purple,
     name: "purple",
-    color: "#c084e6",
+    color: "#bf93f1",
   },
 } as const;
 
