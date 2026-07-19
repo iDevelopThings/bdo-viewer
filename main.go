@@ -3,7 +3,8 @@ package main
 import (
 	"embed"
 	"log"
-	"time"
+
+	"github.com/wailsapp/wails/v3/pkg/events"
 
 	"bdo-viewer/internal/catalog"
 	"bdo-viewer/internal/config"
@@ -118,76 +119,45 @@ func main() {
 		},
 	)
 
-	go func() {
-
-		didFirstTimeWindowCheck := false
-		var prevX, prevY, prevW, prevH int
-		for {
-			if window == nil {
-				time.Sleep(time.Second)
-				continue
-			}
-
-			if !window.IsVisible() || window.IsMinimised() {
-				time.Sleep(time.Second)
-				continue
-			}
-
-			if !didFirstTimeWindowCheck {
-				if s, err := window.GetScreen(); err == nil {
-					// Ensure the saved pos & size aren't off-screen.
-					// (there's a weird bug that causes window pos to get saved to something crazy, and size as 0)
-
-					wpX, wpY := window.Position()
-					wsX, wsY := window.Size()
-					wCenterX, wCenterY := wpX+(wsX/2), wpY+(wsY/2)
-
-					b := s.WorkArea
-					if !b.Contains(application.Point{X: wCenterX, Y: wCenterY}) {
-						window.Center()
-					}
-
-					didFirstTimeWindowCheck = true
-				}
-			}
-
-			hasChanges := false
-			x, y := window.Position()
-			if x != prevX || y != prevY {
-				prevX, prevY = x, y
-				hasChanges = true
-			}
-
-			w, h := window.Size()
-			if w != prevW || h != prevH {
-				prevW, prevH = w, h
-				hasChanges = true
-			}
-
-			if hasChanges {
-				config.Update(
-					func(c *config.Config) {
-						if c.Window == nil {
-							c.Window = &config.WindowState{}
-						}
-
-						c.Window.X = x
-						c.Window.Y = y
-						c.Window.Width = w
-						c.Window.Height = h
-					},
-				)
-			}
-
-			time.Sleep(time.Second)
+	updateWindowState := func() {
+		if window == nil || window.IsMinimised() {
+			return
 		}
-	}()
 
-	// Run the application. This blocks until the application has been exited.
-	err = app.Run()
+		x, y := window.Position()
+		w, h := window.Size()
 
-	// If an error occurred while running the application, log it and exit.
-	if err != nil {
+		config.Update(
+			func(c *config.Config) {
+				if c.Window == nil {
+					c.Window = &config.WindowState{}
+				}
+
+				log.Printf("Saving window state: x=%d, y=%d, w=%d, h=%d", x, y, w, h)
+
+				c.Window.X = x
+				c.Window.Y = y
+				c.Window.Width = w
+				c.Window.Height = h
+			},
+		)
+	}
+
+	window.OnWindowEvent(
+		events.Common.WindowDidMove,
+		func(event *application.WindowEvent) {
+			updateWindowState()
+		},
+	)
+	window.OnWindowEvent(
+		events.Common.WindowDidResize,
+		func(event *application.WindowEvent) {
+			updateWindowState()
+		},
+	)
+
+	if err = app.Run(); err != nil {
 		log.Fatal(err)
 	}
+
 }
