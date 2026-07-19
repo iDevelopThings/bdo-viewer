@@ -163,9 +163,8 @@ export type VirtualEntryListProps = {
 };
 
 export function VirtualEntryList({loading, entries, parentRef, renderRow, emptyMessage}: VirtualEntryListProps) {
-	// Key by URN (unique across sources); many non-item sources share id 0, so fall back to the
-	// row index for those rather than letting them collide on key 0.
-	const getItemKey       = useCallback((index: number) => entries[index].urn || entries[index].id || index, [entries]);
+	// Key by URN (unique across sources); many non-item sources share id 0.
+	const getItemKey       = useCallback((index: number) => entries[index].urn || entries[index].id, [entries]);
 	const getScrollElement = useCallback(() => parentRef.current, [parentRef]);
 	const estimateSize     = useCallback(() => {
 		// Check the first 5 entries to see if they have a subtitle, and adjust the height accordingly.
@@ -178,7 +177,7 @@ export function VirtualEntryList({loading, entries, parentRef, renderRow, emptyM
 	}, [entries]);
 
 	// eslint-disable-next-line react-hooks/incompatible-library
-	const rowVirtualizer = useVirtualizer({
+	const rowVirtualizer   = useVirtualizer({
 		count                               : entries.length,
 		getScrollElement,
 		estimateSize,
