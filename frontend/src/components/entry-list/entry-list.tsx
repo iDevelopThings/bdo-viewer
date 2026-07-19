@@ -66,16 +66,16 @@ export function SortControls({sorts, sortKey, dir, onChange, className}: SortCon
 
 	const active = sorts.some(s => s.key === sortKey) ? sortKey! : sorts[0].key;
 
-	const control = "h-8 shrink-0 rounded-md border border-input bg-transparent dark:bg-input/30 text-zinc-300 outline-none cursor-pointer focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+	const control = "h-8 shrink-0 rounded-md border border-input bg-transparent dark:bg-input/30 text-fg-muted outline-none cursor-pointer focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 	return (
 		<div className={cn("flex flex-row items-center gap-1", className)} data-testid={"sort-controls"}>
-			<span className={"text-xs text-muted-foreground mr-1"}>Sort</span>
+			<span className={"text-xs text-fg-subtle mr-1"}>Sort</span>
 			<select
 				value={active}
 				onChange={e => onChange(e.target.value, dir)}
 				data-testid={"sort-key"}
-				className={cn(control, "px-2 text-sm [&>option]:bg-zinc-900")}
+				className={cn(control, "px-2 text-sm [&>option]:bg-surface-2")}
 				title={"Sort by"}
 			>
 				{sorts.map(s => (
@@ -88,7 +88,7 @@ export function SortControls({sorts, sortKey, dir, onChange, className}: SortCon
 				data-dir={dir}
 				onClick={() => onChange(active, dir === "asc" ? "desc" : "asc")}
 				title={dir === "asc" ? "Ascending" : "Descending"}
-				className={cn(control, "w-8 flex items-center justify-center hover:bg-zinc-800")}
+				className={cn(control, "w-8 flex items-center justify-center hover:bg-surface-3")}
 			>
 				{dir === "asc" ? <ArrowUp className={"size-4"} /> : <ArrowDown className={"size-4"} />}
 			</button>
@@ -113,8 +113,8 @@ export function EntryRowBase({entry, active, badge, onClick, onAuxClick}: EntryR
 			data-testid={"entry-row"}
 			data-urn={entry.urn}
 			className={cn(
-				"flex flex-row items-center gap-4 p-2 hover:bg-zinc-800 cursor-pointer",
-				"data-[active=true]:bg-zinc-800",
+				"flex flex-row items-center gap-4 p-2 hover:bg-surface-2 cursor-pointer",
+				"data-[active=true]:bg-surface-3",
 			)}
 			onClick={onClick}
 			onMouseDown={e => {
@@ -134,7 +134,7 @@ export function EntryRowBase({entry, active, badge, onClick, onAuxClick}: EntryR
 					{entry.title}
 				</div>
 				{entry.subtitle && (
-					<div className={"text-xs text-zinc-400 truncate"}>
+					<div className={"text-xs text-fg-subtle truncate"}>
 						{entry.subtitle}
 					</div>
 				)}
@@ -148,7 +148,7 @@ export function EntryRowBase({entry, active, badge, onClick, onAuxClick}: EntryR
 // mixed results of a global search.
 export function EntrySourceBadge({source}: { source: string }) {
 	return (
-		<span className={"shrink-0 rounded-sm border border-zinc-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-zinc-400"}>
+		<span className={"shrink-0 rounded-sm border border-surface-border px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-fg-subtle"}>
 			{source}
 		</span>
 	);
@@ -187,11 +187,11 @@ export function VirtualEntryList({loading, entries, parentRef, renderRow, emptyM
 	});
 
 	if (loading) {
-		return <div className={"p-4 text-sm text-zinc-400 text-center w-full"}>Loading...</div>;
+		return <div className={"p-4 text-sm text-fg-subtle text-center w-full"}>Loading...</div>;
 	}
 
 	if (entries.length === 0) {
-		return <div className={"p-4 text-sm text-zinc-400 text-center w-full"}>{emptyMessage ?? "No entries found"}</div>;
+		return <div className={"p-4 text-sm text-fg-subtle text-center w-full"}>{emptyMessage ?? "No entries found"}</div>;
 	}
 
 	return (

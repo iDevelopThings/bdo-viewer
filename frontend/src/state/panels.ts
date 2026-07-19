@@ -82,9 +82,16 @@ export function setDockviewApi(instance: DockviewApi | undefined) {
 			untrackPanel(panel.id);
 			notifyChange();
 		}));
+		apiListeners.push(instance.onDidActivePanelChange(() => notifyChange()));
 		instance.panels.forEach(trackPanel);
 	}
 	notifyChange();
+}
+
+// The id of the currently focused dockview panel, or undefined. Backs the rail's
+// active-tool highlight; re-reads on any add/remove/active-panel change.
+export function useActivePanelId(): string | undefined {
+	return useSyncExternalStore(subscribePanelChanges, () => api?.activePanel?.id);
 }
 
 function subscribePanelChanges(callback: () => void): () => void {

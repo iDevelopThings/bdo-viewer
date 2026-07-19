@@ -10,7 +10,7 @@ export function TreeNav() {
 	const {rootNodes} = useSnapshot(navigation);
 
 	if (loading) {
-		return <div className={"p-2 text-sm text-zinc-400"}>Loading...</div>;
+		return <div className={"p-2 text-sm text-fg-subtle"}>Loading...</div>;
 	}
 
 	return (

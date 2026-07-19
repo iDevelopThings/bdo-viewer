@@ -164,6 +164,7 @@ export function AppLayoutV2() {
 					scrollbars={"native"}
 					components={components}
 					defaultTabComponent={GripTab}
+					defaultRenderer={"onlyWhenVisible"}
 				/>
 			</div>
 		</div>

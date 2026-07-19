@@ -25,6 +25,9 @@ html, body, #root {
     --color-surface-2: var(--surface-2);
     --color-surface-3: var(--surface-3);
     --color-surface-border: var(--surface-border);
+    --color-fg: var(--fg);
+    --color-fg-muted: var(--fg-muted);
+    --color-fg-subtle: var(--fg-subtle);
     --color-chart-5: var(--chart-5);
     --color-chart-4: var(--chart-4);
     --color-chart-3: var(--chart-3);
@@ -98,6 +101,11 @@ html, body, #root {
     --surface-3: oklch(0.915 0.004 286.32);
     --surface-border: oklch(0.9 0.004 286.32);
 
+    /* Text emphasis scale: fg (primary) → fg-muted (secondary) → fg-subtle (labels/hints). */
+    --fg: oklch(0.141 0.005 285.823);
+    --fg-muted: oklch(0.45 0.01 285.9);
+    --fg-subtle: oklch(0.55 0.016 285.938);
+
 
     font-synthesis: none;
     text-rendering: optimizeLegibility;
@@ -145,6 +153,10 @@ html, body, #root {
     --surface-2: oklch(0.24 0.006 285.9);
     --surface-3: oklch(0.285 0.006 286);
     --surface-border: oklch(1 0 0 / 14%);
+
+    --fg: oklch(0.985 0 0);
+    --fg-muted: oklch(0.72 0.015 286);
+    --fg-subtle: oklch(0.556 0.016 286);
 }
 
 @layer base {

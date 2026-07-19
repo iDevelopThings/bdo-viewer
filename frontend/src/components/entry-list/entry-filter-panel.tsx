@@ -8,7 +8,7 @@ import {Label} from "@/components/ui/label.tsx";
 export function FilterRow({label, children}: { label: string, children: ReactNode }) {
 	return (
 		<div className={"flex items-center gap-3"}>
-			<Label className={"w-20 shrink-0 text-xs text-muted-foreground"}>{label}</Label>
+			<Label className={"w-20 shrink-0 text-xs text-fg-subtle"}>{label}</Label>
 			<div className={"flex-1 min-w-0"}>{children}</div>
 		</div>
 	);
@@ -64,7 +64,7 @@ export function EntryFilterHeader(
 
 							// clearList();
 						}}
-						className={"h-9 w-9 flex items-center justify-center shrink-0 rounded-md border border-input bg-transparent dark:bg-input/30 text-zinc-300 outline-none cursor-pointer hover:bg-zinc-800 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"}
+						className={"h-9 w-9 flex items-center justify-center shrink-0 rounded-md border border-input bg-transparent dark:bg-input/30 text-fg-muted outline-none cursor-pointer hover:bg-surface-3 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"}
 					>
 						<XIcon className={"size-4"} />
 					</button>
