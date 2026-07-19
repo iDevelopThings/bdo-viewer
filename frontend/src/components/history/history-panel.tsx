@@ -1,30 +1,40 @@
 import type {UntypedSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import {SourceKind} from "@bindings/bdo-viewer/internal/sources";
 import {useSnapshot} from "valtio/react";
-import {useState} from "react";
-import {ChevronLeft, ChevronRight, History as HistoryIcon} from "lucide-react";
+import {BookOpen, ChevronLeft, ChevronRight, History as HistoryIcon, MapPin, Package, Swords, User} from "lucide-react";
 import {getMiddleClickProps} from "@/utils.tsx";
 import {openSourceDetails} from "@/state/panels.ts";
 import {history} from "@/components/history/history.tsx";
 import {ItemIconImage} from "@/lib/item-icon.tsx";
+import {useIsExpanded, toggleExpanded} from "@/state/global.tsx";
 
 const COLLAPSE_KEY = "history-collapsed";
 
-export function HistoryPanel() {
-	const {entries}                 = useSnapshot(history);
-	const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === "1");
-
-	if (entries.length === 0) {
-		return null;
+// History mixes every source, not just items. Items show their real icon; the rest get a
+// per-kind glyph so every chip still reads with a leading icon.
+function SourceGlyph({type}: { type: string }) {
+	const cls = "w-4 h-4 shrink-0 text-fg-subtle";
+	switch (type) {
+		case SourceKind.Npc:
+		case SourceKind.Character:
+			return <User className={cls} />;
+		case SourceKind.Knowledge:
+			return <BookOpen className={cls} />;
+		case SourceKind.Region:
+			return <MapPin className={cls} />;
+		case SourceKind.GrindSpot:
+			return <Swords className={cls} />;
+		default:
+			return <Package className={cls} />;
 	}
+}
 
-	const toggle = () => {
-		setCollapsed(prev => {
-			const next = !prev;
-			localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
-			return next;
-		});
-	};
+export function HistoryPanel() {
+	const {entries} = useSnapshot(history);
+
+	const expanded = useIsExpanded(COLLAPSE_KEY);
+
+	const toggle = () => toggleExpanded(COLLAPSE_KEY);
 
 	const open = (entry: UntypedSourceEntry, isMiddle: boolean) => {
 		openSourceDetails(entry.type, entry.value, isMiddle);
@@ -35,16 +45,16 @@ export function HistoryPanel() {
 			<button
 				type={"button"}
 				onClick={toggle}
-				title={collapsed ? "Show recent" : "Hide recent"}
+				title={!expanded ? "Show recent" : "Hide recent"}
 				className={"flex flex-row items-center gap-1.5 px-3 shrink-0 text-fg-subtle hover:text-fg hover:bg-surface-2 transition-colors"}
 			>
 				<HistoryIcon className={"size-3.5"} />
 				<span className={"text-xs uppercase tracking-wide"}>History</span>
 				<span className={"text-xs opacity-70"}>{entries.length}</span>
-				{collapsed ? <ChevronRight className={"size-3.5"} /> : <ChevronLeft className={"size-3.5"} />}
+				{!expanded ? <ChevronRight className={"size-3.5"} /> : <ChevronLeft className={"size-3.5"} />}
 			</button>
 
-			{!collapsed && (
+			{expanded && (
 				<div className={"flex flex-row gap-1.5 px-2 py-1.5 overflow-x-auto min-w-0"}>
 					{entries.map((entry, idx) => (
 						<div
@@ -58,8 +68,8 @@ export function HistoryPanel() {
 						>
 							{entry.type === SourceKind.Item && entry.urn
 								? <ItemIconImage urn={entry.urn} imageClass={"w-4 h-4 shrink-0"} />
-								: <span className={"text-[10px] uppercase tracking-wide text-fg-subtle px-1"}>{entry.type}</span>}
-							<span className={"text-fg-muted text-xs whitespace-nowrap max-w-[160px] truncate"}>
+								: <SourceGlyph type={entry.type} />}
+							<span className={"text-fg-muted text-xs whitespace-nowrap max-w-40 truncate"}>
 								{entry.value?.name || entry.value?.id}
 							</span>
 						</div>
