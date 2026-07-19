@@ -70,7 +70,6 @@ export function SortControls({sorts, sortKey, dir, onChange, className}: SortCon
 
 	return (
 		<div className={cn("flex flex-row items-center gap-1", className)} data-testid={"sort-controls"}>
-			<span className={"text-xs text-fg-subtle mr-1"}>Sort</span>
 			<select
 				value={active}
 				onChange={e => onChange(e.target.value, dir)}

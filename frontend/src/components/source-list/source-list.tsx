@@ -35,7 +35,7 @@ export function SourceList() {
 
 	return (
 		<div className={"max-h-full h-full overflow-y-scroll"} ref={parentRef} data-panel={"list"}>
-			<div className={"sticky top-0 z-10 bg-background flex flex-col gap-2 p-3 border-b border-surface-border"}>
+			<div className={"sticky top-0 z-10 bg-background flex flex-col gap-2 px-3 py-2.5 border-b border-surface-border"}>
 				<EntryFilterHeader
 					query={query}
 					setQuery={q => {
