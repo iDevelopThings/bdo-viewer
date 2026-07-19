@@ -11,6 +11,9 @@ type RecipeTreeCtx = {
 	// onToggleCraft flips a craftable node between crafted (expanded) and bought
 	// (collapsed) — it re-resolves the tree, so `craft` is the new desired state.
 	onToggleCraft: (path: string, craft: boolean) => void;
+	// Visible (depth-first) row index for a node path, so rows can alternate
+	// background regardless of nesting.
+	orderOf: (path: string) => number;
 };
 export const RecipeTreeContext = createContext<RecipeTreeCtx | null>(null);
 

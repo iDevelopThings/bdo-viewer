@@ -1,4 +1,4 @@
-import {useMemo, useState} from "react";
+import {useCallback, useMemo, useState} from "react";
 import {CheckIcon, ChevronRightIcon, Repeat2} from "lucide-react";
 import {cn} from "@/lib/utils.ts";
 import {RecipeSelection} from "@bindings/bdo-viewer/internal/recipe";
@@ -104,15 +104,36 @@ function NodeAltsButton({node, items, className}: { node: RNode, items: RItems, 
 // RecipeTreeView renders a resolved craft tree's root node, providing the
 // selection/expansion context its rows read. Callers supply onSelectRecipe (which
 // should re-resolve the tree with the updated selections) and expansion state.
+// Indent per tree level, and the x of the guide rail at a given level (roughly the
+// chevron centre of the parent at that level).
+const INDENT = 16;
+const RAIL_X = (level: number) => 8 + level * INDENT + 7;
+
 export function RecipeTreeView({root, items, onSelectRecipe, onToggleCraft}: {
 	root: RNode;
 	items: RItems;
 	onSelectRecipe: (path: string, selection: RecipeSelection) => void;
 	onToggleCraft: (path: string, craft: boolean) => void;
 }) {
+	// Depth-first visible order, matching how RecipeBody renders, so rows can stripe.
+	const orderMap = useMemo(() => {
+		const m = new Map<string, number>();
+		let i = 0;
+		const walk = (node: RNode) => {
+			for (const child of node.children ?? []) {
+				if (!child) continue;
+				m.set(child.path, i++);
+				if (child.children?.length) walk(child);
+			}
+		};
+		walk(root);
+		return m;
+	}, [root]);
+	const orderOf = useCallback((path: string) => orderMap.get(path) ?? 0, [orderMap]);
+
 	return (
-		<RecipeTreeContext.Provider value={{onSelectRecipe, onToggleCraft}}>
-			<RecipeBody node={root} items={items} depth={0} isRoot />
+		<RecipeTreeContext.Provider value={{onSelectRecipe, onToggleCraft, orderOf}}>
+			<RecipeBody node={root} items={items} depth={0} prefix={[]} isRoot />
 		</RecipeTreeContext.Provider>
 	);
 }
@@ -120,13 +141,14 @@ export function RecipeTreeView({root, items, onSelectRecipe, onToggleCraft}: {
 // RecipeBody renders how a node is crafted: an optional cluster (recipe-family)
 // switch, the per-slot alternative chips for the selected cluster, and the resolved
 // ingredient rows. Used both for the root and (on expand) any craftable child.
-export function RecipeBody({node, items, depth, isRoot}: { node: RNode, items: RItems, depth: number, isRoot?: boolean }) {
+export function RecipeBody({node, items, depth, prefix = [], isRoot}: { node: RNode, items: RItems, depth: number, prefix?: boolean[], isRoot?: boolean }) {
 	const sel      = node.selected;
 	const clusters = node.clusters ?? [];
 	if (!sel || clusters.length === 0) {
 		return null;
 	}
-	const cluster = clusters[sel.cluster] ?? clusters[0];
+	const cluster  = clusters[sel.cluster] ?? clusters[0];
+	const children = node.children ?? [];
 
 	return (
 		<div className={"flex flex-col gap-2"}>
@@ -137,8 +159,8 @@ export function RecipeBody({node, items, depth, isRoot}: { node: RNode, items: R
 				</div>
 			)}
 			<div className={"flex flex-col"}>
-				{node.children?.map(child => (
-					<RecipeRow key={child!.path} node={child!} items={items} depth={depth} />
+				{children.map((child, i) => (
+					<RecipeRow key={child!.path} node={child!} items={items} depth={depth} prefix={prefix} isLast={i === children.length - 1} />
 				))}
 			</div>
 		</div>
@@ -148,13 +170,14 @@ export function RecipeBody({node, items, depth, isRoot}: { node: RNode, items: R
 // RecipeRow is one ingredient in the tree. A craftable ingredient carries a
 // craft/buy toggle: crafted (chevron open) shows its own recipe + children;
 // bought (chevron closed) is a shopping-list leaf. Toggling re-resolves the tree.
-function RecipeRow({node, items, depth}: { node: RNode, items: RItems, depth: number }) {
-	const {onToggleCraft} = useRecipeTree();
+function RecipeRow({node, items, depth, prefix, isLast}: { node: RNode, items: RItems, depth: number, prefix: boolean[], isLast: boolean }) {
+	const {onToggleCraft, orderOf} = useRecipeTree();
 	const item            = itemOf(items, node.item);
 	const craftable       = !!node.craftable && !node.gathered;
 	const crafted         = !!node.children?.length;
 	const color           = tryGetGradeColor(item?.extra?.grade)?.toString();
 	const cluster         = crafted ? (node.clusters![node.selected?.cluster ?? 0] ?? node.clusters![0]) : undefined;
+	const stripe          = orderOf(node.path) % 2 === 1 ? "bg-fg/[0.03]" : "";
 
 	return (
 		<div className={"flex flex-col"}>
@@ -164,8 +187,8 @@ function RecipeRow({node, items, depth}: { node: RNode, items: RItems, depth: nu
 				data-path={node.path}
 				data-craftable={craftable}
 				data-crafted={crafted}
-				className={"flex flex-row gap-1.5 items-center py-1 px-2 rounded-sm hover:bg-surface-3/40 cursor-pointer"}
-				style={{paddingLeft : `${8 + depth * 16}px`}}
+				className={cn("relative flex flex-row gap-1.5 items-center py-1 pr-2 rounded-sm cursor-pointer", stripe, "hover:bg-surface-3/40")}
+				style={{paddingLeft : `${8 + depth * INDENT}px`}}
 				onClick={() => craftable ? onToggleCraft(node.path, !crafted) : (item && openItemPanel({id : item.id, name : item.title}, false))}
 				onMouseDown={e => {
 					if (e.button === 1) {
@@ -178,6 +201,17 @@ function RecipeRow({node, items, depth}: { node: RNode, items: RItems, depth: nu
 					}
 				}}
 			>
+				{/* tree guide rails: continuing verticals for ancestors, a ├/└ connector for this row */}
+				{depth > 0 && (
+					<>
+						{prefix.slice(0, depth - 1).map((cont, i) =>
+							cont ? <span key={i} className={"absolute top-0 bottom-0 w-px bg-surface-border"} style={{left : RAIL_X(i)}} /> : null,
+						)}
+						<span className={"absolute w-px bg-surface-border"} style={{left : RAIL_X(depth - 1), top : 0, height : "50%"}} />
+						{!isLast && <span className={"absolute w-px bg-surface-border"} style={{left : RAIL_X(depth - 1), top : "50%", bottom : 0}} />}
+						<span className={"absolute h-px bg-surface-border"} style={{left : RAIL_X(depth - 1), top : "50%", width : INDENT - 7}} />
+					</>
+				)}
 				{craftable ? (
 					<ChevronRightIcon
 						className={cn(
@@ -205,7 +239,7 @@ function RecipeRow({node, items, depth}: { node: RNode, items: RItems, depth: nu
 				{crafted && <NodeAltsButton node={node} items={items} className={"ml-auto"} />}
 			</div>
 			{crafted && (
-				<RecipeBody node={node} items={items} depth={depth + 1} />
+				<RecipeBody node={node} items={items} depth={depth + 1} prefix={[...prefix, !isLast]} />
 			)}
 		</div>
 	);
