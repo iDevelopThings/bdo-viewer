@@ -12,12 +12,12 @@ export function EffectSections({groups}: { groups: DeepReadonly<StatGroup[]> }) 
 		<div className={"flex flex-col gap-4"}>
 			{groups.map((group, i) => (
 				<div key={`${group.title}-${i}`}>
-					<div className={"text-sm font-semibold text-zinc-300 mb-1"}>{group.title}</div>
+					<div className={"text-sm font-semibold text-fg-muted mb-1"}>{group.title}</div>
 					<table className={"w-full border-separate border-spacing-x-4 border-spacing-y-0.5"}>
 						<tbody>
 						{(group.stats ?? []).map((stat, i) => (
 							<tr key={i}>
-								<td className={"text-sm text-zinc-400 break-words"}>{stat.title}</td>
+								<td className={"text-sm text-fg-subtle break-words"}>{stat.title}</td>
 								<td className={"text-sm font-medium whitespace-nowrap text-right align-top"} style={{color : ItemGradeInfos[ItemGrades.Yellow].color}}>{stat.value}</td>
 							</tr>
 						))}

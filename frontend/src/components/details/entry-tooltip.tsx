@@ -50,7 +50,7 @@ export function EntryTooltip({urn, children, className, ...props}: EntryTooltipP
 				className={"p-0 max-w-none border-0 bg-transparent shadow-none"}
 			>
 				{loading || !details ? (
-					<div className={"p-3 text-xs text-zinc-400 bg-zinc-950 border border-amber-900/40 rounded-sm"}>Loading...</div>
+					<div className={"p-3 text-xs text-fg-subtle bg-surface-0 border border-amber-900/40 rounded-sm"}>Loading...</div>
 				) : (
 					<EntryTooltipCard urn={urn} details={details} />
 				)}
@@ -86,8 +86,8 @@ function StatRows({stats}: { stats: ReturnType<typeof flatStats> }) {
 		<div className={"grid grid-cols-2 gap-x-4 gap-y-0.5"}>
 			{stats.map(stat => (
 				<div key={stat.title} className={"flex flex-row items-center justify-between gap-2"}>
-					<span className={"text-zinc-500"}>{stat.title}</span>
-					<span className={"text-zinc-200 font-medium"}>{stat.value}</span>
+					<span className={"text-fg-subtle"}>{stat.title}</span>
+					<span className={"text-fg font-medium"}>{stat.value}</span>
 				</div>
 			))}
 		</div>
@@ -100,7 +100,7 @@ function ItemTooltipCard({item, stats, effects}: { item: ItemModel, stats: Retur
 	const equipLabel = item.equipInfo?.type || item.equipInfo?.slot || item.equipInfo?.kind;
 
 	return (
-		<div className={"w-80 overflow-hidden rounded-sm border border-amber-800/40 bg-zinc-950/95 shadow-xl"}>
+		<div className={"w-80 overflow-hidden rounded-sm border border-amber-800/40 bg-surface-0/95 shadow-xl"}>
 			<div
 				className={"relative flex flex-row items-center gap-3 px-3 py-2.5"}
 				style={{background : `linear-gradient(to bottom, ${gradeColor.darken(0.35)}, ${gradeColor.darken(0.7)})`}}
@@ -109,7 +109,7 @@ function ItemTooltipCard({item, stats, effects}: { item: ItemModel, stats: Retur
 					<span className={"absolute top-1.5 right-2 text-[10px] text-amber-200/70"}>Equipment({equipLabel})</span>
 				)}
 				<img src={item.icon} alt={item.name} className={"w-10 h-10 shrink-0 rounded-sm border border-black/30"} />
-				<span className={"text-base font-bold text-white"}>{item.name}</span>
+				<span className={"text-base font-bold text-fg"}>{item.name}</span>
 			</div>
 
 			<div className={"flex flex-col gap-2 px-3 py-2.5 text-xs"}>
@@ -118,7 +118,7 @@ function ItemTooltipCard({item, stats, effects}: { item: ItemModel, stats: Retur
 				{item.description && (
 					<GameText
 						text={item.description}
-						className={cn("text-zinc-300", stats.length > 0 && "border-t border-amber-900/30 pt-2")}
+						className={cn("text-fg-muted", stats.length > 0 && "border-t border-amber-900/30 pt-2")}
 					/>
 				)}
 
@@ -140,7 +140,7 @@ function GenericTooltipCard({stats, effects}: { stats: ReturnType<typeof flatSta
 	}
 
 	return (
-		<div className={"w-80 overflow-hidden rounded-sm border border-amber-800/40 bg-zinc-950/95 shadow-xl p-3 flex flex-col gap-2 text-xs"}>
+		<div className={"w-80 overflow-hidden rounded-sm border border-amber-800/40 bg-surface-0/95 shadow-xl p-3 flex flex-col gap-2 text-xs"}>
 			<StatRows stats={stats} />
 
 			{effects.length > 0 && (

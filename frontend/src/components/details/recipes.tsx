@@ -24,7 +24,7 @@ export function DetailsRecipes() {
 	if (tree.status) {
 		return (
 			<DetailsSection title={"Recipes"} borderTop>
-				<div className={"text-sm text-zinc-400"}>{tree.status}</div>
+				<div className={"text-sm text-fg-subtle"}>{tree.status}</div>
 			</DetailsSection>
 		);
 	}
@@ -61,7 +61,7 @@ export function DetailsRecipes() {
 function ByproductsSection({byproducts, items}: { byproducts: DeepReadonly<RecipeTreeByproduct[]>, items: RItems }) {
 	return (
 		<DetailsSection title={`Byproduct Of (${byproducts.length})`} borderTop>
-			<div className={"text-sm text-zinc-400"}>Procs while crafting these — not a guaranteed output.</div>
+			<div className={"text-sm text-fg-subtle"}>Procs while crafting these — not a guaranteed output.</div>
 			<div className={"flex flex-col gap-2"}>
 				{byproducts.map((bp, index) => (
 					<ByproductEntry key={`byproduct-${index}`} bp={bp} items={items} />
@@ -76,10 +76,10 @@ function ByproductEntry({bp, items}: { bp: DeepReadonly<RecipeTreeByproduct>, it
 	const color = tryGetGradeColor(out?.extra?.grade)?.toString() ?? "#d4d4d8";
 
 	return (
-		<div className={"flex flex-col gap-1.5 bg-zinc-800 rounded-md p-2"}>
+		<div className={"flex flex-col gap-1.5 bg-surface-2 rounded-md p-2"}>
 			<div className={"flex flex-row gap-2 items-center flex-wrap"}>
 				<div
-					className={"flex flex-row gap-1 items-center bg-zinc-700/50 px-1.5 py-0.5 rounded-md cursor-pointer select-none"}
+					className={"flex flex-row gap-1 items-center bg-surface-3/50 px-1.5 py-0.5 rounded-md cursor-pointer select-none"}
 					{...getMiddleClickProps(
 						() => out && openItemPanel({id : out.id, name : out.title}, false),
 						() => out && openItemPanel({id : out.id, name : out.title}, true),
@@ -94,9 +94,9 @@ function ByproductEntry({bp, items}: { bp: DeepReadonly<RecipeTreeByproduct>, it
 				<div className={"flex flex-row flex-wrap gap-2 items-center"}>
 					{bp.inputs.map((input, i) => (
 						<EntryTooltip key={`${input.item}:${i}`} urn={input.item} className={"shrink-0"} side={"top"}>
-							<div className={"flex flex-row gap-1 items-center bg-zinc-700/50 px-1.5 py-0.5 rounded-md select-none"}>
+							<div className={"flex flex-row gap-1 items-center bg-surface-3/50 px-1.5 py-0.5 rounded-md select-none"}>
 								<ItemIcon urn={input.item} className={"shrink-0"} imageClass={"w-4 h-4"} />
-								<span className={"text-sm text-zinc-300"}>×{input.count}</span>
+								<span className={"text-sm text-fg-muted"}>×{input.count}</span>
 							</div>
 						</EntryTooltip>
 					))}
@@ -128,12 +128,12 @@ export function DetailsUsedIn() {
 						)}
 					>
 						<EntryTooltip urn={use.output.urn} className={"gap-2"} side={"top"}>
-							<div className={"flex flex-row gap-1 items-center bg-zinc-700/50 px-1.5 py-0.5 rounded-md select-none"}>
+							<div className={"flex flex-row gap-1 items-center bg-surface-3/50 px-1.5 py-0.5 rounded-md select-none"}>
 								<img src={use.output.icon} alt={use.output.title} className={"w-4 h-4"} />
-								<span className={"text-sm text-zinc-300"}>{use.output.title}</span>
+								<span className={"text-sm text-fg-muted"}>{use.output.title}</span>
 							</div>
-							<span className={"text-sm text-zinc-400"}>via <span className={"font-bold"}>{recipeTypeLabel(use.type, use.station)}</span></span>
-							<span className={"text-sm text-zinc-400"}>×{use.count}</span>
+							<span className={"text-sm text-fg-subtle"}>via <span className={"font-bold"}>{recipeTypeLabel(use.type, use.station)}</span></span>
+							<span className={"text-sm text-fg-subtle"}>×{use.count}</span>
 						</EntryTooltip>
 					</div>
 				))}

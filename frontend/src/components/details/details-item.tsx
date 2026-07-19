@@ -223,7 +223,7 @@ export function DetailsAcquisition() {
 			<div className={"flex flex-col gap-4"}>
 				{d.vendors?.length > 0 && (
 					<div className={"flex flex-col gap-2"}>
-						<p className="text-sm text-zinc-400 font-semibold mb-2 uppercase">Sold By</p>
+						<p className="text-sm text-fg-subtle font-semibold mb-2 uppercase">Sold By</p>
 						<div className={"flex flex-row gap-2 flex-wrap"}>
 							{d.vendors.map((vendor, i) => {
 								const towns = vendorTowns(vendor);
@@ -233,11 +233,11 @@ export function DetailsAcquisition() {
 										label={(
 											<span className={"flex flex-row items-center gap-1.5"}>
 												{vendor.name}
-												{vendor.title && <span className={"text-zinc-400"}>{vendor.title}</span>}
+												{vendor.title && <span className={"text-fg-subtle"}>{vendor.title}</span>}
 												{towns.length > 0 && (
-													<span className={"text-zinc-500"}>{towns.join(", ")}</span>
+													<span className={"text-fg-subtle"}>{towns.join(", ")}</span>
 												)}
-												{vendor.spawns?.length > 0 && <MapPinIcon size={11} className={"text-zinc-400"} />}
+												{vendor.spawns?.length > 0 && <MapPinIcon size={11} className={"text-fg-subtle"} />}
 											</span>
 										)}
 										variant={"sm"}
@@ -252,7 +252,7 @@ export function DetailsAcquisition() {
 				)}
 				{d.gatheredFrom.length > 0 && (
 					<div className={"flex flex-col gap-2"}>
-						<p className="text-sm text-zinc-400 font-semibold mb-2 uppercase">Gathered From</p>
+						<p className="text-sm text-fg-subtle font-semibold mb-2 uppercase">Gathered From</p>
 						<div className={"flex flex-row gap-2 flex-wrap"}>
 							{d.gatheredFrom.map((source) => (
 								<Chip
@@ -268,7 +268,7 @@ export function DetailsAcquisition() {
 				)}
 				{d.gatherNodes.length > 0 && (
 					<div className={"flex flex-col gap-2"}>
-						<p className="text-sm text-zinc-400 font-semibold mb-2 uppercase">Gather Nodes</p>
+						<p className="text-sm text-fg-subtle font-semibold mb-2 uppercase">Gather Nodes</p>
 						<div className={"flex flex-row gap-2 flex-wrap"}>
 							{gatherNodes.map(({urn, node}) => {
 								return (
@@ -277,8 +277,8 @@ export function DetailsAcquisition() {
 										label={(
 											<span className={"flex flex-row items-center gap-1.5"}>
 												{node ? `${node.parent()?.name ?? node.name}` : urn}
-												{node && <span className={"text-zinc-500"}>{node.name}</span>}
-												<MapPinIcon size={11} className={"text-zinc-400"} />
+												{node && <span className={"text-fg-subtle"}>{node.name}</span>}
+												<MapPinIcon size={11} className={"text-fg-subtle"} />
 											</span>
 										)}
 										variant={"sm"}

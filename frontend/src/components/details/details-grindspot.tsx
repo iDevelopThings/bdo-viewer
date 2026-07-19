@@ -40,7 +40,7 @@ export function GrindSpotDetails() {
 								label={(
 									<span className={"flex flex-row items-center gap-1.5"}>
 										{e.node.name ?? e.name}
-										<MapPinIcon size={11} className={"text-zinc-400"} />
+										<MapPinIcon size={11} className={"text-fg-subtle"} />
 									</span>
 								)}
 								variant={"sm"}
@@ -58,7 +58,7 @@ export function GrindSpotDetails() {
 							{e.tags?.map(t => (
 								<div
 									key={t.key}
-									className={"text-sm text-zinc-400 px-2 py-1 rounded-md"}
+									className={"text-sm text-fg-subtle px-2 py-1 rounded-md"}
 									style={{
 										backgroundColor : parseARGB(t.color, 0.3),
 										color           : parseARGB(t.fontColor)
@@ -87,7 +87,7 @@ export function GrindSpotDetails() {
 								/* Should be displayed as a card, rather than chip, with title and desc on separate lines */
 								<div key={t.id} className={"flex flex-col gap-1 p-2 border rounded-md"}>
 									<div className={"text-sm font-semibold"}>{t.name}</div>
-									<div className={"text-xs text-zinc-400"}>{t.desc?.replace("Title Requirement: ", "")}</div>
+									<div className={"text-xs text-fg-subtle"}>{t.desc?.replace("Title Requirement: ", "")}</div>
 								</div>
 							))}
 						</div>

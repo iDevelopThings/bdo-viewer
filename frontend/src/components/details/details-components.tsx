@@ -37,8 +37,8 @@ export function DetailsHeader({title, icon, grade, lines}: DetailsHeaderProps) {
 							return null;
 						}
 						return (
-							<div key={key} className={"text-sm text-zinc-400"}>
-								{key}: <span className={"font-bold text-zinc-300"}>{v}</span>
+							<div key={key} className={"text-sm text-fg-subtle"}>
+								{key}: <span className={"font-bold text-fg-muted"}>{v}</span>
 							</div>
 						);
 					})}
@@ -57,7 +57,7 @@ export function DetailsSection({title, borderTop, children, expandable = true}: 
 	return (
 		<div className={cn([
 			// "mt-4 pt-4",
-			borderTop && "border-t border-zinc-700/50"
+			borderTop && "border-t border-surface-border/50"
 		])}>
 			<div
 				className={cn([
@@ -70,11 +70,11 @@ export function DetailsSection({title, borderTop, children, expandable = true}: 
 					"text-lg font-bold ",
 					...(expandable ? (
 						[
-							"group-hover:text-zinc-300 transition-colors duration-150",
-							expanded ? "text-zinc-200" : "text-zinc-500"
+							"group-hover:text-fg-muted transition-colors duration-150",
+							expanded ? "text-fg" : "text-fg-subtle"
 						]
 					) : [
-						"text-zinc-200"
+						"text-fg"
 					])
 				])}>
 					{title}
@@ -83,7 +83,7 @@ export function DetailsSection({title, borderTop, children, expandable = true}: 
 					<ChevronLeftIcon
 						size={18}
 						className={cn(
-							"shrink-0 text-zinc-500 transition duration-150 group-hover:text-zinc-300",
+							"shrink-0 text-fg-subtle transition duration-150 group-hover:text-fg-muted",
 							expanded && "-rotate-90"
 						)}
 					/>
@@ -119,12 +119,12 @@ export function DetailsCollapseSection(
 			>
 				<div className={"flex flex-row gap-2 items-center grow"}>
 					{typeof title === "string" ? (
-						<div className={"text-sm text-zinc-400 font-bold"}>{title}</div>
+						<div className={"text-sm text-fg-subtle font-bold"}>{title}</div>
 					) : (
 						<div>{title}</div>
 					)}
 				</div>
-				<div className={"text-sm text-zinc-400"}>{!expanded ? <ChevronDownIcon /> : <ChevronUpIcon />}</div>
+				<div className={"text-sm text-fg-subtle"}>{!expanded ? <ChevronDownIcon /> : <ChevronUpIcon />}</div>
 			</div>
 			{expanded && (
 				<div className={cn(["flex flex-col gap-2", contentContainerStyle])}>
@@ -165,9 +165,9 @@ export function ItemCardSimple({item}: { item: MaybeReadonly<Item> }) {
 			)}
 		>
 			<EntryTooltip urn={item.urn} className={"gap-2"} side={"top"}>
-				<div className={"flex flex-row gap-1 items-center bg-zinc-700/50 px-1.5 py-0.5 rounded-md select-none"}>
+				<div className={"flex flex-row gap-1 items-center bg-surface-3/50 px-1.5 py-0.5 rounded-md select-none"}>
 					<img src={item.icon} alt={item.name} className={"w-4 h-4"} />
-					<span className={"text-sm text-zinc-300"}>{item.name}</span>
+					<span className={"text-sm text-fg-muted"}>{item.name}</span>
 				</div>
 			</EntryTooltip>
 		</div>
@@ -203,16 +203,16 @@ export function NpcCardSimple({npc}: { npc: MaybeReadonly<NPC> }) {
 				() => goToURN(NpcURN.new(npc.id), {title : npc.name, pinned : true})
 			)}
 		>
-			<div className={"flex flex-row gap-1 items-center bg-zinc-700/50 px-1.5 py-0.5 rounded-md select-none"}>
+			<div className={"flex flex-row gap-1 items-center bg-surface-3/50 px-1.5 py-0.5 rounded-md select-none"}>
 				{/* <img src={npc.icon} alt={npc.name} className={"w-4 h-4"} /> */}
-				<span className={"text-sm text-zinc-300"}>{npc.name}</span>
+				<span className={"text-sm text-fg-muted"}>{npc.name}</span>
 			</div>
 		</div>
 	);
 }
 
 const chipVariants = cva(
-	"bg-zinc-800 rounded-md cursor-pointer hover:bg-zinc-700",
+	"bg-surface-2 rounded-md cursor-pointer hover:bg-surface-3",
 	{
 		variants        : {
 			variant : {
@@ -300,6 +300,6 @@ export function ChipList({section, items, onClick, variant = "sm"}: ChipListProp
 }
 
 export function SectionSubtitle({title}: { title?: string }) {
-	return <p className="text-sm text-zinc-400 font-semibold mb-2 uppercase">{title}</p>;
+	return <p className="text-sm text-fg-subtle font-semibold mb-2 uppercase">{title}</p>;
 
 }

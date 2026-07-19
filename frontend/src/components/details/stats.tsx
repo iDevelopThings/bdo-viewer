@@ -14,9 +14,9 @@ export type StatCardProps = {
 // backend (internal/stats.Stat) - no client-side reformatting.
 export function StatCard({title, value}: StatCardProps) {
 	return (
-		<div className={"flex flex-col gap-1 px-4 py-2 bg-zinc-800 rounded-md"}>
+		<div className={"flex flex-col gap-1 px-4 py-2 bg-surface-2 rounded-md"}>
 			<div className={"text-sm font-bold"}>{value}</div>
-			<div className={"text-sm text-zinc-500 uppercase"}>{title}</div>
+			<div className={"text-sm text-fg-subtle uppercase"}>{title}</div>
 		</div>
 	);
 }

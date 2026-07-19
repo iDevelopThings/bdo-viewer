@@ -135,10 +135,10 @@ export const DetailsPanel = (props: IDockviewPanelProps) => {
 	if(!props.params?.key || !props.params?.source || !props?.params?.urn) {
 		return (
 			<div className="flex flex-col grow max-h-full h-full w-full items-center justify-center overflow-auto p-8">
-				<p className={"text-zinc-200 text-lg"}>
+				<p className={"text-fg text-lg"}>
 					No source selected
 				</p>
-				<p className={"text-zinc-400 text-sm"}>
+				<p className={"text-fg-subtle text-sm"}>
 					Select a source to view details
 				</p>
 			</div>
