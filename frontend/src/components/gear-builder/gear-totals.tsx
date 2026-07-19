@@ -1,5 +1,6 @@
 import {cn} from "@/lib/utils.ts";
-import {useGearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
+import {gearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
+import {useSnapshot} from "valtio/react";
 
 function Total({label, value, highlight}: { label: string, value: number, highlight?: boolean }) {
 	return (
@@ -15,12 +16,12 @@ function Total({label, value, highlight}: { label: string, value: number, highli
 }
 
 export function GearTotals() {
-	const [builder, s] = useGearBuilderStore();
+	const {stats} = useSnapshot(gearBuilderStore);
 
-	const ap    = builder?.stats?.ap ?? 0;
-	const aap   = builder?.stats?.aap ?? 0;
-	const dp    = builder?.stats?.dp ?? 0;
-	const score = builder?.stats?.score ?? 0;
+	const ap    = stats?.ap ?? 0;
+	const aap   = stats?.aap ?? 0;
+	const dp    = stats?.dp ?? 0;
+	const score = stats?.score ?? 0;
 
 	return (
 		<div className={"flex flex-row items-center justify-center gap-10 py-2"}>

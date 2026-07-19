@@ -4,6 +4,7 @@
 // Both push/pop a colour on a stack. Everything else in angle brackets (e.g.
 // <How to Use>, <Heidel>, NPC names) is literal text and is preserved.
 
+import {useMemo} from "react";
 import {parseARGB} from "@/utils.tsx";
 
 export type TextSegment = { text: string; color?: string };
@@ -16,6 +17,7 @@ const SPAN_COLOR_RE = /color:\s*(#[0-9a-fA-F]{3,8})/i;
 
 // Parse game text into coloured segments. Colours nest via a stack, so
 // PAOldColor reverts to whatever colour was active before the last PAColor.
+// eslint-disable-next-line react-refresh/only-export-components
 export function parseGameText(input: string): TextSegment[] {
 	if (!input) return [];
 	const segments: TextSegment[]       = [];
@@ -49,15 +51,17 @@ export function parseGameText(input: string): TextSegment[] {
 
 // Plain-text version (colour tags removed) for places that need a string,
 // e.g. title/aria attributes.
+// eslint-disable-next-line react-refresh/only-export-components
 export function plainGameText(input: string): string {
 	return (input ?? "").replace(STRIP_RE, "");
 }
 
 export function GameText({text, className, textClassName}: { text: string, className?: string, textClassName?: string }) {
+	const segments = useMemo(() => parseGameText(text), [text]);
+
 	if (!text) {
 		return null;
 	}
-	const segments = parseGameText(text);
 
 	return (
 		<span className={className} style={{whiteSpace : "pre-line"}}>

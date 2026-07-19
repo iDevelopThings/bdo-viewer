@@ -34,7 +34,9 @@ const MAX_LOG_LINES = 200;
 export function useExtraction(onDone?: () => void) {
 	const [state, setState] = useState<ExtractionState>(initial);
 	const onDoneRef = useRef(onDone);
-	onDoneRef.current = onDone;
+	useEffect(() => {
+		onDoneRef.current = onDone;
+	});
 
 	useEffect(() => {
 		const offProgress = Events.On("setup:progress", (e: {data: Progress}) => {

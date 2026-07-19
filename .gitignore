@@ -10,9 +10,11 @@ build/android/gen/
 bdo-viewer.exe
 
 CLAUDE.md
+AGENTS.md
 /.agents/
 /.claude/
 /.task/
+.mcp.json
 
 
 /frontend/dist

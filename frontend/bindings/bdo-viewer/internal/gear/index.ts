@@ -7,10 +7,12 @@ export {
 };
 
 export type {
+    EventEquipHistoryUpdatedPayload,
     EventLoadoutUpdatedPayload,
+    EventSlotBlockUpdatedPayload,
     MasteryConfigSet,
     MasteryData,
-    Slot,
+    SimpleSlotData,
     StatSheet,
     StatSource,
     StatValue

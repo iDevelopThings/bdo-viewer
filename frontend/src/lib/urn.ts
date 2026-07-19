@@ -158,7 +158,7 @@ export function tryMatchURN(raw: string | undefined): URNHandler | undefined {
 		return undefined;
 	}
 	try {
-		for (let k in urns) {
+		for (const k in urns) {
 			const handler = urns[k];
 			if (handler.match(raw)) {
 				return handler;

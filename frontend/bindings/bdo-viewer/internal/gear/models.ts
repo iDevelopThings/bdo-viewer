@@ -3,18 +3,33 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as sources$0 from "../sources/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as model$0 from "../../../github.com/idevelopthings/bdo-data-extractor/src/model/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as models$0 from "../../../github.com/idevelopthings/bdo-data-extractor/src/models/models.js";
 
+export interface EventEquipHistoryUpdatedPayload {
+    "equipHistory"?: sources$0.ListSourceEntry[] | null;
+}
+
 export interface EventLoadoutUpdatedPayload {
     "gearMastery": MasteryConfigSet;
     "level": number;
+    "consumables": (model$0.Item | null)[] | null;
     "class"?: model$0.CharacterClassTypeInfo;
-    "slots": Slot[];
+    "slots": SimpleSlotData[];
     "maxOnEquip": boolean;
     "stats": StatSheet | null;
+}
+
+export interface EventSlotBlockUpdatedPayload {
+    "slotId": model$0.SlotName;
+    "locked": boolean;
+    "lockedBy": model$0.SlotName | null;
+    "previousItem"?: model$0.Item | null;
 }
 
 export type MasteryConfigSet = { [_ in model$0.LifeSkillType]?: MasteryData } | null;
@@ -24,7 +39,10 @@ export interface MasteryData {
     "lvl": number;
 }
 
-export interface Slot {
+/**
+ * SimpleSlotData a lightweight version we can stream down to frontend
+ */
+export interface SimpleSlotData {
     "id": model$0.SlotName;
     "itemRef": models$0.EntityRef<model$0.Item> | null;
 
@@ -32,6 +50,11 @@ export interface Slot {
      * True when we've equipped an item which "blocks" other slots, for ex, life skill gear, "manos fisher's clothes"
      */
     "locked": boolean;
+
+    /**
+     * The slot which is locking this slot, if any
+     */
+    "lockedBy"?: model$0.SlotName | null;
 
     /**
      * The enhancement level of the item
@@ -42,28 +65,15 @@ export interface Slot {
      * The caphras level of the item
      */
     "caphrasLevel": number;
-
-    /**
-     * Mainly for frontend
-     */
     "info": model$0.SlotNameInfo;
-    "item": model$0.Item | null;
-
-    /**
-     * The enhancement info of the item
-     */
-    "enhancement": model$0.EnchantLevel | null;
-
-    /**
-     * The caphras info of the item
-     */
-    "caphras": model$0.CaphrasLevel | null;
+    "item"?: sources$0.ListSourceEntry | null;
+    "enhancementTitle"?: string;
+    "enhancementMinLevel"?: number;
+    "enhancementMaxLevel"?: number;
+    "caphrasMinLevel"?: number;
+    "caphrasMaxLevel"?: number;
 }
 
-/**
- * StatSheet is the computed character sheet: headline AP/AAP/DP plus every stat
- * keyed by its StatId (see model.StatId(key).Info() for label/category/unit).
- */
 export interface StatSheet {
     /**
      * sheet main-hand AP, floor((apMin+apMax)/2)

@@ -15,7 +15,9 @@ import type * as gear$0 from "../../../../../bdo-viewer/internal/gear/models.js"
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
+            "gear-builder:equip-history-updated": gear$0.EventEquipHistoryUpdatedPayload;
             "gear-builder:loadout-updated": gear$0.EventLoadoutUpdatedPayload;
+            "gear-builder:slot-block-status-change": gear$0.EventSlotBlockUpdatedPayload;
             "load:done": {};
             "load:error": event_reporter$0.ErrorPayload;
             "load:progress": event_reporter$0.Progress;

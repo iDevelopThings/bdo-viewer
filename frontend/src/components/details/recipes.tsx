@@ -6,9 +6,10 @@ import {openItemPanel} from "@/state/panels.ts";
 import {ItemIcon} from "@/lib/item-icon.tsx";
 import {DetailsSection} from "@/components/details/details-components.tsx";
 import {useDetail} from "@/state/detail.tsx";
-import {useMiddleClickProps} from "@/utils.tsx";
-import {itemOf, type RItems, RecipeTreeView} from "@/components/details/recipe-tree.tsx";
+import {getMiddleClickProps} from "@/utils.tsx";
+import {RecipeTreeView} from "@/components/recipes/recipe-tree.tsx";
 import {tryGetGradeColor} from "@/lib/types/item-grades.ts";
+import {itemOf, type RItems} from "@/components/recipes/recipe-tree-context.tsx";
 
 // DetailsRecipes is the item-detail wrapper around the shared RecipeTreeView: it
 // backs selection with the detail store (selectRecipe re-resolves the tree) and
@@ -79,7 +80,7 @@ function ByproductEntry({bp, items}: { bp: DeepReadonly<RecipeTreeByproduct>, it
 			<div className={"flex flex-row gap-2 items-center flex-wrap"}>
 				<div
 					className={"flex flex-row gap-1 items-center bg-zinc-700/50 px-1.5 py-0.5 rounded-md cursor-pointer select-none"}
-					{...useMiddleClickProps(
+					{...getMiddleClickProps(
 						() => out && openItemPanel({id : out.id, name : out.title}, false),
 						() => out && openItemPanel({id : out.id, name : out.title}, true),
 					)}
@@ -121,7 +122,7 @@ export function DetailsUsedIn() {
 					<div
 						key={index}
 						className={"flex flex-row gap-2 items-center cursor-pointer"}
-						{...useMiddleClickProps(
+						{...getMiddleClickProps(
 							() => openItemPanel({id : use.output.id, name : use.output.title}, false),
 							() => openItemPanel({id : use.output.id, name : use.output.title}, true),
 						)}

@@ -32,6 +32,7 @@ export interface LifeSkillTypeInfo {
   nativeName: string;
   playable?: boolean;
   masteryStat?: StatId;
+  expStat?: StatId;
   reserved?: boolean;
 }
 
@@ -43,6 +44,7 @@ export const LifeSkillTypeInfos: Record<LifeSkillType, LifeSkillTypeInfo> = {
     nativeName: "gathering",
     playable: true,
     masteryStat: StatIds.GatheringMastery,
+    expStat: StatIds.GatheringExp,
   },
   [LifeSkillTypes.Fishing]: {
     value: LifeSkillTypes.Fishing,
@@ -51,6 +53,7 @@ export const LifeSkillTypeInfos: Record<LifeSkillType, LifeSkillTypeInfo> = {
     nativeName: "fishing",
     playable: true,
     masteryStat: StatIds.FishingMastery,
+    expStat: StatIds.FishingExp,
   },
   [LifeSkillTypes.Hunting]: {
     value: LifeSkillTypes.Hunting,
@@ -59,6 +62,7 @@ export const LifeSkillTypeInfos: Record<LifeSkillType, LifeSkillTypeInfo> = {
     nativeName: "hunting",
     playable: true,
     masteryStat: StatIds.HuntingMastery,
+    expStat: StatIds.HuntingExp,
   },
   [LifeSkillTypes.Cooking]: {
     value: LifeSkillTypes.Cooking,
@@ -67,6 +71,7 @@ export const LifeSkillTypeInfos: Record<LifeSkillType, LifeSkillTypeInfo> = {
     nativeName: "cooking",
     playable: true,
     masteryStat: StatIds.CookingMastery,
+    expStat: StatIds.CookingExp,
   },
   [LifeSkillTypes.Alchemy]: {
     value: LifeSkillTypes.Alchemy,
@@ -75,6 +80,7 @@ export const LifeSkillTypeInfos: Record<LifeSkillType, LifeSkillTypeInfo> = {
     nativeName: "alchemy",
     playable: true,
     masteryStat: StatIds.AlchemyMastery,
+    expStat: StatIds.AlchemyExp,
   },
   [LifeSkillTypes.Processing]: {
     value: LifeSkillTypes.Processing,
@@ -83,6 +89,7 @@ export const LifeSkillTypeInfos: Record<LifeSkillType, LifeSkillTypeInfo> = {
     nativeName: "processing",
     playable: true,
     masteryStat: StatIds.ProcessingMastery,
+    expStat: StatIds.ProcessingExp,
   },
   [LifeSkillTypes.Training]: {
     value: LifeSkillTypes.Training,
@@ -91,6 +98,7 @@ export const LifeSkillTypeInfos: Record<LifeSkillType, LifeSkillTypeInfo> = {
     nativeName: "training",
     playable: true,
     masteryStat: StatIds.TrainingMastery,
+    expStat: StatIds.TrainingExp,
   },
   [LifeSkillTypes.Trading]: {
     value: LifeSkillTypes.Trading,
@@ -99,6 +107,7 @@ export const LifeSkillTypeInfos: Record<LifeSkillType, LifeSkillTypeInfo> = {
     nativeName: "trading",
     playable: true,
     masteryStat: StatIds.TradingMastery,
+    expStat: StatIds.TradingExp,
   },
   [LifeSkillTypes.Farming]: {
     value: LifeSkillTypes.Farming,
@@ -107,6 +116,7 @@ export const LifeSkillTypeInfos: Record<LifeSkillType, LifeSkillTypeInfo> = {
     nativeName: "farming",
     playable: true,
     masteryStat: StatIds.FarmingMastery,
+    expStat: StatIds.FarmingExp,
   },
   [LifeSkillTypes.Sailing]: {
     value: LifeSkillTypes.Sailing,
@@ -115,6 +125,7 @@ export const LifeSkillTypeInfos: Record<LifeSkillType, LifeSkillTypeInfo> = {
     nativeName: "sailing",
     playable: true,
     masteryStat: StatIds.SailingMastery,
+    expStat: StatIds.SailingExp,
   },
   [LifeSkillTypes.Quest]: {
     value: LifeSkillTypes.Quest,
@@ -128,6 +139,7 @@ export const LifeSkillTypeInfos: Record<LifeSkillType, LifeSkillTypeInfo> = {
     title: "Bartering",
     nativeName: "bartering",
     playable: true,
+    expStat: StatIds.BarteringExp,
   },
   [LifeSkillTypes.Reserved12]: {
     value: LifeSkillTypes.Reserved12,
@@ -170,7 +182,7 @@ export const LifeSkillTypeValues: readonly LifeSkillType[] = [
   LifeSkillTypes.Reserved14,
 ] as const;
 
-export const LifeSkillTypeByName: Record<string, LifeSkillType> = {
+export const LifeSkillTypeByName = {
   "Gathering": LifeSkillTypes.Gathering,
   "Fishing": LifeSkillTypes.Fishing,
   "Hunting": LifeSkillTypes.Hunting,
@@ -187,6 +199,8 @@ export const LifeSkillTypeByName: Record<string, LifeSkillType> = {
   "Reserved13": LifeSkillTypes.Reserved13,
   "Reserved14": LifeSkillTypes.Reserved14,
 } as const;
+
+export type LifeSkillTypeNames = keyof (typeof LifeSkillTypeByName)
 
 const lifeSkillTypeByLowerName: Record<string, LifeSkillType> = {};
 for (const [k, v] of Object.entries(LifeSkillTypeByName)) {

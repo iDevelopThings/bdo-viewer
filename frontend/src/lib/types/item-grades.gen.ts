@@ -65,7 +65,7 @@ export const ItemGradeValues: readonly ItemGrade[] = [
   ItemGrades.Purple,
 ] as const;
 
-export const ItemGradeByName: Record<string, ItemGrade> = {
+export const ItemGradeByName = {
   "none": ItemGrades.None,
   "white": ItemGrades.White,
   "green": ItemGrades.Green,
@@ -74,6 +74,8 @@ export const ItemGradeByName: Record<string, ItemGrade> = {
   "red": ItemGrades.Red,
   "purple": ItemGrades.Purple,
 } as const;
+
+export type ItemGradeNames = keyof (typeof ItemGradeByName)
 
 const itemGradeByLowerName: Record<string, ItemGrade> = {};
 for (const [k, v] of Object.entries(ItemGradeByName)) {

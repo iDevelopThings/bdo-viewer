@@ -1,10 +1,10 @@
 import {type PropsWithChildren, useContext, useEffect, useMemo} from "react";
 import {useSnapshot} from "valtio/react";
-import {isItem} from "@/state/sources/item-source.tsx";
 import {DetailStore, getEntryKey, type PartialSourceEntry} from "@/state/detail-store.tsx";
 import {persistSync} from "@/lib/persist-sync.ts";
 import {Snapshot} from "valtio";
 import {DetailContext} from "@/state/detail-context.ts";
+import {isItem} from "@/state/sources/sources.ts";
 
 export type DetailProviderProps = PropsWithChildren<{
 	entry: PartialSourceEntry | undefined;
@@ -13,8 +13,8 @@ export type DetailProviderProps = PropsWithChildren<{
 export function DetailProvider({entry, children}: DetailProviderProps) {
 	const storageKey = entry ? `details-${entry.type}-${getEntryKey(entry)}` : "details";
 
-	const store = useMemo(() => {
-		const result = persistSync(new DetailStore(entry), storageKey, {
+	const persisted = useMemo(() => {
+		return persistSync(new DetailStore(entry), storageKey, {
 			debounceTime          : 500,
 			mergeStrategy         : {
 				isAsync : false,
@@ -51,15 +51,19 @@ export function DetailProvider({entry, children}: DetailProviderProps) {
 				}
 			}
 		});
+	}, [entry, storageKey]);
 
+	const store = persisted.store as DetailStore;
 
-		return result.store as DetailStore;
-	}, [storageKey]);
-
+	// Each navigation builds a new per-entry store; dispose the previous one so its
+	// persistence subscription doesn't leak.
+	useEffect(() => {
+		return () => persisted.dispose();
+	}, [persisted]);
 
 	useEffect(() => {
 		store?.initialize(entry);
-	}, [entry, storageKey]);
+	}, [entry, store]);
 
 	if (!store) {
 		console.error("DetailProvider: store is null, this should not happen");
@@ -73,14 +77,23 @@ export function DetailProvider({entry, children}: DetailProviderProps) {
 	);
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
+export function useDetailStore() {
+	const store = useContext(DetailContext);
+	if (!store) throw new Error("useDetailStore must be used within DetailProvider");
+	return store;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
 export function useDetail() {
 	const store = useContext(DetailContext);
 	if (!store) throw new Error("useDetail must be used within DetailProvider");
 	return [store, useSnapshot(store)] as const;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useDetailItem() {
-	const [store, snapshot] = useDetail();
+	const [store] = useDetail();
 	if (!store.entry || !isItem(store.entry)) {
 		throw new Error("useDetailItem must be used with an item entry");
 	}

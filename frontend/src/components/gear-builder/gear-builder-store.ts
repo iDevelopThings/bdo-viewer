@@ -1,17 +1,33 @@
 import {proxy} from "valtio";
-import {CharacterClassTypeInfo, SlotName} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
-import {GetAllClasses, SetClass, Equip, Unequip, Upgrade, GetStats} from "@bindings/bdo-viewer/internal/gear/builderservice.ts";
+import type {CharacterClassTypeInfo, Item, SlotName} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import {GetAllClasses, SetClass, Equip, Unequip, Upgrade, ToggleMaxOnEquip, GetEquipHistory} from "@bindings/bdo-viewer/internal/gear/builderservice.ts";
 import {ref} from "valtio/vanilla";
 import {Events} from "@wailsio/runtime";
-import {Slot, StatSheet, MasteryConfigSet} from "@bindings/bdo-viewer/internal/gear";
+import type {SimpleSlotData as Slot, MasteryConfigSet} from "@bindings/bdo-viewer/internal/gear";
 import {useSnapshot} from "valtio/react";
-
+import {useEffect} from "react";
+import {batch} from "valtio-reactive";
+import {persistSync} from "@/lib/persist-sync.ts";
+import type {StatSheet} from "@bindings/bdo-viewer/internal/gear/models.ts";
+import type {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 
 export const GearBuilderTabs = [
 	{id : "combat", label : "Equipment"},
 	{id : "life", label : "Life Tools"},
 	{id : "settings", label : "Settings"},
 ] as const;
+
+
+export const {store : gearBuilderPersistent} = persistSync({
+	tab : "combat" as typeof GearBuilderTabs[number]["id"],
+}, "gear-builder");
+
+type HighlightSlot = { highlighter: SlotName, highlightee: SlotName, reason: "locker" | "locked" };
+
+// Safe as a value compare because both sides are the same backend struct, so key order matches.
+function slotsEqual(a: Slot, b: Slot): boolean {
+	return JSON.stringify(a) === JSON.stringify(b);
+}
 
 export class GearBuilderStore {
 	public loading = true;
@@ -24,44 +40,69 @@ export class GearBuilderStore {
 	private _selectedSlot: SlotName | null = null;
 	private _pickerSlot: SlotName | null   = null;
 
-	public tab: typeof GearBuilderTabs[number]["id"] = "combat";
-
 	public maxOnEquip: boolean          = false;
 	public stats: StatSheet | undefined = undefined;
 
 	public gearMastery: MasteryConfigSet | undefined = undefined;
 	public level: number                             = 65;
+	public consumables: (Item | null)[]              = [];
+
+	// Keyed by highlighter slot so each gear slot subscribes to only its own key.
+	public highlightSlots: Partial<Record<SlotName, HighlightSlot>> = {};
+	public gearHistory: ListSourceEntry[]                           = [];
 
 	public onMount(): () => void {
 		const offLoadoutUpdated = Events.On("gear-builder:loadout-updated", payload => {
-			this.maxOnEquip    = payload.data.maxOnEquip;
-			this.selectedClass = payload.data.class;
-			this.gearMastery   = payload.data.gearMastery;
-			this.level         = payload.data.level;
-			this.slots         = payload.data.slots;
-			// The backend recomputes stats for every change (slots, level, mastery,
-			// class) and ships them in the event — use them directly, no re-fetch.
-			this.stats         = payload.data.stats ?? undefined;
+			batch(() => {
+				this.maxOnEquip    = payload.data.maxOnEquip;
+				this.selectedClass = payload.data.class;
+				this.gearMastery   = payload.data.gearMastery;
+				this.level         = payload.data.level;
+				this.consumables   = payload.data.consumables ?? [];
+				this.reconcileSlots(payload.data.slots);
+				this.stats = payload.data.stats ? ref(payload.data.stats) : undefined;
+			});
 		});
+
+		const offSlotLockChange = Events.On("gear-builder:slot-block-status-change", payload => {
+			const changed = payload.data.slotId;
+			for (const [key, h] of Object.entries(this.highlightSlots)) {
+				if (h && (h.highlighter === changed || h.highlightee === changed)) {
+					delete this.highlightSlots[key as unknown as SlotName];
+				}
+			}
+		});
+
+
+		const offHistoryUpdated = Events.On("gear-builder:equip-history-updated", payload => {
+			this.gearHistory = payload.data?.equipHistory ? ref(payload.data.equipHistory) : [];
+		});
+
+
 
 		this.loading = true;
 
-		this.loadClasses()
-			.finally(() => {
-				this.loading = false;
-			});
+		this.load().finally(() => {
+			this.loading = false;
+		});
 
 		return () => {
 			offLoadoutUpdated();
+			offSlotLockChange();
+			offHistoryUpdated();
 		};
 	}
 
-	public async loadClasses() {
+	public async load() {
 		this.classes = ref(
 			(await GetAllClasses())
 				.filter(cls => !cls.Reserved)
 				.sort((a, b) => a.Title.localeCompare(b.Title))
 		);
+
+		// Seed history once; equip-history-updated keeps it current after.
+		const hist = await GetEquipHistory()
+		this.gearHistory = hist ? ref(hist) : [];
 	}
 
 	public selectClass(cls: CharacterClassTypeInfo) {
@@ -73,8 +114,18 @@ export class GearBuilderStore {
 		return this._slots;
 	}
 
-	public set slots(slots: Slot[]) {
-		this._slots = slots;
+	// The backend re-emits the whole loadout on any change; replace only the slots that actually
+	// differ so unchanged slots keep their identity and don't re-render. ref() avoids deep-proxying.
+	private reconcileSlots(next: Slot[]) {
+		const cur = this._slots;
+		if (cur.length !== next.length) {
+			cur.length = next.length;
+		}
+		for (let i = 0; i < next.length; i++) {
+			if (!cur[i] || !slotsEqual(cur[i], next[i])) {
+				cur[i] = ref(next[i]);
+			}
+		}
 	}
 
 	public get selectedSlot(): Slot | undefined {
@@ -106,8 +157,8 @@ export class GearBuilderStore {
 		this._pickerSlot = null;
 	}
 
-	public async equip(slotId: SlotName, urn: string) {
-		await Equip(slotId, urn);
+	public async equip(urn: string) {
+		await Equip(urn);
 	}
 
 	public async unequip(slotId: SlotName) {
@@ -128,24 +179,51 @@ export class GearBuilderStore {
 		await Upgrade(slotId, enhancement, caphras);
 	}
 
-	public async computeStats() {
-		try {
-			this.stats = await GetStats();
-		} catch (error) {
-			console.error("Error computing stats:", error);
-		} finally {
+	public clearClass() {
+		this.selectedClass = null;
+		void SetClass(null);
+	}
+
+	public toggleMaxOnEquip() {
+		this.maxOnEquip = !this.maxOnEquip;
+		void ToggleMaxOnEquip();
+	}
+
+	public setHoverState(slot: SlotName, lockedBy: SlotName, hovered: boolean, locked: HighlightSlot["reason"]): void {
+		if (!hovered) {
+			delete this.highlightSlots[lockedBy];
+			return;
 		}
+
+		this.highlightSlots[lockedBy] = {highlighter : lockedBy, highlightee : slot, reason : locked};
 	}
 }
 
 export const gearBuilderStore = proxy(new GearBuilderStore());
 
+// if (import.meta.env?.DEV) {
+// 	void connectReduxDevtools(gearBuilderStore, {name : "Gear Builder State"});
+// }
+
+// Mounted once for the app's lifetime (the store is a singleton). Kept in a module var so an HMR
+// reload can dispose the old event subscriptions instead of stacking a fresh set on top.
 let _gearBuilderStoreUnmount: (() => void) | null = null;
 
-export function useGearBuilderStore() {
+function ensureGearBuilderMounted() {
 	if (!_gearBuilderStoreUnmount) {
 		_gearBuilderStoreUnmount = gearBuilderStore.onMount();
 	}
+}
+
+if (import.meta.hot) {
+	import.meta.hot.dispose(() => {
+		_gearBuilderStoreUnmount?.();
+		_gearBuilderStoreUnmount = null;
+	});
+}
+
+export function useGearBuilderStore() {
+	useEffect(ensureGearBuilderMounted, []);
 	const snap = useSnapshot(gearBuilderStore);
 
 	return [snap, gearBuilderStore] as const;

@@ -1,13 +1,13 @@
 import type {DockviewApi, DockviewIDisposable as IDisposable, IDockviewPanel} from "dockview-react";
 import {useSyncExternalStore} from "react";
 import {Item} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
-import {addHistoryEntry} from "@/components/history/history-panel.tsx";
 import {SourceKind} from "@bindings/bdo-viewer/internal/sources";
 import type {MaybeReadonly} from "@/types.ts";
 import {ItemURN} from "@/lib/urn.ts";
 import {findSourceByType, findSourceByURN, WrappedSource} from "@/state/sources/sources.ts";
 import {navigateToURN, getNavigationNodeByURN} from "@/state/navigation.tsx";
 import {mapState} from "@/components/world-map/map-state.ts";
+import {addHistoryEntry} from "@/components/history/history.tsx";
 
 // Describes a piece of content to show in a panel — not tied to any specific
 // dockview panel id/slot, so any source (items, npcs, zones, ...) can use it.
@@ -71,7 +71,6 @@ export function setDockviewApi(instance: DockviewApi | undefined) {
 
 	api = instance;
 
-	//@ts-ignore
 	window.dockviewApi = instance;
 
 	if (instance) {
@@ -139,7 +138,7 @@ export function openPanel<P extends object>(request: PanelRequest<P>, options: O
 
 	// Anchor new panels next to whatever's already open as a tab in the same group,
 	// so the first click has somewhere to land and later ones stay grouped together.
-	const openPanels = api.panels;
+	// const openPanels = api.panels;
 
 	let previewGroup = api.getGroup("right");
 	if (!previewGroup) {
@@ -152,8 +151,6 @@ export function openPanel<P extends object>(request: PanelRequest<P>, options: O
 	}
 
 	const listPanel = api.getPanel("list");
-
-	// const referencePanel = api.getPanel(PREVIEW_PANEL_ID) ?? api.activePanel ?? openPanels[openPanels.length - 1];
 
 
 	return api.addPanel({
@@ -175,7 +172,7 @@ export function openPanel<P extends object>(request: PanelRequest<P>, options: O
 	});
 }
 
-type ItemPanelItem = Item | { id: string | number, name: string }
+export type ItemPanelItem = Item | { id: string | number, name: string }
 
 export function openItemPanel(item: MaybeReadonly<ItemPanelItem>, pinned: boolean = false) {
 
@@ -320,7 +317,7 @@ export function goToURN(urn: string | undefined, options: GoToURNOptions = {}): 
 		return true;
 	}
 
-	let source: WrappedSource | undefined = undefined;
+	let source: WrappedSource | undefined;
 	try {
 		source = findSourceByURN(urn);
 	} catch (error) {

@@ -1,13 +1,13 @@
 import {EntryPicker} from "@/components/entry-list/entry-picker.tsx";
-import {useGearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
+import {gearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
+import {useSnapshot} from "valtio/react";
 
 // ItemPicker is the gear-builder's slot picker: a thin wrapper over the generic
 // EntryPicker that scopes results to the slot's equip slots + the build's class.
 export function ItemPicker() {
-	const [builder, s] = useGearBuilderStore();
+	const {pickerSlot : slot, selectedClass} = useSnapshot(gearBuilderStore);
 
-	const slot = builder.pickerSlot;
-	if(!slot) {
+	if (!slot) {
 		return null;
 	}
 
@@ -21,13 +21,13 @@ export function ItemPicker() {
 			defaultFocus={true}
 			baseFilters={{
 				equipSlots : [slot.info.SlotName],
-				class      : builder.selectedClass.Name,
+				class      : selectedClass.Name,
 			}}
 			onPick={entry => {
-				void s.equip(slot.id, entry.urn);
-				s.closePicker();
+				void gearBuilderStore.equip(entry.urn);
+				gearBuilderStore.closePicker();
 			}}
-			onClose={() => s.closePicker()}
+			onClose={() => gearBuilderStore.closePicker()}
 		/>
 	);
 }

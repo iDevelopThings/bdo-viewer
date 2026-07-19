@@ -9,10 +9,11 @@ import {EffectSections} from "@/components/details/effects.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Label} from "@/components/ui/label.tsx";
 import {Slider} from "@/components/ui/slider.tsx";
-import {useGearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
+import {gearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
 import {ItemIcon} from "@/lib/item-icon.tsx";
 import {getGradeColor} from "@/lib/types/item-grades.ts";
 import {useDebounce} from "@/utils.tsx";
+import {useSnapshot} from "valtio/react";
 
 
 function SlotStats({itemId, level, caphras}: { itemId: number; level: number; caphras: number }) {
@@ -61,17 +62,34 @@ function SlotStats({itemId, level, caphras}: { itemId: number; level: number; ca
 }
 
 export function GearSlotDetail() {
-	const [builder, s] = useGearBuilderStore();
+	const {selectedSlot : slot} = useSnapshot(gearBuilderStore);
 
+	// Hold the enhance level locally while dragging so the slider stays smooth without a store write
+	// (and full re-render + stat re-fetch) on every tick — commit to the backend debounced instead.
+	const [dragEnhanceLevel, setDragEnhanceLevel]           = useState<number | null>(null);
+	const [dragCaphrasLevel, setDragCaphrasLevel]             = useState<number | null>(null);
 
-	const upgrade = useDebounce(l => s.upgrade(slot.id, l), 50);
+	const [committedEnhanceLevel, setCommittedEnhanceLevel] = useState(slot?.enhanceLevel);
+	const [committedCaphrasLevel, setCommittedCaphrasLevel] = useState(slot?.caphrasLevel);
 
-	const applyUpgrade = (l: number) => {
-		s.slots[slot.id].enhanceLevel = l;
-		upgrade(l);
-	};
+	const commitEnhance = useDebounce((l: number) => {
+		void gearBuilderStore.upgrade(gearBuilderStore.selectedSlot.id, l);
+	}, 5);
+	const commitCaphras = useDebounce((l: number) => {
+		void gearBuilderStore.upgrade(gearBuilderStore.selectedSlot.id, undefined, l);
+	}, 5);
 
-	const slot = builder.selectedSlot;
+	// Drop the local override whenever the store's committed level changes: our debounced commit
+	// landing, an external change (e.g. max-on-equip), or a different slot being selected.
+	if (slot?.enhanceLevel !== committedEnhanceLevel ) {
+		setCommittedEnhanceLevel(slot?.enhanceLevel);
+		setDragEnhanceLevel(null);
+	}
+	if (slot?.caphrasLevel !== committedCaphrasLevel) {
+		setCommittedCaphrasLevel(slot?.caphrasLevel);
+		setDragCaphrasLevel(null);
+	}
+
 	if (!slot) {
 		return null;
 	}
@@ -81,21 +99,22 @@ export function GearSlotDetail() {
 		return null;
 	}
 
-	const enchant    = slot.enhancement;
-	const minLevel   = item?.enhancement?.minLevel ?? 0;
-	const maxLevel   = item?.enhancement?.maxLevel ?? 0;
-	const minCaphras = enchant?.caphrasMinLevel;
-	const maxCaphras = enchant?.caphrasMaxLevel ?? 0;
+	const enhanceLevel = dragEnhanceLevel ?? slot.enhanceLevel;
+	const caphrasLevel = dragCaphrasLevel ?? slot.caphrasLevel;
+	const minLevel     = slot?.enhancementMinLevel ?? 0;
+	const maxLevel     = slot?.enhancementMaxLevel ?? 0;
+	const minCaphras   = slot?.caphrasMinLevel;
+	const maxCaphras   = slot?.caphrasMaxLevel ?? 0;
 
-	const gradeColor = getGradeColor(item?.grade);
+	const gradeColor = getGradeColor(item?.extra?.grade);
 
 
 	return (
 		<div className={"flex flex-col gap-4 border-t border-zinc-800 p-4"}>
 			<div className={"flex flex-row items-center gap-3"}>
 				<ItemIcon
-					urn={item}
-					grade={item.grade}
+					urn={{id : item.urn, name : item.title}}
+					grade={item.extra?.grade}
 					imageClass={"w-8 h-8 shrink-0"}
 					className={"flex-none"}
 					clickable
@@ -103,7 +122,7 @@ export function GearSlotDetail() {
 
 				<div className={"flex flex-col min-w-0"}>
 					<span className={"font-semibold truncate"} style={gradeColor ? {color : gradeColor.toString()} : undefined}>
-						{item.name}
+						{item.title}
 					</span>
 					<span className={"text-xs text-zinc-400"}>{slot.info.Title}</span>
 				</div>
@@ -111,14 +130,14 @@ export function GearSlotDetail() {
 					<Button
 						variant={"outline"}
 						size={"xs"}
-						onClick={() => s.openPicker(slot.id)}
+						onClick={() => gearBuilderStore.openPicker(slot.id)}
 					>
 						Change
 					</Button>
 					<Button
 						variant={"ghost"}
 						size={"xs"}
-						onClick={() => s.unequip(slot.id)}
+						onClick={() => gearBuilderStore.unequip(slot.id)}
 					>
 						Unequip
 					</Button>
@@ -130,13 +149,14 @@ export function GearSlotDetail() {
 					<div className="flex items-center gap-6">
 						<Label>Enhance Level</Label>
 						<span className="text-sm text-muted-foreground">
-							{enchant?.name ?? "Base"} ({slot.enhanceLevel})
+							{slot.enhancementTitle ?? "Base"} ({enhanceLevel})
 						</span>
 					</div>
 					<Slider
-						value={slot.enhanceLevel}
+						value={enhanceLevel}
 						onValueChange={(value) => {
-							applyUpgrade(value as number);
+							setDragEnhanceLevel(value as number);
+							commitEnhance(value as number);
 						}}
 						min={minLevel}
 						max={maxLevel}
@@ -154,9 +174,10 @@ export function GearSlotDetail() {
 						</span>
 					</div>
 					<Slider
-						value={slot.caphrasLevel}
+						value={caphrasLevel}
 						onValueChange={(value) => {
-							void s.upgrade(slot.id, undefined, value as number);
+							setDragCaphrasLevel(value as number);
+							commitCaphras(value as number);
 						}}
 						min={minCaphras}
 						max={maxCaphras}

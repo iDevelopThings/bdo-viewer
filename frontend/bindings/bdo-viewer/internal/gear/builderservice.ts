@@ -7,6 +7,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as sources$0 from "../sources/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as model$0 from "../../../github.com/idevelopthings/bdo-data-extractor/src/model/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -17,18 +20,31 @@ import * as models$0 from "../../../github.com/idevelopthings/bdo-data-extractor
 import * as $models from "./models.js";
 
 /**
+ * AddConsumable activates a consumable buff (idempotent by URN — the exact same
+ * item can't stack, distinct consumables can). Returns false for an unresolvable
+ * or non-consumable item.
+ */
+export function AddConsumable(itemRef: models$0.EntityRef<model$0.Item> | null): $CancellablePromise<boolean> {
+    return $Call.ByName("bdo-viewer/internal/gear.BuilderService.AddConsumable", itemRef);
+}
+
+/**
  * EnteredBuilder Called by frontend when the user opens the builder panel
  */
 export function EnteredBuilder(): $CancellablePromise<void> {
     return $Call.ByName("bdo-viewer/internal/gear.BuilderService.EnteredBuilder");
 }
 
-export function Equip(slotId: model$0.SlotName, itemRef: models$0.EntityRef<model$0.Item> | null): $CancellablePromise<boolean> {
-    return $Call.ByName("bdo-viewer/internal/gear.BuilderService.Equip", slotId, itemRef);
+export function Equip(itemRef: models$0.EntityRef<model$0.Item> | null): $CancellablePromise<boolean> {
+    return $Call.ByName("bdo-viewer/internal/gear.BuilderService.Equip", itemRef);
 }
 
 export function GetAllClasses(): $CancellablePromise<model$0.CharacterClassTypeInfo[] | null> {
     return $Call.ByName("bdo-viewer/internal/gear.BuilderService.GetAllClasses");
+}
+
+export function GetEquipHistory(): $CancellablePromise<sources$0.ListSourceEntry[] | null> {
+    return $Call.ByName("bdo-viewer/internal/gear.BuilderService.GetEquipHistory");
 }
 
 /**
@@ -40,6 +56,13 @@ export function GetStats(): $CancellablePromise<$models.StatSheet | null> {
 
 export function LoadState(): $CancellablePromise<void> {
     return $Call.ByName("bdo-viewer/internal/gear.BuilderService.LoadState");
+}
+
+/**
+ * RemoveConsumable deactivates a consumable by its item URN.
+ */
+export function RemoveConsumable(urnStr: string): $CancellablePromise<void> {
+    return $Call.ByName("bdo-viewer/internal/gear.BuilderService.RemoveConsumable", urnStr);
 }
 
 export function SaveState(): $CancellablePromise<void> {
@@ -56,6 +79,10 @@ export function SetClass($class: model$0.CharacterClassType): $CancellablePromis
  */
 export function SetLevel(level: number): $CancellablePromise<void> {
     return $Call.ByName("bdo-viewer/internal/gear.BuilderService.SetLevel", level);
+}
+
+export function SetSlotsBlockStatus(slotsToBlock: model$0.SlotName[] | null, blocker: model$0.SlotName, block: boolean): $CancellablePromise<$models.EventSlotBlockUpdatedPayload[] | null> {
+    return $Call.ByName("bdo-viewer/internal/gear.BuilderService.SetSlotsBlockStatus", slotsToBlock, blocker, block);
 }
 
 export function ToggleMaxOnEquip(): $CancellablePromise<void> {

@@ -14,42 +14,7 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as pipeline$0 from "../../../github.com/idevelopthings/bdo-data-extractor/pipeline/models.js";
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
 import * as $models from "./models.js";
-
-/**
- * AvailableLanguages lists the localization languages present in a game install.
- */
-export function AvailableLanguages(dir: string): $CancellablePromise<string[] | null> {
-    return $Call.ByName("bdo-viewer/internal/setup.Service.AvailableLanguages", dir);
-}
-
-/**
- * AvailableRegions lists the region-variant suffixes a game install ships client
- * data for (regionclientdata_<region>_.xml), e.g. na, kr, eu — for the wizard's
- * and settings' region picker. Empty means only the base file exists.
- */
-export function AvailableRegions(dir: string): $CancellablePromise<string[] | null> {
-    return $Call.ByName("bdo-viewer/internal/setup.Service.AvailableRegions", dir);
-}
-
-/**
- * DefaultDataDir returns the directory to prefill the data-dir picker with.
- */
-export function DefaultDataDir(): $CancellablePromise<string> {
-    return $Call.ByName("bdo-viewer/internal/setup.Service.DefaultDataDir");
-}
-
-/**
- * DefaultGameDir returns the directory to prefill the game-dir picker with: the
- * previously configured install if any, else the default Steam path.
- */
-export function DefaultGameDir(): $CancellablePromise<string> {
-    return $Call.ByName("bdo-viewer/internal/setup.Service.DefaultGameDir");
-}
 
 /**
  * ForceLoadData reloads the dataset from disk even when it's already in memory — for
@@ -57,6 +22,14 @@ export function DefaultGameDir(): $CancellablePromise<string> {
  */
 export function ForceLoadData(): $CancellablePromise<void> {
     return $Call.ByName("bdo-viewer/internal/setup.Service.ForceLoadData");
+}
+
+/**
+ * GetSetupConfig returns the values to prefill the setup form with: the previously
+ * configured install if any, else the default Steam path (and likewise the data dir).
+ */
+export function GetSetupConfig(): $CancellablePromise<$models.SetupConfig> {
+    return $Call.ByName("bdo-viewer/internal/setup.Service.GetSetupConfig");
 }
 
 /**
@@ -105,8 +78,10 @@ export function Status(): $CancellablePromise<$models.SetupState> {
 }
 
 /**
- * ValidateGameDir confirms dir is a readable BDO install, returning a summary.
+ * ValidateGameInstall confirms dir is a readable BDO install and, in the same call,
+ * returns the languages and region variants present. A non-nil error means it isn't a
+ * valid install; an empty Regions means only the base (non-region) client data exists.
  */
-export function ValidateGameDir(dir: string): $CancellablePromise<pipeline$0.Meta> {
-    return $Call.ByName("bdo-viewer/internal/setup.Service.ValidateGameDir", dir);
+export function ValidateGameInstall(dir: string): $CancellablePromise<$models.InstallInfo> {
+    return $Call.ByName("bdo-viewer/internal/setup.Service.ValidateGameInstall", dir);
 }

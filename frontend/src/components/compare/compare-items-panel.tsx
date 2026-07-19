@@ -1,5 +1,4 @@
-import {IDockviewPanelProps} from "dockview-react";
-import {useEffect, useRef, useState} from "react";
+import {Fragment, useEffect, useMemo, useRef, useState} from "react";
 import {useSnapshot} from "valtio/react";
 import {Plus, X} from "lucide-react";
 import {Button} from "@/components/ui/button.tsx";
@@ -32,7 +31,7 @@ function CompareColumn({entry, onRemove, onResult}: {
 	const [caphrasStep, setCaphrasStep] = useState(0);
 
 
-	const loadedRef = useRef(false);
+	const loadedRef      = useRef(false);
 	const lastFetchedRef = useRef({level : 0, caphrasStep : 0});
 
 	useEffect(() => {
@@ -41,8 +40,8 @@ function CompareColumn({entry, onRemove, onResult}: {
 		GetEntryDetailsByURN(entry.urn).then(details => {
 			if (cancelled) return;
 
-			const it          = details?.[SourceKind.Item] as ItemModel | undefined;
-			const levels      = it?.enhancement?.levels ?? [];
+			const it           = details?.[SourceKind.Item] as ItemModel | undefined;
+			const levels       = it?.enhancement?.levels ?? [];
 			const initialLevel = levels[0]?.level ?? 0;
 
 			lastFetchedRef.current = {level : initialLevel, caphrasStep : 0};
@@ -125,66 +124,60 @@ function CompareColumn({entry, onRemove, onResult}: {
 	);
 }
 
-export function CompareItemsPanel(_props: IDockviewPanelProps) {
-	const snap                        = useSnapshot(compare);
+export function CompareItemsPanel() {
+	const {entries} = useSnapshot(compare);
+
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const [results, setResults]       = useState<Record<string, ColumnResult>>({});
 
-	const urns = snap.entries.map(e => e.urn);
+	const urns = entries.map(e => e.urn);
 
-	// Drop results for urns that were removed, so a stale column can't leak
-	// into the unioned table.
-	useEffect(() => {
-		setResults(prev => {
-			const next: Record<string, ColumnResult> = {};
-			for (const urn of urns) {
-				if (prev[urn]) {
-					next[urn] = prev[urn];
+	const {titles, statByUrnTitle, maxRawByTitle} = useMemo(() => {
+		const urns = entries.map(e => e.urn);
+
+		// Only the title-less (Card/main Effects) groups are comparable in the diff table below -
+		// the titled effect groups render as their own sections further down instead. Titles are
+		// collected in first-seen order so the table grows to fit whichever item has the rarest stats.
+		const byUrn            = new Map<string, Map<string, Stat>>();
+		const titles: string[] = [];
+		const seen             = new Set<string>();
+		for (const urn of urns) {
+			const m = new Map<string, Stat>();
+			for (const stat of flatStats(results[urn]?.stats)) {
+				if (!m.has(stat.title)) {
+					m.set(stat.title, stat);
+				}
+				if (!seen.has(stat.title)) {
+					seen.add(stat.title);
+					titles.push(stat.title);
 				}
 			}
-			return Object.keys(next).length === Object.keys(prev).length ? prev : next;
-		});
-	}, [urns.join("|")]);
+			byUrn.set(urn, m);
+		}
 
-	// Only the title-less (Card/main Effects) groups are comparable in the diff
-	// table below - the titled effect groups render as their own sections
-	// further down instead.
-	const flatStatsByUrn: Record<string, Stat[]> = {};
-	for (const urn of urns) {
-		flatStatsByUrn[urn] = flatStats(results[urn]?.stats);
-	}
-
-	// Stat titles in first-seen order across every compared item, so the table
-	// grows to fit whichever item has the most/rarest stats.
-	const titles: string[] = [];
-	const seenTitles       = new Set<string>();
-	for (const urn of urns) {
-		for (const stat of flatStatsByUrn[urn]) {
-			if (!seenTitles.has(stat.title)) {
-				seenTitles.add(stat.title);
-				titles.push(stat.title);
+		// The highlight compares Stat.Raw (the pre-format number), not the display string -
+		// "285.0m" vs "1.2b" never look equal, but that's not what we want to flag. Only the row's
+		// largest raw value(s) get highlighted, and only when the compared items actually disagree
+		// (a single distinct raw value among them isn't a "larger" one). Stats with no Raw (plain
+		// AddString) can't be compared this way and are never highlighted.
+		const maxRawByTitle = new Map<string, number>();
+		for (const title of titles) {
+			const raws: number[] = [];
+			for (const urn of urns) {
+				const raw = byUrn.get(urn)?.get(title)?.raw;
+				if (raw !== undefined) {
+					raws.push(raw);
+				}
+			}
+			if (new Set(raws).size >= 2) {
+				maxRawByTitle.set(title, Math.max(...raws));
 			}
 		}
-	}
 
-	const statFor = (urn: string, title: string) =>
-		flatStatsByUrn[urn].find(s => s.title === title);
+		return {titles, statByUrnTitle : byUrn, maxRawByTitle};
+	}, [entries, results]);
 
-	// The highlight compares Stat.Raw (the pre-format number), not the display
-	// string - "285.0m" vs "1.2b" never look equal, but that's not what we want
-	// to flag. Only the row's largest raw value(s) get highlighted, and only
-	// when the compared items actually disagree (a single distinct raw value
-	// among them isn't a "larger" one). Stats with no Raw (plain AddString)
-	// can't be compared this way and are never highlighted.
-	const maxRawFor = (title: string): number | undefined => {
-		const raws = urns
-			.map(urn => statFor(urn, title)?.raw)
-			.filter((r): r is number => r !== undefined);
-		if (new Set(raws).size < 2) {
-			return undefined;
-		}
-		return Math.max(...raws);
-	};
+	const statFor = (urn: string, title: string) => statByUrnTitle.get(urn)?.get(title);
 
 	return (
 		<div className={"relative flex flex-col h-full max-h-full overflow-hidden"}>
@@ -193,7 +186,7 @@ export function CompareItemsPanel(_props: IDockviewPanelProps) {
 				<Button variant={"outline"} size={"xs"} className={"ml-auto"} onClick={() => setPickerOpen(true)}>
 					<Plus /> Add Item
 				</Button>
-				{snap.entries.length > 0 && (
+				{entries.length > 0 && (
 					<Button variant={"ghost"} size={"xs"} onClick={() => clearCompare()}>
 						Clear All
 					</Button>
@@ -201,7 +194,7 @@ export function CompareItemsPanel(_props: IDockviewPanelProps) {
 			</div>
 
 			<div className={"flex-1 overflow-auto"}>
-				{snap.entries.length === 0 ? (
+				{entries.length === 0 ? (
 					<div className={"p-4 text-sm text-zinc-400"}>
 						No items to compare yet — click "Add Item" to get started.
 					</div>
@@ -212,7 +205,7 @@ export function CompareItemsPanel(_props: IDockviewPanelProps) {
 							style={{gridTemplateColumns : `160px repeat(${urns.length}, minmax(160px, 1fr))`}}
 						>
 							<div className={"border-b border-zinc-800"} />
-							{snap.entries.map(entry => (
+							{entries.map(entry => (
 								<CompareColumn
 									key={entry.urn}
 									entry={entry}
@@ -222,13 +215,10 @@ export function CompareItemsPanel(_props: IDockviewPanelProps) {
 							))}
 
 							{titles.map(title => {
-								const max = maxRawFor(title);
+								const max = maxRawByTitle.get(title);
 								return (
-									<>
-										<div
-											key={`label:${title}`}
-											className={"text-xs text-zinc-400 p-2 border-b border-zinc-800/50 flex items-center"}
-										>
+									<Fragment key={title}>
+										<div className={"text-xs text-zinc-400 p-2 border-b border-zinc-800/50 flex items-center"}>
 											{title}
 										</div>
 										{urns.map(urn => {
@@ -245,13 +235,13 @@ export function CompareItemsPanel(_props: IDockviewPanelProps) {
 												</div>
 											);
 										})}
-									</>
+									</Fragment>
 								);
 							})}
 						</div>
 
 						<div className={"flex flex-row gap-4 p-4"}>
-							{snap.entries.map(entry => {
+							{entries.map(entry => {
 								const groups = namedGroups(results[entry.urn]?.stats);
 								if (groups.length === 0) {
 									return <div key={entry.urn} className={"flex-1 min-w-35"} />;

@@ -1,38 +1,30 @@
 import {persist} from "valtio-persist";
+import {useSnapshot} from "valtio/react";
 
 export type GlobalState = {
-	expandedSources: Set<string>
+	expandedSources: Record<string, boolean>
 }
 
 export const {store : global} = await persist<GlobalState>({
-	expandedSources : new Set<string>()
+	expandedSources : {}
 }, "global");
 
-// Reassigns the whole Set instead of mutating it in place - a plain Set isn't
-// itself a valtio proxy, so add()/delete() on it wouldn't trigger reactivity.
-// Reassigning global.expandedSources is a normal property set on `global`
-// (which is a proxy), so that's what subscribers actually see change.
-
 export function isExpanded(id: string) {
-	return global.expandedSources.has(id);
+	return !!global.expandedSources[id];
+}
+
+export function useIsExpanded(id: string): boolean {
+	return !!useSnapshot(global).expandedSources[id];
 }
 
 export function toggleExpanded(id: string) {
-	const next = new Set(global.expandedSources);
-	if (next.has(id)) {
-		next.delete(id);
-	} else {
-		next.add(id);
-	}
-	global.expandedSources = next;
+	toggleExpansion(id, isExpanded(id));
 }
 
 export function toggleExpansion(id: string, current: boolean) {
-	const next = new Set(global.expandedSources);
 	if (current) {
-		next.delete(id);
+		delete global.expandedSources[id];
 	} else {
-		next.add(id);
+		global.expandedSources[id] = true;
 	}
-	global.expandedSources = next;
 }

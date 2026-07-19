@@ -49,7 +49,6 @@ type ItemSource struct {
 	// NPC ID -> items sold by that NPC (vendor)
 	ItemVendors map[uint32][]*model.Item `json:"-"`
 
-	ItemType  []string `json:"-"`
 	EquipType []string `json:"-"`
 
 	// MarketCategories is the central-market taxonomy (marketcategories.json),
@@ -125,7 +124,6 @@ func (s *ItemSource) Load() error {
 
 	s.ItemVendors = make(map[uint32][]*model.Item, 0)
 	s.ItemVariants = make(map[urn.URN][]*model.Item)
-	s.ItemType = make([]string, 0)
 	s.EquipType = make([]string, 0)
 	s.ByName = make(map[string]*model.Item)
 
@@ -174,9 +172,6 @@ func (s *ItemSource) Load() error {
 			s.ItemVariants[it.VariantOf.URN] = append(s.ItemVariants[it.VariantOf.URN], it)
 		}
 
-		if it.ItemType != "" && !slices.Contains(s.ItemType, it.ItemType) {
-			s.ItemType = append(s.ItemType, it.ItemType)
-		}
 		if it.EquipInfo != nil && it.EquipInfo.Type != "" && !slices.Contains(s.EquipType, it.EquipInfo.Type) {
 			s.EquipType = append(s.EquipType, it.EquipInfo.Type)
 		}
@@ -462,7 +457,7 @@ func (s *ItemSource) GetStats(ref urn.URN, level int, caphrasStep int) []stats.S
 // Category/SubCategory are handled generically by ListSourceParams itself.
 type itemFilters struct {
 	Grade     *model.ItemGrade `json:"grade,omitempty"`
-	ItemType  string           `json:"itemType,omitempty"`
+	ItemType  *model.ItemType  `json:"itemType,omitempty"`
 	EquipType string           `json:"equipType,omitempty"`
 	Effect    string           `json:"effect,omitempty"`
 	// EquipSlots matches items whose EquipInfo.Slot is one of the listed values
@@ -471,7 +466,8 @@ type itemFilters struct {
 	Class string `json:"class,omitempty"`
 	// Craftable, when true, keeps only items that have a recipe (the crafting
 	// calculator's add-item picker).
-	Craftable bool `json:"craftable,omitempty"`
+	Craftable  bool `json:"craftable,omitempty"`
+	Consumable bool `json:"consumable,omitempty"`
 }
 
 // List dispatches to the named source's provider. Returns nil for an
@@ -515,12 +511,17 @@ func (s *ItemSource) List(params sources.ListSourceParams) []sources.ListSourceE
 		if f.Grade != nil && it.Grade != *f.Grade {
 			return false
 		}
-		if f.ItemType != "" && it.ItemType != f.ItemType {
+		if f.ItemType != nil && it.ItemType != *f.ItemType {
 			return false
 		}
 		if f.EquipType != "" && (it.EquipInfo == nil || it.EquipInfo.Type != f.EquipType) {
 			return false
 		}
+
+		if f.Consumable && !it.IsConsumableLike() {
+			return false
+		}
+
 		if ef != "" && !it.HasEffect(ef) {
 			return false
 		}
@@ -596,6 +597,27 @@ func itemLess(by, dir string) func(a, b *model.Item) bool {
 			if a.Weight != b.Weight {
 				return a.Weight < b.Weight
 			}
+			return a.Name < b.Name
+		}
+	case "consumable":
+		less = func(a, b *model.Item) bool {
+			if a.Effects != nil && b.Effects != nil {
+				aKey := a.Effects.BuffCategories.SortKey()
+				aKey += int(a.Grade.Wire())
+
+				bKey := b.Effects.BuffCategories.SortKey()
+				bKey += int(b.Grade.Wire())
+
+				if aKey != bKey {
+					return aKey < bKey
+				}
+
+			}
+
+			if a.Grade != b.Grade {
+				return a.Grade < b.Grade
+			}
+
 			return a.Name < b.Name
 		}
 	default:

@@ -115,6 +115,8 @@ export class NodeGraph {
 	// wrap() assigns onto the node itself, so read the model's ref lists up front — a wrapper
 	// member sharing a field's name would otherwise clobber the field it reads from.
 	private wrapNode(node: WorldNode): WrappedWorldNode {
+		// Captured because the returned object's methods rebind `this` to the wrapped node.
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const graph       = this;
 		const productURNs = node.products?.urns ?? [];
 		const childURNs   = node.children?.urns ?? [];

@@ -14,20 +14,19 @@ import {openSourceDetails} from "@/state/panels.ts";
 import {MaybeReadonly} from "@/types.ts";
 import {cn} from "@/lib/utils.ts";
 import {PlusIcon, MinusIcon} from "lucide-react";
-import {WorldNodeKind} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 
-const NODE_LAYER_IDS = ["node-icons", "node-dots", "sub-node-icons"];
+const NODE_LAYER_IDS   = ["node-icons", "node-dots", "sub-node-icons"];
 const NPC_LAYER_ID     = "npc-markers";
 const ALL_NPC_LAYER_ID = "npc-all-markers";
 const NPC_ICON_URL     = "/nodes/npc.png";
 /** public/nodes/npc.png is 26x26. */
-const NPC_ICON_PX = 26;
+const NPC_ICON_PX      = 26;
 
 const LABEL_SIZE_PX = 13;
 
 // fontSize is the atlas rasterization size, not the drawn size: deck samples it without mipmaps,
 // so an atlas far larger than LABEL_SIZE_PX stair-steps. smoothing is the shader's edge gamma.
-const FONT_SETTINGS = {
+const FONT_SETTINGS                                   = {
 	sdf       : true,
 	fontSize  : 32,
 	buffer    : 8,
@@ -35,12 +34,12 @@ const FONT_SETTINGS = {
 	cutoff    : 0.25,
 	smoothing : 0.2,
 };
-const FONT_FAMILY = "'Segoe UI', system-ui, -apple-system, sans-serif";
+const FONT_FAMILY                                     = "'Segoe UI', system-ui, -apple-system, sans-serif";
 // Deck divides outlineWidth by fontSettings.radius; the outline needs sdf to render at all.
-const OUTLINE_WIDTH = 2;
+const OUTLINE_WIDTH                                   = 2;
 const OUTLINE_COLOR: [number, number, number, number] = [9, 12, 17, 255];
 // Deck's default character set is ASCII 32-128, which drops the accented node names (Grándiha).
-const CHARACTER_SET = "auto" as const;
+const CHARACTER_SET                                   = "auto" as const;
 
 
 // worldTileLayer builds a single-level TileLayer at pyramid level z. minZoom==maxZoom pins
@@ -98,6 +97,8 @@ function useDeckHealth(deckRef: MutableRefObject<any>, enabled: boolean, deckReb
 
 	useEffect(() => {
 		if (!enabled) {
+			// Reset of a debug-overlay poller that syncs external deck.gl state; not a render cascade.
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setHealth(null);
 
 			return;
@@ -198,6 +199,8 @@ export function GameMap() {
 		if (!focus) {
 			return;
 		}
+		// Applies a one-shot focus request from cross-component map state to deck's camera.
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setViewState({
 			target                 : [focus.target[0], focus.target[1], 0],
 			zoom                   : focus.zoom,
@@ -231,6 +234,10 @@ export function GameMap() {
 	}, []);
 
 	const layers = useMemo(() => {
+		// The computed getters read below (iconNodes, contributionNodes, visibleNpcMarkers, …) come off
+		// the snapshot; this memo's deps cover their inputs, so they can't be stale. The valtio rule
+		// can't see that — the proper fix is proxy-memoize selectors, tracked as a separate task.
+
 		const out: any[] = [];
 
 		if (map.meta) {
@@ -240,8 +247,6 @@ export function GameMap() {
 				out.push(worldTileLayer(map.meta, map.tileZ, "world-tiles"));
 			}
 		}
-
-		const filteredNodes = map.filteredNodes;
 
 		// Region overlays (under the nodes/links). Drawn straight from world-space data.
 		if (map.settings.showBounds) {
@@ -307,8 +312,8 @@ export function GameMap() {
 		const iconHoverScaleFactor = 0.5;
 		const subNodeScaleFactor   = 0.7;
 
-		const iconNodes = filteredNodes.filter(n => n.hasIcon);
-		const dotNodes  = filteredNodes.filter(n => !n.hasIcon);
+		const iconNodes = map.iconNodes;
+		const dotNodes  = map.dotNodes;
 
 		out.push(new ScatterplotLayer<WrappedWorldNode>({
 			id               : "node-dots",
@@ -398,11 +403,11 @@ export function GameMap() {
 				height : NPC_ICON_PX,
 				mask   : true,
 			}),
-			getColor      : [226, 232, 240, 210],
-			getSize       : 13,
-			sizeUnits     : "pixels",
-			sizeMinPixels : 9,
-			sizeMaxPixels : 18,
+			getColor         : [226, 232, 240, 210],
+			getSize          : 13,
+			sizeUnits        : "pixels",
+			sizeMinPixels    : 9,
+			sizeMaxPixels    : 18,
 		}));
 
 		out.push(new IconLayer<NpcMarker>({
@@ -420,10 +425,10 @@ export function GameMap() {
 				height : NPC_ICON_PX,
 				mask   : false,
 			}),
-			getSize       : 20,
-			sizeUnits     : "pixels",
-			sizeMinPixels : 14,
-			sizeMaxPixels : 28,
+			getSize          : 20,
+			sizeUnits        : "pixels",
+			sizeMinPixels    : 14,
+			sizeMaxPixels    : 28,
 		}));
 
 		// hovered node drawn on top with its _h art; not pickable so hit-testing falls through to
@@ -476,19 +481,7 @@ export function GameMap() {
 
 		out.push(new TextLayer<WrappedWorldNode>({
 			id                   : "labels",
-			data                 : !map.showLabels ? [] : filteredNodes.filter(n => {
-				if (!map.settings.showSubLabels && !n.main) {
-					return false;
-				}
-				if (map.tileZ > 6) {
-					return true;
-				}
-				if (map.tileZ >= 3) {
-					return n.kind === WorldNodeKind.WorldNodeKindCity
-						|| n.kind === WorldNodeKind.WorldNodeKindVillage;
-				}
-				return true;
-			}),
+			data                 : map.labelNodes,
 			coordinateSystem     : "cartesian",
 			getPosition          : n => n.mapPos,
 			getText              : n => n.name ?? "",
@@ -513,6 +506,10 @@ export function GameMap() {
 		}));
 
 		return out;
+
+		// The node-subset getters (icon/dot/label/contribution) are memoized off the listed inputs
+		// (map.nodes + the visibility flags/zoom), so depend on those, not the getters' identities.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [
 		deckKey,
 		map.meta, map.tileZ, map.linkSegments, map.nodes, map.hoveredNode, map.shouldShowLabels,

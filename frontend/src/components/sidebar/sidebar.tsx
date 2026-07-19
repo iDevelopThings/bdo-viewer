@@ -1,4 +1,3 @@
-import {IDockviewPanelProps} from "dockview-react";
 import {useSnapshot} from "valtio/react";
 import {sources} from "@/state/sources/sources.ts";
 import {navigate, navigation, toggleExpanded} from "@/state/navigation.tsx";
@@ -8,14 +7,14 @@ import type {DeepReadonly} from "@/types.ts";
 import {Calculator, ChevronRight, GitCompare, Map, Settings, Swords} from "lucide-react";
 import {openCompareItemsPanel, openCraftCalculatorPanel, openGearBuilderPanel, openSettingsPanel, openMapPanel} from "@/state/panels.ts";
 import {SourceNavigationNode} from "@bindings/bdo-viewer/internal/sources";
-import {useEffect, useRef} from "react";
+import {memo, useEffect, useMemo, useRef} from "react";
 
-export function Sidebar(props: IDockviewPanelProps) {
+export function Sidebar() {
 
-	const srcs = useSnapshot(sources);
-	const nav  = useSnapshot(navigation);
+	const {loading}   = useSnapshot(sources);
+	const {rootNodes} = useSnapshot(navigation);
 
-	if (srcs.loading) {
+	if (loading) {
 		return <div>Loading...</div>;
 	}
 
@@ -69,7 +68,7 @@ export function Sidebar(props: IDockviewPanelProps) {
 			<span className={"truncate"}>Settings</span>
 		</div>
 
-		{nav.rootNodes.map(node => (
+		{rootNodes.map(node => (
 			<SidebarNode key={node.id} node={node} parent={node} depth={0} />
 		))}
 	</div>;
@@ -104,14 +103,26 @@ type SidebarNodeProps = {
 }
 
 
-export function SidebarNode({node, parent, depth}: SidebarNodeProps) {
+export const SidebarNode = memo(function SidebarNode({node, parent, depth}: SidebarNodeProps) {
 	const nav = useSnapshot(navigation);
 
 	const nodeRef = useRef<HTMLDivElement>(null);
 
 	const hasChildren = !!node.children?.length;
 	const isActive    = nav.activePath === node.path;
-	const expanded    = nav.expandedPaths.includes(node.path);
+	const expanded    = !!nav.expandedPaths[node.path];
+
+	// The synthetic "All" child is otherwise a fresh object each render, which would defeat
+	// the memo on the SidebarNode that receives it.
+	const allNode = useMemo(() => ({
+		id       : node.id,
+		urn      : node.urn,
+		path     : node.path,
+		count    : node.count,
+		source   : node.source,
+		children : [],
+		title    : "All",
+	}), [node.id, node.urn, node.path, node.count, node.source]);
 
 	useEffect(() => {
 		if (isActive) {
@@ -156,15 +167,7 @@ export function SidebarNode({node, parent, depth}: SidebarNodeProps) {
 			</div>
 			{hasChildren && expanded && (
 				<div className={"flex flex-col w-full"}>
-					<SidebarNode key={`sbn:${parent.id}:${node.path}_ALL_`} node={{
-						id       : node.id,
-						urn      : node.urn,
-						path     : node.path,
-						count    : node.count,
-						source   : node.source,
-						children : [],
-						title    : "All"
-					}} depth={depth + 1} parent={parent} />
+					<SidebarNode key={`sbn:${parent.id}:${node.path}_ALL_`} node={allNode} depth={depth + 1} parent={parent} />
 
 					{node.children.map(child => (
 						<SidebarNode key={`sbnc:${node.id}:${child.id}`} node={child} parent={node} depth={depth + 1} />
@@ -173,4 +176,4 @@ export function SidebarNode({node, parent, depth}: SidebarNodeProps) {
 			)}
 		</div>
 	);
-}
+});

@@ -6,16 +6,33 @@ import {GearStatsPanel} from "@/components/gear-builder/gear-stats-panel.tsx";
 import {GearTotals} from "@/components/gear-builder/gear-totals.tsx";
 import {ItemPicker} from "@/components/gear-builder/item-picker.tsx";
 import {cn} from "@/lib/utils.ts";
-import {useGearBuilderStore, GearBuilderTabs} from "@/components/gear-builder/gear-builder-store.ts";
-import {useEffect} from "react";
-import {EnteredBuilder, ToggleMaxOnEquip} from "@bindings/bdo-viewer/internal/gear/builderservice.ts";
+import {GearBuilderTabs, gearBuilderStore, gearBuilderPersistent, useGearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
+import {useEffect, useCallback} from "react";
+import {EnteredBuilder} from "@bindings/bdo-viewer/internal/gear/builderservice.ts";
 import {GearBuilderCharacterSettings} from "@/components/gear-builder/gear-builder-character-settings.tsx";
-
+import {Tabs, TabsContent, TabsList, TabsTrigger,} from "@/components/ui/tabs";
+import {Button} from "@/components/ui/button.tsx";
+import {useSnapshot} from "valtio/react";
+import {ConsumablesRow} from "@/components/gear-builder/gear-builder-consumables.tsx";
+import {GearHistory} from "@/components/gear-builder/gear-history.tsx";
 
 function GearBuilderInner() {
-	const [builder, s] = useGearBuilderStore();
+	const {loading, selectedClass, maxOnEquip} = useSnapshot(gearBuilderStore);
+	const {tab}                                = useSnapshot(gearBuilderPersistent);
 
-	if (builder.selectedClass == null) {
+	const updateSavedTab = useCallback((t: typeof GearBuilderTabs[number]["id"]) => {
+		gearBuilderPersistent.tab = t;
+	}, []);
+
+	if (loading) {
+		return (
+			<div className={"flex h-full w-full items-center justify-center"}>
+				<span className={"text-sm text-zinc-400"}>Loading...</span>
+			</div>
+		);
+	}
+
+	if (selectedClass == null) {
 		return (
 			<div className={"max-h-full overflow-auto"}>
 				<ClassSelect />
@@ -23,81 +40,79 @@ function GearBuilderInner() {
 		);
 	}
 
-
 	return (
 		<div className={"relative flex flex-row h-full max-h-full overflow-hidden"}>
 			<div className={"flex flex-col flex-1 min-w-0 overflow-auto"}>
-				<div className={"flex flex-row items-center gap-1 px-3 pt-2"}>
-					{GearBuilderTabs.map(tab => (
-						<button
-							key={tab.id}
-							className={cn(
-								"px-3 py-1.5 text-sm rounded-md cursor-pointer transition-colors",
-								builder.tab === tab.id
-									? "bg-zinc-800 text-white"
-									: "text-zinc-400 hover:bg-zinc-900 hover:text-white",
-							)}
-							onClick={() => {
-								s.tab = tab.id;
-							}}
-						>
-							{tab.label}
-						</button>
-					))}
-					<div className={"ml-auto flex items-center gap-3"}>
-						{builder.loading && <span className={"text-xs text-zinc-400"}>Loading...</span>}
-						<button
-							type={"button"}
-							title={"Equip items at max enhancement + Caphras"}
-							onClick={() => {
-								s.selectedClass = null;
-							}}
-							className={cn(
-								"flex items-center gap-1.5 px-2 py-1 rounded-md text-xs border cursor-pointer transition-colors",
-								"border-input text-zinc-400 hover:bg-zinc-900 hover:text-white",
-							)}
-						>
-							Reset class
-						</button>
-						<button
-							type={"button"}
-							title={"Equip items at max enhancement + Caphras"}
-							onClick={() => {
-								s.maxOnEquip = !s.maxOnEquip;
-								void ToggleMaxOnEquip();
-							}}
-							className={cn(
-								"flex items-center gap-1.5 px-2 py-1 rounded-md text-xs border cursor-pointer transition-colors",
-								builder.maxOnEquip
-									? "border-primary/60 bg-primary/15 text-primary"
-									: "border-input text-zinc-400 hover:bg-zinc-900 hover:text-white",
-							)}
-						>
-							<span className={cn(
-								"h-2 w-2 rounded-full",
-								builder.maxOnEquip ? "bg-primary" : "bg-zinc-600",
-							)} />
-							Max on equip
-						</button>
-					</div>
-				</div>
 
-				<div className={"flex flex-col items-center gap-2 p-4"}>
-					{builder.tab === "combat" && (
-						<>
-							<GearRing />
+				<Tabs
+					defaultValue={tab}
+					onValueChange={updateSavedTab}
+					value={tab}
+					className={"flex-1"}
+				>
+					<div className={"flex flex-row items-center justify-between gap-1 px-3 pt-2"}>
+						<TabsList variant={"floating"} className={"flex flex-row gap-2"}>
+							{GearBuilderTabs.map(tab => (
+								<TabsTrigger key={tab.id} value={tab.id}>
+									{tab.label}
+								</TabsTrigger>
+							))}
+						</TabsList>
+
+						<div className={"ml-auto flex items-center gap-3"}>
+
+							<Button variant={"chip"} size={"xs"} onClick={() => gearBuilderStore.clearClass()}>
+								Reset class
+							</Button>
+							<Button
+								variant={"chip"}
+								size={"xs"}
+								aria-pressed={maxOnEquip}
+								onClick={() => gearBuilderStore.toggleMaxOnEquip()}
+							>
+								<span className={cn("h-2 w-2 rounded-full", maxOnEquip ? "bg-primary" : "bg-zinc-600")} />
+								Max on equip
+							</Button>
+
+						</div>
+					</div>
+
+					<TabsContent value="combat" className={"flex flex-col min-h-0"}>
+
+						<div className={"relative flex flex-row gap-2 p-4 grow"}>
+							<div className={"flex flex-row items-end"}>
+								<ConsumablesRow />
+							</div>
+							<div className={"flex flex-col items-center gap-2 grow"}>
+								<GearRing />
+								<GearTotals />
+							</div>
+
+							<div className={"absolute bottom-4 right-4 z-10 flex flex-row items-center gap-2"}>
+								<GearHistory />
+							</div>
+						</div>
+
+
+					</TabsContent>
+
+					<TabsContent value="life">
+						<div className={"flex flex-col items-center gap-2 p-4"}>
+							<LifeRing />
 							<GearTotals />
-						</>
-					)}
-					{builder.tab === "life" && (
-						<LifeRing />
-					)}
-					{builder.tab === "settings" && (
-						<GearBuilderSettings />
-					)}
-				</div>
+						</div>
+
+					</TabsContent>
+
+					<TabsContent value="settings">
+						<div className={"flex flex-col items-center gap-2 p-4"}>
+							<GearBuilderSettings />
+						</div>
+					</TabsContent>
+				</Tabs>
 
 				<GearSlotDetail />
+
 			</div>
 
 			<GearStatsPanel />
@@ -108,9 +123,11 @@ function GearBuilderInner() {
 }
 
 export function GearBuilderPanel(props: IDockviewPanelProps) {
-	const params  = props.params as { key?: string | number } | undefined;
-	const buildId = params?.key !== undefined ? String(params.key) : "default";
+	// const params  = props.params as { key?: string | number } | undefined;
+	// const buildId = params?.key !== undefined ? String(params.key) : "default";
 
+	// Triggers initial mount if we haven't already
+	const [,] = useGearBuilderStore();
 
 	useEffect(() => {
 		if (props.api.isActive) {
@@ -125,7 +142,7 @@ export function GearBuilderPanel(props: IDockviewPanelProps) {
 		return () => {
 			disposeDidActiveChange.dispose();
 		};
-	}, []);
+	}, [props.api]);
 
 	return (
 		<GearBuilderInner />
@@ -133,7 +150,6 @@ export function GearBuilderPanel(props: IDockviewPanelProps) {
 }
 
 export function GearBuilderSettings() {
-
 	return (
 		<div className={"self-start"}>
 			<GearBuilderCharacterSettings />

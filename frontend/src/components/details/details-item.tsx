@@ -1,4 +1,3 @@
-import {IDockviewPanelProps} from "dockview-react";
 import type {MaybeReadonly} from "@/types.ts";
 import {Label} from "@/components/ui/label.tsx";
 import {Slider} from "@/components/ui/slider.tsx";
@@ -8,19 +7,25 @@ import {GameText} from "@/lib/game-text.tsx";
 import {DetailsStats} from "@/components/details/stats.tsx";
 import {DetailsRecipes, DetailsUsedIn} from "@/components/details/recipes.tsx";
 import {Chip, ChipList, DetailsHeader, DetailsSection, SectionSubtitle} from "@/components/details/details-components.tsx";
-import {useDetail, useDetailItem} from "@/state/detail.tsx";
+import {useDetail, useDetailStore} from "@/state/detail.tsx";
 import {JsonInspector} from "@rexxars/react-json-inspector";
 import "@rexxars/react-json-inspector/json-inspector.css";
-import {useEffect} from "react";
+import {useEffect, useMemo} from "react";
 import {useSnapshot} from "valtio";
 import {MapPinIcon} from "lucide-react";
 import {mapState} from "@/components/world-map/map-state.ts";
 import {openMapAt, openMapAtNode, goToURN} from "@/state/panels.ts";
 import {ItemVendorData} from "@bindings/bdo-viewer/internal/catalog";
 
-export function DetailsItem(props: IDockviewPanelProps) {
-	const [details, d] = useDetail();
-	const item         = useDetailItem();
+import {isItem} from "@/state/sources/sources.ts";
+import {ItemTypeInfos} from "@/lib/types/item-types.gen.ts";
+
+export function DetailsItem() {
+	const {entry} = useSnapshot(useDetailStore());
+	const item    = isItem(entry) ? entry.value : undefined;
+	if (!item) {
+		return null;
+	}
 
 	return (
 		<div
@@ -32,7 +37,7 @@ export function DetailsItem(props: IDockviewPanelProps) {
 				grade={item.grade}
 				lines={{
 					"ID"              : item.id.toString(),
-					"Type"            : item.itemType,
+					"Type"            : ItemTypeInfos[item.itemType]?.title,
 					"Crystal Group: " : () => {
 						if (!item.crystalGroup) {
 							return undefined;
@@ -70,9 +75,13 @@ export function DetailsItem(props: IDockviewPanelProps) {
 }
 
 export function DetailsEnhancements() {
-	const [details, d] = useDetail();
+	const {level, levelName, minLevel, maxLevel, maxCaphrasStep, caphrasStep, valid} = useSnapshot(useDetailStore());
 
-	if (!d.valid)
+	const store = useDetailStore();
+
+	// const [details, d] = useDetail();
+
+	if (!valid)
 		return null;
 
 	return (
@@ -82,32 +91,32 @@ export function DetailsEnhancements() {
 				<div className="flex items-center gap-6">
 					<Label htmlFor="slider-demo-temperature">Enhance Level</Label>
 					<span className="text-sm text-muted-foreground">
-                        {d.levelName} ({d.level})
+                        {levelName} ({level})
 			        </span>
 				</div>
 				<Slider
-					value={d.level}
+					value={level}
 					onValueChange={(value) => {
-						details.level = value as number;
+						store.setLevel(value as number);
 					}}
-					min={d.minLevel}
-					max={d.maxLevel}
+					min={minLevel}
+					max={maxLevel}
 					step={1}
 				/>
 
-				{d.maxCaphrasStep > 0 && (
+				{maxCaphrasStep > 0 && (
 					<>
 						<div className="flex items-center gap-6">
 							<Label>Caphras Enhancement</Label>
-							<span className="text-sm text-muted-foreground">{d.caphrasStep}</span>
+							<span className="text-sm text-muted-foreground">{caphrasStep}</span>
 						</div>
 						<Slider
-							value={d.caphrasStep}
+							value={caphrasStep}
 							onValueChange={(value) => {
-								details.caphrasStep = value as number;
+								store.setCaphrasStep(value as number);
 							}}
 							min={0}
-							max={d.maxCaphrasStep}
+							max={maxCaphrasStep}
 							step={1}
 						/>
 					</>
@@ -119,7 +128,7 @@ export function DetailsEnhancements() {
 }
 
 export function DetailsEffects() {
-	const [details, d] = useDetail();
+	const [, d] = useDetail();
 
 	const groups = namedGroups(d.stats);
 	if (groups.length === 0) {
@@ -135,7 +144,7 @@ export function DetailsEffects() {
 
 
 export function DetailsKnowledge() {
-	const [details, d] = useDetail();
+	const [, d] = useDetail();
 
 	if (!d.knowledge || (!d.knowledge.entries?.length && !d.knowledge.themes?.length)) {
 		return null;
@@ -189,8 +198,8 @@ function vendorTowns(vendor: MaybeReadonly<ItemVendorData>): string[] {
 }
 
 export function DetailsAcquisition() {
-	const [details, d] = useDetail();
-	const map          = useSnapshot(mapState);
+	const [, d]   = useDetail();
+	const {graph} = useSnapshot(mapState);
 
 	// The gather-node chips name their nodes from the map graph, which the user may never have
 	// opened the map to load.
@@ -199,6 +208,11 @@ export function DetailsAcquisition() {
 			void mapState.ensureLoaded();
 		}
 	}, [d.gatherNodes.length]);
+
+	const gatherNodes = useMemo(
+		() => d.gatherNodes.map(urn => ({urn, node: graph.node(urn)})),
+		[d.gatherNodes, graph],
+	);
 
 	if (d.vendors?.length === 0 && d.gatheredFrom.length === 0 && d.gatherNodes.length === 0) {
 		return null;
@@ -211,25 +225,28 @@ export function DetailsAcquisition() {
 					<div className={"flex flex-col gap-2"}>
 						<p className="text-sm text-zinc-400 font-semibold mb-2 uppercase">Sold By</p>
 						<div className={"flex flex-row gap-2 flex-wrap"}>
-							{d.vendors.map((vendor, i) => (
-								<Chip
-									key={`vendor-${vendor.name}-${i}`}
-									label={(
-										<span className={"flex flex-row items-center gap-1.5"}>
-											{vendor.name}
-											{vendor.title && <span className={"text-zinc-400"}>{vendor.title}</span>}
-											{vendorTowns(vendor).length > 0 && (
-												<span className={"text-zinc-500"}>{vendorTowns(vendor).join(", ")}</span>
-											)}
-											{vendor.spawns?.length > 0 && <MapPinIcon size={11} className={"text-zinc-400"} />}
-										</span>
-									)}
-									variant={"sm"}
-									// A vendor the client's NPC table has no record of has no spawn to fly to
-									// (Item.UnresolvedVendors); the rest go to their first placement.
-									onClick={vendor.spawns?.length ? () => openMapAt(vendor.spawns![0].pos) : undefined}
-								/>
-							))}
+							{d.vendors.map((vendor, i) => {
+								const towns = vendorTowns(vendor);
+								return (
+									<Chip
+										key={`vendor-${vendor.name}-${i}`}
+										label={(
+											<span className={"flex flex-row items-center gap-1.5"}>
+												{vendor.name}
+												{vendor.title && <span className={"text-zinc-400"}>{vendor.title}</span>}
+												{towns.length > 0 && (
+													<span className={"text-zinc-500"}>{towns.join(", ")}</span>
+												)}
+												{vendor.spawns?.length > 0 && <MapPinIcon size={11} className={"text-zinc-400"} />}
+											</span>
+										)}
+										variant={"sm"}
+										// A vendor the client's NPC table has no record of has no spawn to fly to
+										// (Item.UnresolvedVendors); the rest go to their first placement.
+										onClick={vendor.spawns?.length ? () => openMapAt(vendor.spawns![0].pos) : undefined}
+									/>
+								);
+							})}
 						</div>
 					</div>
 				)}
@@ -253,9 +270,7 @@ export function DetailsAcquisition() {
 					<div className={"flex flex-col gap-2"}>
 						<p className="text-sm text-zinc-400 font-semibold mb-2 uppercase">Gather Nodes</p>
 						<div className={"flex flex-row gap-2 flex-wrap"}>
-							{d.gatherNodes.map((urn) => {
-								const node = map.graph.node(urn);
-
+							{gatherNodes.map(({urn, node}) => {
 								return (
 									<Chip
 										key={`gather-node-${urn}`}
@@ -280,7 +295,7 @@ export function DetailsAcquisition() {
 }
 
 export function DetailsJsonInspector() {
-	const [details, d] = useDetail();
+	const [, d] = useDetail();
 
 	return (
 		<DetailsSection title={"Raw Data"} borderTop>

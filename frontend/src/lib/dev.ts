@@ -4,6 +4,29 @@ import {navigation} from "@/state/navigation.tsx";
 import {list} from "@/state/list.tsx";
 import {snapshot} from "valtio/vanilla";
 import {load} from "@/state/load.ts";
+import {type GearBuilderStore, gearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
+
+export interface DevHelpers {
+	__errors: string[];
+	__app: {
+		goToURN: typeof goToURN;
+		openItemPanel: typeof openItemPanel;
+		openSourceDetails: typeof openSourceDetails;
+		wailsDebug: {
+			enabled: boolean;
+			toggle: () => void;
+		};
+		stores: {
+			sources: typeof sources;
+			navigation: typeof navigation;
+			list: typeof list;
+			load: typeof load;
+			gearBuilder: GearBuilderStore;
+		};
+		state: () => Record<string, unknown>;
+		clearErrors: () => void;
+	};
+}
 
 // installDevHelpers wires debugging conveniences onto window in DEV builds only
 // (a no-op in production): `window.__app` to navigate by URN and inspect live
@@ -28,9 +51,8 @@ export function installDevHelpers() {
 	window.addEventListener("error", e => record("error", e.error ?? e.message));
 	window.addEventListener("unhandledrejection", e => record("unhandledrejection", e.reason));
 
-	const w    = window as unknown as Record<string, unknown>;
-	w.__errors = errors;
-	w.__app    = {
+	window.__errors = errors;
+	window.__app    = {
 		// navigate / open panels by URN or entity
 		goToURN,
 		openItemPanel,
@@ -46,7 +68,7 @@ export function installDevHelpers() {
 			}
 		},
 		// live valtio stores (snapshot() them yourself for a full dump)
-		stores : {sources, navigation, list, load},
+		stores : {sources, navigation, list, load, gearBuilder: gearBuilderStore},
 		// lean, JSON-safe summary — avoids dumping the whole nav tree / entry list
 		state       : () => {
 			const nav = snapshot(navigation);

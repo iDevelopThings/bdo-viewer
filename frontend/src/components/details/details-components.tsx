@@ -1,10 +1,10 @@
 import {type MaybeReadonly} from "@/types.ts";
-import {useSnapshot} from "valtio/react";
-import {type PropsWithChildren, type ReactNode, useEffect, useState} from "react";
-import {global, toggleExpanded} from "@/state/global.tsx";
+import {type PropsWithChildren, type ReactNode} from "react";
+import {useAsync} from "react-async-hook";
+import {toggleExpanded, useIsExpanded} from "@/state/global.tsx";
 import {ChevronDownIcon, ChevronUpIcon, ChevronLeftIcon} from "lucide-react";
 import {cn} from "@/lib/utils.ts";
-import {useMiddleClickProps} from "@/utils.tsx";
+import {getMiddleClickProps} from "@/utils.tsx";
 import {Item, NPC} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {GetItemsByURN, GetNpcsByURN} from "@bindings/bdo-viewer/internal/catalog/catalog.ts";
 import {openItemPanel, goToURN} from "@/state/panels.ts";
@@ -51,10 +51,8 @@ export function DetailsHeader({title, icon, grade, lines}: DetailsHeaderProps) {
 
 export function DetailsSection({title, borderTop, children, expandable = true}: PropsWithChildren<{ title?: string, borderTop?: boolean, expandable?: boolean }>) {
 
-	const globalState = useSnapshot(global);
-
 	const id       = `detail-section:${title}`;
-	const expanded = globalState.expandedSources.has(id);
+	const expanded = useIsExpanded(id);
 
 	return (
 		<div className={cn([
@@ -112,8 +110,7 @@ export function DetailsCollapseSection(
 		contentContainerStyle?: string
 	}>) {
 
-	const globalState = useSnapshot(global);
-	const expanded    = globalState.expandedSources.has(id);
+	const expanded = useIsExpanded(id);
 
 	return (
 		<div className={cn(["flex flex-col gap-2", containerStyle])}>
@@ -140,25 +137,10 @@ export function DetailsCollapseSection(
 }
 
 export function DetailsItemList({itemUrns}: { itemUrns: string[] }) {
-	const [items, setItems]     = useState<Item[]>([]);
-	const [loading, setLoading] = useState(false);
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	const {result: items, loading} = useAsync(() => GetItemsByURN(itemUrns), [itemUrns?.join(",")]);
 
-	useEffect(() => {
-		setLoading(true);
-
-		GetItemsByURN(itemUrns)
-			.then(res => {
-				setItems(res);
-			})
-			.catch(err => {
-				console.error("Failed to load items", err);
-			})
-			.finally(() => {
-				setLoading(false);
-			});
-	}, [itemUrns]);
-
-	if (!itemUrns?.length || loading) {
+	if (!itemUrns?.length || loading || !items) {
 		return null;
 	}
 
@@ -177,7 +159,7 @@ export function ItemCardSimple({item}: { item: MaybeReadonly<Item> }) {
 			className={"flex flex-row gap-2 items-center cursor-pointer"}
 			data-testid={"item-card"}
 			data-urn={item.urn}
-			{...useMiddleClickProps(
+			{...getMiddleClickProps(
 				() => openItemPanel(item, false),
 				() => openItemPanel(item, true)
 			)}
@@ -194,25 +176,10 @@ export function ItemCardSimple({item}: { item: MaybeReadonly<Item> }) {
 
 
 export function DetailsNpcList({npcUrns}: { npcUrns: MaybeReadonly<string[]> }) {
-	const [npcs, setNpcs]       = useState<NPC[]>([]);
-	const [loading, setLoading] = useState(false);
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	const {result: npcs, loading} = useAsync(() => GetNpcsByURN([...npcUrns]), [npcUrns?.join(",")]);
 
-	useEffect(() => {
-		setLoading(true);
-
-		GetNpcsByURN([...npcUrns])
-			.then(res => {
-				setNpcs(res);
-			})
-			.catch(err => {
-				console.error("Failed to load npcs", err);
-			})
-			.finally(() => {
-				setLoading(false);
-			});
-	}, [npcUrns]);
-
-	if (!npcUrns?.length || loading) {
+	if (!npcUrns?.length || loading || !npcs) {
 		return null;
 	}
 
@@ -231,7 +198,7 @@ export function NpcCardSimple({npc}: { npc: MaybeReadonly<NPC> }) {
 			className={"flex flex-row gap-2 items-center cursor-pointer"}
 			data-testid={"npc-card"}
 			data-urn={npc.urn}
-			{...useMiddleClickProps(
+			{...getMiddleClickProps(
 				() => goToURN(NpcURN.new(npc.id), {title : npc.name}),
 				() => goToURN(NpcURN.new(npc.id), {title : npc.name, pinned : true})
 			)}
@@ -303,7 +270,7 @@ export function ChipList({section, items, onClick, variant = "sm"}: ChipListProp
 						key={t.id}
 						label={t.name}
 						variant={variant}
-						{...useMiddleClickProps(
+						{...getMiddleClickProps(
 							() => onClick?.({index : i, id : t.id!, name : t.name!}, false),
 							() => onClick?.({index : i, id : t.id!, name : t.name!}, true)
 						)}
@@ -321,7 +288,7 @@ export function ChipList({section, items, onClick, variant = "sm"}: ChipListProp
 						key={t.id}
 						label={t.name}
 						variant={variant}
-						{...useMiddleClickProps(
+						{...getMiddleClickProps(
 							() => onClick?.({index : i, id : t.id!, name : t.name!}, false),
 							() => onClick?.({index : i, id : t.id!, name : t.name!}, true)
 						)}

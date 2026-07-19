@@ -2,8 +2,8 @@ import type {Stat} from "@bindings/bdo-viewer/internal/stats";
 import {flatStats} from "@/lib/stat-groups.ts";
 import {DetailsSection} from "@/components/details/details-components.tsx";
 import {useDetail} from "@/state/detail.tsx";
-import {isItem} from "@/state/sources/item-source.tsx";
 import {useMarketPriceLabel} from "@/lib/market-data.tsx";
+import {isItem} from "@/state/sources/sources.ts";
 
 export type StatCardProps = {
 	title: string;

@@ -55,16 +55,6 @@ export const {store : list} = await persist<ListState>(
 );
 
 
-type PartialSearchParams = {
-	query?: string;
-	category?: string;
-	subcategory?: string;
-	source?: SourceKind;
-	path?: string[]
-}
-
-
-
 let debouncedSearchTimeout: any = null;
 
 export function debounceLoadList() {

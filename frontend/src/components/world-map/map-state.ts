@@ -8,6 +8,8 @@ import {ref} from "valtio/vanilla";
 import {WorldMeta, fetchWorldMeta, MAP_LABEL_MIN_Z, WORLD_LAYER, INITIAL_ZOOM, FOCUS_ZOOM, worldToTile} from "@/components/world-map/map-config.ts";
 import type {OrthographicViewState, ViewStateChangeParameters} from "@deck.gl/core";
 import {NodeGraph, WrappedWorldNode} from "@/components/world-map/world-node.ts";
+import {WorldNodeKind} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import memoizeOne from "memoize-one";
 import {MaybeReadonly} from "@/types.ts";
 
 /** Where the camera is: the world point at the centre of the viewport, and the zoom. */
@@ -54,6 +56,43 @@ const VIEW_SAVE_DELAY = 400;
 let focusId = 0;
 // The single in-flight (then settled) data load — see ensureLoaded.
 let loadOnce: Promise<void> | undefined;
+
+// A single stable empty array so "feature off" getters don't hand deck a fresh [] each render —
+// a new data reference counts as a change and makes deck rebuild the layer's GPU buffers.
+const EMPTY_NODES: WrappedWorldNode[] = [];
+const EMPTY_NPC_MARKERS: NpcMarker[]  = [];
+
+// The map's per-layer data is derived by filtering the world nodes. memoize-one keeps each result
+// referentially stable while its inputs are unchanged, so deck.gl skips regenerating GPU buffers on
+// unrelated renders (e.g. hover). graph.nodes is a ref() (stable until data reloads), so this holds
+// across both proxy and snapshot reads. The getters below compose these (icon/dot/label off filtered).
+const filteredNodesOf = memoizeOne((nodes: WrappedWorldNode[], debugOverlay: boolean, showNodes: boolean, showSubNodes: boolean) =>
+	nodes.filter(n => (n.named || debugOverlay) && (n.main ? showNodes : showSubNodes)));
+const iconNodesOf         = memoizeOne((nodes: WrappedWorldNode[]) => nodes.filter(n => n.hasIcon));
+const dotNodesOf          = memoizeOne((nodes: WrappedWorldNode[]) => nodes.filter(n => !n.hasIcon));
+const contributionNodesOf = memoizeOne((nodes: WrappedWorldNode[]) => nodes.filter(n => n.cp > 0));
+const labelNodesOf        = memoizeOne((nodes: WrappedWorldNode[], showSubLabels: boolean, tileZ: number) =>
+	nodes.filter(n => {
+		if (!showSubLabels && !n.main) {
+			return false;
+		}
+		if (tileZ > 6) {
+			return true;
+		}
+		if (tileZ >= 3) {
+			return n.kind === WorldNodeKind.WorldNodeKindCity || n.kind === WorldNodeKind.WorldNodeKindVillage;
+		}
+		return true;
+	}));
+// NPC marker layers, memoized like the node getters above. isVisible(n) is inlined as
+// n.named || debugOverlay to reuse the flag.
+const visibleNpcMarkersOf    = memoizeOne((markers: NpcMarker[], graph: NodeGraph, debugOverlay: boolean) =>
+	markers.filter(m => {
+		const node = graph.node(m.nodeURN);
+		return !node || node.named || debugOverlay;
+	}));
+const visibleAllNpcMarkersOf = memoizeOne((markers: NpcMarker[], roles: NPCSpawnType[] | null) =>
+	roles ? markers.filter(m => m.spawnTypes?.some(t => roles.includes(t))) : markers);
 
 /** World-map display settings + the settings panel's collapsed state, persisted so they
  *  survive reloads. */
@@ -382,21 +421,37 @@ export class MapController {
 		return n.named || this.settings.debugOverlay;
 	}
 
+	// isVisible(n) === n.named || debugOverlay, inlined into filteredNodesOf to reuse the flag.
 	public get filteredNodes(): WrappedWorldNode[] {
-		return this.graph.nodes.filter(n => this.isVisible(n) && (n.main ? this.settings.showNodes : this.settings.showSubNodes));
+		return filteredNodesOf(this.graph.nodes, this.settings.debugOverlay, this.settings.showNodes, this.settings.showSubNodes);
+	}
+
+	// The node layers split filteredNodes by whether a node draws an icon or a dot; memoized so
+	// their data references stay stable across renders that don't change the underlying nodes.
+	public get iconNodes(): WrappedWorldNode[] {
+		return iconNodesOf(this.filteredNodes);
+	}
+
+	public get dotNodes(): WrappedWorldNode[] {
+		return dotNodesOf(this.filteredNodes);
+	}
+
+	// Labels thin out with zoom: everything above tileZ 6, only cities/villages at 3–6, and
+	// sub-node labels only when their toggle is on.
+	public get labelNodes(): WrappedWorldNode[] {
+		if (!this.showLabels) {
+			return EMPTY_NODES;
+		}
+		return labelNodesOf(this.filteredNodes, this.settings.showSubLabels, this.tileZ);
 	}
 
 	/** NPC markers to draw, or none while the toggle is off. */
 	public get visibleNpcMarkers(): NpcMarker[] {
 		if (!this.settings.showNpcs) {
-			return [];
+			return EMPTY_NPC_MARKERS;
 		}
 
-		return this.npcMarkers.filter(m => {
-			const node = this.graph.node(m.nodeURN);
-
-			return !node || this.isVisible(node);
-		});
+		return visibleNpcMarkersOf(this.npcMarkers, this.graph, this.settings.debugOverlay);
 	}
 
 	public get showNpcs() {
@@ -411,14 +466,10 @@ export class MapController {
 	 *  role at all (spawnTypes empty) only shows when nothing is filtered out. */
 	public get visibleAllNpcMarkers(): NpcMarker[] {
 		if (!this.settings.showAllNpcs) {
-			return [];
-		}
-		const roles = this.settings.npcRoles;
-		if (!roles) {
-			return this.allNpcMarkers;
+			return EMPTY_NPC_MARKERS;
 		}
 
-		return this.allNpcMarkers.filter(m => m.spawnTypes?.some(t => roles.includes(t)));
+		return visibleAllNpcMarkersOf(this.allNpcMarkers, this.settings.npcRoles);
 	}
 
 	/** The roles the filter offers: the ones actually carried by a placed NPC (37 of the enum's 46),
@@ -460,9 +511,9 @@ export class MapController {
 	/** Nodes drawing an on-map CP badge. */
 	public get contributionNodes(): WrappedWorldNode[] {
 		if (!this.settings.showContribution) {
-			return [];
+			return EMPTY_NODES;
 		}
-		return this.filteredNodes.filter(n => n.cp > 0);
+		return contributionNodesOf(this.filteredNodes);
 	}
 
 	public get showLinks() {

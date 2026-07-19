@@ -1,6 +1,8 @@
-import {useEffect, useRef, useState} from "react";
+import {useRef, useState} from "react";
+import {useAsync} from "react-async-hook";
+import useConstant from "use-constant";
+import AwesomeDebouncePromise from "awesome-debounce-promise";
 import {X} from "lucide-react";
-import {CancelError} from "@wailsio/runtime";
 import {ListSourceEntries} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
 import {type ListSourceEntry, SourceKind} from "@bindings/bdo-viewer/internal/sources";
 import type {DeepReadonly} from "@/types.ts";
@@ -56,8 +58,6 @@ export function EntryPicker({
 	const [sortKey, setSortKey] = useState<string>(() => defaultSort ?? findSourceByType(source)?.sorts?.[0]?.key ?? "");
 	const [sortDir, setSortDir] = useState<SortDir>(defaultSortDir);
 	const [filters, setFilters] = useState<ItemFilters>({});
-	const [entries, setEntries] = useState<ListSourceEntry[]>([]);
-	const [loading, setLoading] = useState(true);
 
 	const hasActiveFilters = query.trim() !== "" || Object.values(filters).some(
 		v => Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && v !== "",
@@ -67,39 +67,24 @@ export function EntryPicker({
 	// its identity — otherwise every parent re-render would re-run the query.
 	const baseKey = JSON.stringify(baseFilters ?? {});
 
-	useEffect(() => {
-		setLoading(true);
-
-		let cancelled = false;
-		const timeout = setTimeout(() => {
-			ListSourceEntries({
-				query    : query,
-				source   : source,
-				sort     : sortKey,
-				sort_dir : sortDir,
-				filters  : {...filters, ...baseFilters},
-			}).then(
-				result => {
-					if (cancelled) return;
-					setEntries(result);
-					setLoading(false);
-				},
-				e => {
-					if (cancelled) return;
-					if (!(e instanceof CancelError)) {
-						console.error("EntryPicker: failed to load entries", e);
-					}
-					setLoading(false);
-				},
-			);
-		}, 150);
-
-		return () => {
-			cancelled = true;
-			clearTimeout(timeout);
-		};
+	// Debounce collapses keystroke bursts; useAsync ignores stale responses, so a slow
+	// earlier query can't clobber the latest results. Debounced fn is created once (useConstant).
+	const debouncedList = useConstant(() => AwesomeDebouncePromise(ListSourceEntries, 150));
+	const search = useAsync(
+		() => debouncedList({
+			query,
+			source,
+			sort     : sortKey,
+			sort_dir : sortDir,
+			filters  : {...filters, ...baseFilters},
+		}),
+		// baseKey stands in for baseFilters' content; debouncedList is stable.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [query, sortKey, sortDir, filters, source, baseKey]);
+		[query, sortKey, sortDir, filters, source, baseKey],
+	);
+
+	const entries = search.result ?? [];
+	const loading = search.loading;
 
 	return (
 		<div

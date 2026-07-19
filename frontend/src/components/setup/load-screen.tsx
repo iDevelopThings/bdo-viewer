@@ -1,31 +1,34 @@
 import {useEffect, useRef} from "react";
 import {Button} from "@/components/ui/button.tsx";
-import type {LoadView} from "@/state/load.ts";
+import {useSnapshot} from "valtio/react";
+import {load} from "@/state/load.ts";
 
 // LoadScreen covers the window while the extracted dataset is loaded into memory in
 // the background (the app opens immediately; this fills the gap until it's ready).
-export function LoadScreen({state, onRetry}: { state: LoadView; onRetry: () => void }) {
-	if (state.phase === "error") {
+export function LoadScreen({onRetry}: { onRetry: () => void }) {
+	const {phase, error, total, done, stage, log} = useSnapshot(load);
+
+	if (phase === "error") {
 		return (
 			<div className={"flex h-full w-full flex-col items-center justify-center gap-4"}>
 				<div>
 					<p className={"text-sm text-red-300 max-w-xl text-center font-bold tracking-wide uppercase"}>Failed to load data:</p>
-					<p className={"text-sm text-red-400 max-w-xl text-center"}>{state.error}</p>
+					<p className={"text-sm text-red-400 max-w-xl text-center"}>{error}</p>
 				</div>
 				<Button variant={"outline"} onClick={onRetry}>Try again</Button>
 			</div>
 		);
 	}
 
-	const hasCount = state.total > 0;
-	const fraction = hasCount ? state.done / state.total : 0;
+	const hasCount = total > 0;
+	const fraction = hasCount ? done / total : 0;
 
 	return (
 		<div className={"flex h-full w-full items-center justify-center"}>
 			<div className={"flex w-80 flex-col gap-3"}>
 				<div className={"flex items-center justify-between text-xs text-zinc-400"}>
-					<span>{state.stage || "Loading data…"}</span>
-					{hasCount && <span>{state.done.toLocaleString()} / {state.total.toLocaleString()}</span>}
+					<span>{stage || "Loading data…"}</span>
+					{hasCount && <span>{done.toLocaleString()} / {total.toLocaleString()}</span>}
 				</div>
 				<div className={"h-2 w-full overflow-hidden rounded-full bg-zinc-800"}>
 					{hasCount ? (
@@ -37,7 +40,7 @@ export function LoadScreen({state, onRetry}: { state: LoadView; onRetry: () => v
 						<div className={"h-full w-1/3 animate-pulse rounded-full bg-primary"} />
 					)}
 				</div>
-				{state.log.length > 0 && <LogTail lines={state.log} />}
+				{log.length > 0 && <LogTail lines={log} />}
 			</div>
 		</div>
 	);

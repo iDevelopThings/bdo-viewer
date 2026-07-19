@@ -7,5 +7,7 @@ export {
 };
 
 export type {
+    InstallInfo,
+    SetupConfig,
     SetupState
 } from "./models.js";

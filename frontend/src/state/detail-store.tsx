@@ -277,7 +277,7 @@ export class DetailStore {
 		return caphras.length > 0 ? Math.max(...caphras.map(c => c.level)) : 0;
 	}
 
-	private setLevel(value: number) {
+	public setLevel(value: number) {
 		this._level = Math.max(this.minLevel, Math.min(this.maxLevel, value));
 
 		if (this.enhancement) {
@@ -288,7 +288,7 @@ export class DetailStore {
 		void this.refreshStats();
 	}
 
-	private setCaphrasStep(value: number) {
+	public setCaphrasStep(value: number) {
 		this._caphrasStep = Math.max(0, Math.min(this.maxCaphrasStep, value));
 		void this.refreshStats();
 	}

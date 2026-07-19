@@ -1,14 +1,13 @@
-import {IDockviewPanelProps} from "dockview-react";
 import {useDetail} from "@/state/detail.tsx";
 import {ChipList, DetailsHeader} from "@/components/details/details-components.tsx";
-import {isNpc} from "@/state/sources/npc-source.tsx";
 import {getEntryKey} from "@/state/detail-store.tsx";
 import {DetailsKnowledge} from "@/components/details/details-item.tsx";
 import {WorldURN} from "@/lib/urn.ts";
 import {goToURN} from "@/state/panels.ts";
+import {isNpc} from "@/state/sources/sources.ts";
 
-export function NpcDetails(props: IDockviewPanelProps) {
-	const [details, d] = useDetail();
+export function NpcDetails() {
+	const [, d] = useDetail();
 
 	if (!isNpc(d.entry)) {
 		return null;

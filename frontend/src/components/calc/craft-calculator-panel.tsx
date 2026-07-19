@@ -1,11 +1,10 @@
-import {IDockviewPanelProps} from "dockview-react";
 import {useEffect, useMemo, useState} from "react";
 import {useSnapshot} from "valtio/react";
 import {Plus, X} from "lucide-react";
 import type {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import {Requirement} from "@bindings/bdo-viewer/internal/recipe";
 import {addTarget, calc, type CalcTarget, calcRuntime, recompute, removeTarget, selectRecipe, setQty, toggleCraft} from "@/state/calc/calc-store.ts";
-import {itemOf, RecipeTreeView} from "@/components/details/recipe-tree.tsx";
+import {RecipeTreeView} from "@/components/recipes/recipe-tree.tsx";
 import {EntryPicker} from "@/components/entry-list/entry-picker.tsx";
 import {fetchMarket, market, marketLoaded, marketStatus} from "@/lib/market-data.tsx";
 import {Button} from "@/components/ui/button.tsx";
@@ -15,6 +14,7 @@ import {moneyLabel} from "@/utils.tsx";
 import {openItemPanel} from "@/state/panels.ts";
 import type {DeepReadonly} from "@/types.ts";
 import {tryGetGradeColor} from "@/lib/types/item-grades.ts";
+import {itemOf} from "@/components/recipes/recipe-tree-context.tsx";
 
 // CraftCalculatorPanel: a craft list of target items, each shown as a self-
 // contained block — title + quantity, its (mastery-yield-scaled) recipe tree, and
@@ -23,10 +23,10 @@ import {tryGetGradeColor} from "@/lib/types/item-grades.ts";
 
 type ItemMap = Record<string, ListSourceEntry | null | undefined>;
 
-export function CraftCalculatorPanel(_props: IDockviewPanelProps) {
-	const snap       = useSnapshot(calc);
-	const runtime    = useSnapshot(calcRuntime);
-	const marketSnap = useSnapshot(market);
+export function CraftCalculatorPanel() {
+	const {targets}             = useSnapshot(calc);
+	const {plans, bom}          = useSnapshot(calcRuntime);
+	const {loading}             = useSnapshot(market);
 	const [picking, setPicking] = useState(false);
 
 	// Recompute on mount so a mastery change made in Settings is reflected.
@@ -35,16 +35,17 @@ export function CraftCalculatorPanel(_props: IDockviewPanelProps) {
 	}, []);
 
 	// Merge every target plan's item map — covers the craft-list roots and every
-	// base material (they all appear as nodes in some plan's tree).
+	// base material (they all appear as nodes in some plan's tree). Read from the snapshot
+	// and key on plans so it fills in once the async recompute populates them.
 	const items: ItemMap = useMemo(() => {
 		const m: ItemMap = {};
-		for (const plan of runtime.plans.values()) {
+		for (const plan of plans.values()) {
 			for (const [urn, it] of Object.entries(plan.tree.items ?? {})) {
-				if (it) m[urn] = it;
+				if (it) m[urn] = it as ListSourceEntry;
 			}
 		}
 		return m;
-	}, [runtime.plans]);
+	}, [plans]);
 
 	return (
 		<div className={"relative flex flex-col h-full max-h-full overflow-hidden"} data-panel={"calc"}>
@@ -53,8 +54,8 @@ export function CraftCalculatorPanel(_props: IDockviewPanelProps) {
 				{marketLoaded() ? (
 					<span className={"text-xs text-zinc-500"}>{marketStatus()}</span>
 				) : (
-					<Button size={"sm"} variant={"outline"} disabled={marketSnap.loading} onClick={() => void fetchMarket()}>
-						{marketSnap.loading ? "Loading…" : "Load Prices"}
+					<Button size={"sm"} variant={"outline"} disabled={loading} onClick={() => void fetchMarket()}>
+						{loading ? "Loading…" : "Load Prices"}
 					</Button>
 				)}
 				<Button size={"sm"} onClick={() => setPicking(true)}>
@@ -63,18 +64,18 @@ export function CraftCalculatorPanel(_props: IDockviewPanelProps) {
 			</div>
 
 			<div className={"flex-1 overflow-auto flex flex-col"}>
-				{snap.targets.length === 0 ? (
+				{targets.length === 0 ? (
 					<div className={"p-6 text-sm text-zinc-400"}>
 						Add items to combine their recipes into one shopping list.
 					</div>
 				) : (
 					<>
-						{snap.targets.map(t => (
+						{targets.map(t => (
 							<TargetBlock key={t.urn} target={t} items={items} />
 						))}
-						{snap.targets.length > 1 && (
+						{targets.length > 1 && (
 							<div className={"flex flex-col gap-2 p-3 bg-zinc-900/40"}>
-								<MaterialsList title={`Combined Shopping List (${runtime.bom.length})`} base={runtime.bom} items={items} strong />
+								<MaterialsList title={`Combined Shopping List (${bom.length})`} base={bom} items={items} strong />
 							</div>
 						)}
 					</>
@@ -85,7 +86,7 @@ export function CraftCalculatorPanel(_props: IDockviewPanelProps) {
 				<EntryPicker
 					title={"Add item to craft"}
 					fields={["grade", "effect"]}
-					baseFilters={{craftable: true}}
+					baseFilters={{craftable : true}}
 					onPick={entry => {
 						addTarget(entry.urn);
 						setPicking(false);
@@ -101,8 +102,8 @@ export function CraftCalculatorPanel(_props: IDockviewPanelProps) {
 // title + quantity, the recipe tree (process + "N ways" + ingredients), then the
 // base materials for just this target.
 function TargetBlock({target, items}: { target: DeepReadonly<CalcTarget>, items: ItemMap }) {
-	const runtime = useSnapshot(calcRuntime);
-	const plan    = runtime.plans.get(target.urn);
+	const {plans} = useSnapshot(calcRuntime);
+	const plan    = plans.get(target.urn);
 	const item    = itemOf(items, target.urn);
 
 	return (
@@ -115,8 +116,8 @@ function TargetBlock({target, items}: { target: DeepReadonly<CalcTarget>, items:
 				<ItemIcon urn={target.urn} className={"shrink-0"} imageClass={"w-6 h-6"} />
 				<span
 					className={"flex-1 min-w-0 truncate text-sm font-semibold cursor-pointer hover:underline"}
-					style={{color: tryGetGradeColor(item?.extra?.grade)?.toString()}}
-					onClick={() => item && openItemPanel({id: item.id, name: item.title}, false)}
+					style={{color : tryGetGradeColor(item?.extra?.grade)?.toString()}}
+					onClick={() => item && openItemPanel({id : item.id, name : item.title}, false)}
 				>
 					{item?.title ?? target.urn}
 				</span>
@@ -149,19 +150,20 @@ function TargetBlock({target, items}: { target: DeepReadonly<CalcTarget>, items:
 }
 
 // MaterialsList renders base-material rows with per-item and total market cost.
-// It reads market prices itself so it re-renders when prices load.
 function MaterialsList({title, base, items, strong}: {
 	title: string,
 	base: DeepReadonly<Requirement[]>,
 	items: ItemMap,
 	strong?: boolean,
 }) {
+
 	const marketSnap = useSnapshot(market);
 
 	const priced = base.map(req => {
 		const entry = marketSnap.byURN.get(req.item);
-		return {req, cost: entry ? entry.price * req.count : undefined};
+		return {req, cost : entry ? entry.price * req.count : undefined};
 	});
+
 	const total = priced.reduce((sum, p) => sum + (p.cost ?? 0), 0);
 
 	return (
@@ -196,10 +198,10 @@ function ShoppingRow({urn, count, cost, item}: {
 			className={"flex flex-row items-center gap-2 py-1 cursor-pointer hover:bg-zinc-800/50 rounded-sm px-1"}
 			data-testid={"shopping-row"}
 			data-urn={urn}
-			onClick={() => item && openItemPanel({id: item.id, name: item.title}, false)}
+			onClick={() => item && openItemPanel({id : item.id, name : item.title}, false)}
 		>
 			<ItemIcon urn={urn} className={"shrink-0"} imageClass={"w-5 h-5"} />
-			<span className={"flex-1 min-w-0 truncate text-sm"} style={{color: tryGetGradeColor(item?.extra?.grade)?.toString()}}>
+			<span className={"flex-1 min-w-0 truncate text-sm"} style={{color : tryGetGradeColor(item?.extra?.grade)?.toString()}}>
 				{item?.title ?? urn}
 			</span>
 			<span className={"text-sm text-zinc-400 shrink-0"}>×{count}</span>

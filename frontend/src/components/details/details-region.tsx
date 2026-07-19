@@ -1,12 +1,11 @@
-import {IDockviewPanelProps} from "dockview-react";
 import {useDetail} from "@/state/detail.tsx";
 import {DetailsHeader, DetailsNpcList, DetailsSection} from "@/components/details/details-components.tsx";
 import {getEntryKey} from "@/state/detail-store.tsx";
 import {isRegion} from "@/state/sources/sources.ts";
 import {NpcURN} from "@/lib/urn.ts";
 
-export function RegionDetails(props: IDockviewPanelProps) {
-	const [details, d] = useDetail();
+export function RegionDetails() {
+	const [, d] = useDetail();
 
 	if (!isRegion(d.entry)) {
 		return null;

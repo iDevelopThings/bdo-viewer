@@ -1,10 +1,10 @@
 import {GetAllSources, GetNavigationTree} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
 import {type Source, SourceKind, UntypedSourceEntry} from "@bindings/bdo-viewer/internal/sources";
-import {Character, KnowledgeEntry, WorldRegion, Zone} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import {Character, WorldRegion, KnowledgeEntry, KnowledgeTheme, type Item, Zone, NPC} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {buildNavigationTree} from "@/state/navigation.tsx";
 import {persist} from "valtio-persist";
-import type {MaybeReadonly} from "@/types.ts";
-import {createURNHandler, parseURN, type URNHandler} from "@/lib/urn.ts";
+import type {MaybeReadonly, DeepReadonly} from "@/types.ts";
+import {createURNHandler, parseURN, type URNHandler, KnowledgeURN} from "@/lib/urn.ts";
 import type {SortOption} from "@/components/entry-list/entry-list.tsx";
 
 
@@ -54,7 +54,7 @@ export function wrapSource(source: Source | undefined): WrappedSource | undefine
 		return (source as any)[wrappedSourceSymbol];
 	}
 
-	const urnDefinition = sourceURNDefinition(source);
+	const urnDefinition          = sourceURNDefinition(source);
 	const wrapped: WrappedSource = {
 		...source,
 		[wrappedSourceSymbol] : true,
@@ -164,4 +164,53 @@ export function isRegion(entry: MaybeReadonly<UntypedSourceEntry> | undefined): 
 
 export function isCharacter(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.Character, value: Character } {
 	return entry?.type === SourceKind.Character;
+}
+
+export function isKnowledge(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.Knowledge, value: KnowledgeEntry } {
+	return isKnowledgeEntry(entry);
+}
+
+export function isKnowledgeEntry(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.Knowledge, value: KnowledgeEntry } {
+	if (entry === undefined) {
+		return false;
+	}
+	if (typeof entry.value !== "object" || entry.value === null) {
+		return false;
+	}
+	return entry.type === SourceKind.Knowledge && (
+		KnowledgeURN.match(entry.urn, "entry") || "description" in entry.value
+	);
+}
+
+export function isKnowledgeTheme(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.Knowledge, value: KnowledgeTheme } {
+	if (entry === undefined) {
+		return false;
+	}
+	if (typeof entry.value !== "object" || entry.value === null) {
+		return false;
+	}
+	return entry.type === SourceKind.Knowledge && (
+		KnowledgeURN.match(entry.urn, "theme") || ("key" in entry.value && !("description" in entry.value))
+	);
+}
+
+export function isItem(entry: UntypedSourceEntry | DeepReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.Item, value: Item } {
+	if (entry === undefined) {
+		return false;
+	}
+	return entry.type === "item";
+}
+
+export function isGrindSpot(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.GrindSpot, value: Zone } {
+	if (entry === undefined) {
+		return false;
+	}
+	return entry.type === SourceKind.GrindSpot;
+}
+
+export function isNpc(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.Npc, value: NPC } {
+	if (entry === undefined) {
+		return false;
+	}
+	return entry.type === SourceKind.Npc;
 }

@@ -1,4 +1,3 @@
-import {IDockviewPanelProps} from "dockview-react";
 import {useEffect, useState} from "react";
 import {useSnapshot} from "valtio/react";
 import {GetMarketRegion, GetPlayer, SetMarketRegion, SetPlayerMastery} from "@bindings/bdo-viewer/internal/config/config.ts";
@@ -15,7 +14,7 @@ const REGIONS = ["NA", "EU", "SEA", "MENA", "KR", "RU", "JP", "TH", "TW", "SA", 
 
 // SettingsPanel edits the global player settings the crafting calculator reads:
 // life-skill mastery (drives yield) and the central-market region + price load.
-export function SettingsPanel(_props: IDockviewPanelProps) {
+export function SettingsPanel() {
 	const [cooking, setCooking]       = useState(0);
 	const [alchemy, setAlchemy]       = useState(0);
 	const [processing, setProcessing] = useState(0);

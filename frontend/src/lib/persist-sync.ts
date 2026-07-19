@@ -1,5 +1,5 @@
 import {proxy, type Snapshot, snapshot, subscribe} from "valtio";
-import {LocalStorageStrategy, type MergeStrategy, type PersistResult, type SerializationStrategy, type StorageStrategy} from "valtio-persist";
+import {LocalStorageStrategy, type MergeStrategy, type SerializationStrategy, type StorageStrategy} from "valtio-persist";
 import {type SerializedSpecialType, type TypeMarker} from "valtio-persist";
 import {proxyMap, proxySet} from "valtio/utils";
 
@@ -407,6 +407,9 @@ export interface PersistResultSync<T extends object> {
 	persist: () => void;
 	restore: () => boolean;
 	clear: () => void;
+	// Stop persisting this store. Needed for short-lived stores (e.g. a per-entry detail store)
+	// so their subscription doesn't leak; long-lived singletons can ignore it.
+	dispose: () => void;
 }
 
 function debounce(func: () => void, wait: number) {
@@ -546,7 +549,7 @@ export function persistSync<T extends object>(
 	const debouncedPersist = debounce(persistData, debounceTime);
 
 	// Subscribe to changes
-	subscribe(store, () => {
+	const unsubscribe = subscribe(store, () => {
 		const currentState = snapshot(store);
 
 		if (shouldPersist(previousState, currentState)) {
@@ -560,6 +563,7 @@ export function persistSync<T extends object>(
 	// Return the result
 	return {
 		store,
+		dispose : unsubscribe,
 		persist : persistData,
 		clear   : () => {
 			storage.remove(key);

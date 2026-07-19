@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Combobox as ComboboxPrimitive } from "@base-ui/react"
+import { useVirtualizer } from "@tanstack/react-virtual"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -137,13 +138,13 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
   )
 }
 
-function ComboboxItem({
-  className,
-  children,
-  ...props
-}: ComboboxPrimitive.Item.Props) {
+const ComboboxItem = React.forwardRef<
+  HTMLDivElement,
+  ComboboxPrimitive.Item.Props
+>(({ className, children, ...props }, ref) => {
   return (
     <ComboboxPrimitive.Item
+      ref={ref}
       data-slot="combobox-item"
       className={cn(
         "relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -160,6 +161,134 @@ function ComboboxItem({
         <CheckIcon className="pointer-events-none" />
       </ComboboxPrimitive.ItemIndicator>
     </ComboboxPrimitive.Item>
+  )
+})
+ComboboxItem.displayName = "ComboboxItem"
+
+type ComboboxVirtualizer = ReturnType<
+  typeof useVirtualizer<HTMLDivElement, Element>
+>
+
+// ComboboxVirtualList renders the popup list virtualized via @tanstack/react-virtual:
+// only the visible rows mount, so lists of thousands stay cheap. It reads the combobox's
+// filtered items (server-side filtering still applies via filter={null} on the Root) and
+// renders each through `children`. Pair it with `virtualized` + an `onItemHighlighted`
+// scroll handler on the Root, sharing `virtualizerRef` so keyboard nav can scroll rows in.
+function ComboboxVirtualList<T>({
+  open,
+  virtualizerRef,
+  scrollOffsetRef,
+  estimateSize = 36,
+  overscan = 20,
+  className,
+  children,
+}: {
+  open: boolean
+  virtualizerRef: React.RefObject<ComboboxVirtualizer | null>
+  // Caller-owned so it survives the popup unmounting on close; the list restores it on re-mount.
+  scrollOffsetRef?: React.MutableRefObject<number>
+  estimateSize?: number
+  overscan?: number
+  className?: string
+  children: (item: T, index: number) => React.ReactNode
+}) {
+  const items = ComboboxPrimitive.useFilteredItems<T>()
+  const scrollRef = React.useRef<HTMLDivElement | null>(null)
+
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useVirtualizer({
+    enabled: open,
+    count: items.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => estimateSize,
+    overscan,
+    paddingStart: 4,
+    paddingEnd: 4,
+    scrollPaddingStart: 4,
+    scrollPaddingEnd: 4,
+    initialOffset: scrollOffsetRef?.current ?? 0,
+  })
+
+  React.useImperativeHandle(virtualizerRef, () => virtualizer, [virtualizer])
+
+  const setScrollRef = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      scrollRef.current = element
+      if (element) {
+        // Measure so rows size correctly, then restore the caller's saved scroll
+        // position (the popup re-mounts on each open, resetting the DOM scrollTop).
+        virtualizer.measure()
+        const saved = scrollOffsetRef?.current ?? 0
+        if (saved > 0) {
+          element.scrollTop = saved
+        }
+      }
+    },
+    [virtualizer, scrollOffsetRef]
+  )
+
+  const totalSize = virtualizer.getTotalSize()
+
+  return (
+    <ComboboxPrimitive.List data-slot="combobox-list" className="p-0">
+      {items.length > 0 && (
+        <div
+          role="presentation"
+          ref={setScrollRef}
+          onScroll={
+            scrollOffsetRef
+              ? (event) => {
+                  // Closing collapses the virtualized content and snaps scrollTop to 0;
+                  // ignore that so the last real position survives to the next open.
+                  if (!open) {
+                    return
+                  }
+                  scrollOffsetRef.current = event.currentTarget.scrollTop
+                }
+              : undefined
+          }
+          className={cn(
+            "h-[min(--spacing(72),var(--total-size))] max-h-(--available-height) overflow-y-auto overscroll-contain scroll-py-1",
+            className
+          )}
+          style={{ "--total-size": `${totalSize}px` } as React.CSSProperties}
+        >
+          <div
+            role="presentation"
+            className="relative w-full"
+            style={{ height: totalSize }}
+          >
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const item = items[virtualItem.index]
+              if (item == null) {
+                return null
+              }
+              return (
+                <ComboboxItem
+                  key={virtualItem.key}
+                  value={item}
+                  index={virtualItem.index}
+                  data-index={virtualItem.index}
+                  ref={virtualizer.measureElement}
+                  aria-setsize={items.length}
+                  aria-posinset={virtualItem.index + 1}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: virtualItem.size,
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
+                  {children(item, virtualItem.index)}
+                </ComboboxItem>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </ComboboxPrimitive.List>
   )
 }
 
@@ -288,6 +417,7 @@ export {
   ComboboxInput,
   ComboboxContent,
   ComboboxList,
+  ComboboxVirtualList,
   ComboboxItem,
   ComboboxGroup,
   ComboboxLabel,
@@ -299,5 +429,8 @@ export {
   ComboboxChipsInput,
   ComboboxTrigger,
   ComboboxValue,
+  // eslint-disable-next-line react-refresh/only-export-components
   useComboboxAnchor,
 }
+
+export type { ComboboxVirtualizer }

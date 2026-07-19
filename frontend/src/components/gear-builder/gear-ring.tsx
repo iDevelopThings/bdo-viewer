@@ -1,7 +1,8 @@
 import {GearSlotButton, GearSlotButtonVariant} from "@/components/gear-builder/gear-slot-button.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {SlotName} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
-import {useGearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
+import {gearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
+import {useSnapshot} from "valtio/react";
 
 // Positions slots evenly on an ellipse inside a relative container. Null
 // entries hold their position but render nothing (spacers).
@@ -90,10 +91,11 @@ const SLOT_STEP = (2 * Math.PI) / OUTER_RING.length;
 
 export function GearRing() {
 
-	const [builder, store] = useGearBuilderStore();
+	const {selectedClass} = useSnapshot(gearBuilderStore);
 
 	return (
-		<div className={"flex flex-col items-center gap-3 w-full"}>
+		<div className={"flex flex-col items-center gap-3 w-full relative"}>
+
 			<div className={"relative w-full max-w-140 aspect-square"}>
 				<div className={"absolute inset-[12%] rounded-full border border-zinc-800/80"} />
 
@@ -104,13 +106,13 @@ export function GearRing() {
 					<div className={"pointer-events-auto"}>
 						<GearSlotButton slotId={SlotName.SlotNameAlchemyStone} size={"xs"} />
 					</div>
-					<span className={"text-base font-semibold text-zinc-200"}>{builder.selectedClass?.Title}</span>
+					<span className={"text-base font-semibold text-zinc-200"}>{selectedClass?.Title}</span>
 					<Button
 						variant={"ghost"}
 						size={"xs"}
 						className={"pointer-events-auto text-zinc-400"}
 						onClick={() => {
-							store.selectedClass = null;
+							gearBuilderStore.selectedClass = null;
 						}}
 					>
 						Change Class

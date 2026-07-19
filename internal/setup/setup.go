@@ -67,35 +67,57 @@ func (s *Service) Status() SetupState {
 	return SetupState{NeedsSetup: firstRun || reason != "", FirstRun: firstRun, Reason: reason}
 }
 
-// DefaultGameDir returns the directory to prefill the game-dir picker with: the
-// previously configured install if any, else the default Steam path.
-func (s *Service) DefaultGameDir() string {
+// SetupConfig is the frontend-facing snapshot used to prefill the setup form: the
+// configured install/data dirs (falling back to the default Steam path / data dir on
+// first run) and the persisted region variant. Both the wizard and settings seed from it.
+type SetupConfig struct {
+	DefaultDir string `json:"defaultDir"`
+	GameDir    string `json:"gameDir"`
+	DataDir    string `json:"dataDir"`
+	Region     string `json:"region"`
+}
+
+// GetSetupConfig returns the values to prefill the setup form with: the previously
+// configured install if any, else the default Steam path (and likewise the data dir).
+func (s *Service) GetSetupConfig() SetupConfig {
+	gameDir := pipeline.DefaultGameDir
 	if config.Global != nil && config.Global.GameDir != "" {
-		return config.Global.GameDir
+		gameDir = config.Global.GameDir
 	}
-	return pipeline.DefaultGameDir
+	return SetupConfig{
+		DefaultDir: pipeline.DefaultGameDir,
+		GameDir:    gameDir,
+		DataDir:    config.GetExtractedDataDir(),
+		Region:     config.Global.GetDataRegion(),
+	}
 }
 
-// DefaultDataDir returns the directory to prefill the data-dir picker with.
-func (s *Service) DefaultDataDir() string {
-	return config.GetExtractedDataDir()
+// InstallInfo is everything the setup form needs to validate a candidate game dir in
+// one round-trip: the install summary (present == valid) plus the languages and region
+// variants (regionclientdata_<region>_.xml, e.g. na, kr, eu) that install ships.
+type InstallInfo struct {
+	Meta      pipeline.Meta `json:"meta"`
+	Languages []string      `json:"languages"`
+	Regions   []string      `json:"regions"`
 }
 
-// ValidateGameDir confirms dir is a readable BDO install, returning a summary.
-func (s *Service) ValidateGameDir(dir string) (pipeline.Meta, error) {
-	return pipeline.ValidateGameDir(dir)
-}
-
-// AvailableLanguages lists the localization languages present in a game install.
-func (s *Service) AvailableLanguages(dir string) ([]string, error) {
-	return pipeline.AvailableLanguages(dir)
-}
-
-// AvailableRegions lists the region-variant suffixes a game install ships client
-// data for (regionclientdata_<region>_.xml), e.g. na, kr, eu — for the wizard's
-// and settings' region picker. Empty means only the base file exists.
-func (s *Service) AvailableRegions(dir string) ([]string, error) {
-	return pipeline.AvailableRegions(dir)
+// ValidateGameInstall confirms dir is a readable BDO install and, in the same call,
+// returns the languages and region variants present. A non-nil error means it isn't a
+// valid install; an empty Regions means only the base (non-region) client data exists.
+func (s *Service) ValidateGameInstall(dir string) (InstallInfo, error) {
+	meta, err := pipeline.ValidateGameDir(dir)
+	if err != nil {
+		return InstallInfo{}, err
+	}
+	langs, err := pipeline.AvailableLanguages(dir)
+	if err != nil {
+		return InstallInfo{}, err
+	}
+	regions, err := pipeline.AvailableRegions(dir)
+	if err != nil {
+		return InstallInfo{}, err
+	}
+	return InstallInfo{Meta: meta, Languages: langs, Regions: regions}, nil
 }
 
 // PickDirectory opens the native directory picker and returns the chosen path

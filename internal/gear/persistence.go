@@ -5,6 +5,7 @@ import (
 
 	"bdo-viewer/internal/config"
 	"github.com/idevelopthings/bdo-data-extractor/src/model"
+	"github.com/idevelopthings/bdo-data-extractor/src/models"
 )
 
 const (
@@ -16,12 +17,14 @@ type PersistedState struct {
 	BuildName string `json:"buildName"`
 	Version   int    `json:"version"`
 
-	GearMastery MasteryConfigSet                `json:"gearMastery"`
-	Level       int                             `json:"level"`
-	Class       model.CharacterClassType        `json:"class"`
-	Slots       [model.SlotNameMAX]BaseSlotData `json:"slots"`
+	GearMastery MasteryConfigSet                 `json:"gearMastery"`
+	Level       int                              `json:"level"`
+	Consumables models.EntityRefList[model.Item] `json:"consumables"`
+	Class       model.CharacterClassType         `json:"class"`
+	Slots       [model.SlotNameMAX]BaseSlotData  `json:"slots"`
 
-	MaxOnEquip bool `json:"maxOnEquip"` // If true, we automatically set the max enhancement level when equipping an item
+	MaxOnEquip   bool                           `json:"maxOnEquip"`   // If true, we automatically set the max enhancement level when equipping an item
+	EquipHistory []models.EntityRef[model.Item] `json:"equipHistory"` // The history of equipped items
 }
 
 func (s *BuilderService) update(f func()) {
@@ -45,13 +48,15 @@ func (s *BuilderService) SaveState() {
 	s.mu.Lock()
 
 	state := PersistedState{
-		BuildName:   "My Build",
-		Version:     PersistedStateVersion,
-		GearMastery: s.GearMastery,
-		Level:       s.Level,
-		Class:       s.Class,
-		Slots:       [model.SlotNameMAX]BaseSlotData{},
-		MaxOnEquip:  s.MaxOnEquip,
+		BuildName:    "My Build",
+		Version:      PersistedStateVersion,
+		GearMastery:  s.GearMastery,
+		Level:        s.Level,
+		Consumables:  s.Consumables,
+		Class:        s.Class,
+		Slots:        [model.SlotNameMAX]BaseSlotData{},
+		MaxOnEquip:   s.MaxOnEquip,
+		EquipHistory: s.EquipHistory,
 	}
 
 	for i, slot := range s.Slots {
@@ -95,6 +100,8 @@ func (s *BuilderService) LoadState() {
 		if state.Level > 0 { // keep the default for pre-level saves
 			s.Level = state.Level
 		}
+		s.Consumables = state.Consumables
+		s.EquipHistory = state.EquipHistory
 
 		for i, slotData := range state.Slots {
 			slot := s.Slots[i]

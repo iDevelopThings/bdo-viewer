@@ -293,7 +293,7 @@ export const CharacterClassTypeValues: readonly CharacterClassType[] = [
   CharacterClassTypes.Reserved36,
 ] as const;
 
-export const CharacterClassTypeByName: Record<string, CharacterClassType> = {
+export const CharacterClassTypeByName = {
   "Unknown": CharacterClassTypes.Unknown,
   "Warrior": CharacterClassTypes.Warrior,
   "Hashashin": CharacterClassTypes.Hashashin,
@@ -333,6 +333,8 @@ export const CharacterClassTypeByName: Record<string, CharacterClassType> = {
   "Reserved35": CharacterClassTypes.Reserved35,
   "Reserved36": CharacterClassTypes.Reserved36,
 } as const;
+
+export type CharacterClassTypeNames = keyof (typeof CharacterClassTypeByName)
 
 const characterClassTypeByLowerName: Record<string, CharacterClassType> = {};
 for (const [k, v] of Object.entries(CharacterClassTypeByName)) {

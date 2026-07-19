@@ -11,7 +11,7 @@ import {HistoryPanel} from "@/components/history/history-panel.tsx";
 
 export function AppRoot() {
 	const [status, setStatus] = useState<SetupState | null>(null);
-	const loadState           = useSnapshot(load);
+	const {phase}             = useSnapshot(load);
 
 	useEffect(() => {
 		void Status().then(setStatus);
@@ -43,8 +43,8 @@ export function AppRoot() {
 				onComplete={() => setStatus({...status, needsSetup : false})}
 			/>
 		);
-	} else if (loadState.phase !== "ready") {
-		body = <LoadScreen state={loadState} onRetry={() => load.reload()} />;
+	} else if (phase !== "ready") {
+		body = <LoadScreen onRetry={() => load.reload()} />;
 	} else {
 		body = (
 			<>

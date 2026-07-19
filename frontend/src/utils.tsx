@@ -96,7 +96,7 @@ export function moneyLabel(value: number | undefined): string | undefined {
 	}
 }
 
-export function useMiddleClickProps(
+export function getMiddleClickProps(
 	handleAction: () => void,
 	handleRegularClick: () => void
 ) {

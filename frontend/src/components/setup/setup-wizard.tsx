@@ -1,20 +1,9 @@
-import {useEffect, useState} from "react";
 import {RefreshCw} from "lucide-react";
 import {Button} from "@/components/ui/button.tsx";
-import {Label} from "@/components/ui/label.tsx";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
-import {DirPicker} from "./dir-picker.tsx";
 import {ExtractionProgress} from "./extraction-progress.tsx";
+import {GameInstallFields} from "./game-install-fields.tsx";
+import {useGameInstall} from "@/state/game-install.ts";
 import {useExtraction} from "@/state/extraction.ts";
-import {
-	AvailableLanguages,
-	AvailableRegions,
-	DefaultDataDir,
-	DefaultGameDir,
-	ValidateGameDir,
-} from "@bindings/bdo-viewer/internal/setup/service.ts";
-import {GetDataRegion} from "@bindings/bdo-viewer/internal/config/config.ts";
-import type {Meta} from "@bindings/github.com/idevelopthings/bdo-data-extractor/pipeline/models.ts";
 
 // reasonMessage turns the backend's stale-data reason into user-facing copy.
 function reasonMessage(reason: string): string {
@@ -31,69 +20,8 @@ function reasonMessage(reason: string): string {
 // user points at their BDO install, and the re-extraction flow (reason set) shown
 // after an update or game patch, where it makes clear why the data must be refreshed.
 export function SetupWizard({onComplete, firstRun, reason}: {onComplete: () => void; firstRun: boolean; reason: string}) {
-	const [gameDir, setGameDir]   = useState("");
-	const [dataDir, setDataDir]   = useState("");
-	const [lang, setLang]         = useState("en");
-	const [region, setRegion]     = useState("");
-	const [regions, setRegions]   = useState<string[]>([]);
-	const [meta, setMeta]         = useState<Meta | null>(null);
-	const [languages, setLanguages] = useState<string[]>([]);
-	const [validating, setValidating] = useState(false);
-	const [validateError, setValidateError] = useState<string | null>(null);
-
+	const install = useGameInstall();
 	const {state, run, reset, fraction} = useExtraction(onComplete);
-
-	useEffect(() => {
-		void Promise.all([DefaultGameDir(), DefaultDataDir(), GetDataRegion()]).then(([g, d, r]) => {
-			setGameDir(g);
-			setDataDir(d);
-			setRegion(r);
-		});
-	}, []);
-
-	// Validate the game dir (debounced) whenever it changes, pulling its meta
-	// summary and the languages actually present in that install.
-	useEffect(() => {
-		if (!gameDir) {
-			setMeta(null);
-			setValidateError(null);
-			return;
-		}
-		let cancelled = false;
-		setValidating(true);
-		const timer = setTimeout(() => {
-			void Promise.all([ValidateGameDir(gameDir), AvailableLanguages(gameDir), AvailableRegions(gameDir)])
-				.then(([m, langs, regs]) => {
-					if (cancelled) {
-						return;
-					}
-					setMeta(m);
-					setValidateError(null);
-					const list = langs ?? [];
-					setLanguages(list);
-					setLang(prev => (list.includes(prev) ? prev : (list.includes("en") ? "en" : list[0] ?? prev)));
-					setRegions(regs ?? []);
-				})
-				.catch((err: unknown) => {
-					if (cancelled) {
-						return;
-					}
-					setMeta(null);
-					setLanguages([]);
-					setRegions([]);
-					setValidateError(err instanceof Error ? err.message : String(err));
-				})
-				.finally(() => {
-					if (!cancelled) {
-						setValidating(false);
-					}
-				});
-		}, 500);
-		return () => {
-			cancelled = true;
-			clearTimeout(timer);
-		};
-	}, [gameDir]);
 
 	const busy    = state.status === "running" || state.status === "done";
 	const errored = state.status === "error";
@@ -135,76 +63,12 @@ export function SetupWizard({onComplete, firstRun, reason}: {onComplete: () => v
 
 				{!busy && !errored && (
 					<>
-						<DirPicker
-							label={"Game install directory"}
-							value={gameDir}
-							onChange={setGameDir}
-							title={"Select your Black Desert Online install folder"}
-							placeholder={"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Black Desert Online"}
-						/>
-
-						<div className={"min-h-5 text-xs"}>
-							{validating && <span className={"text-zinc-500"}>Checking…</span>}
-							{!validating && meta && (
-								<span className={"text-emerald-400"}>
-									Valid install — version {meta.version}, {meta.files.toLocaleString()} files.
-								</span>
-							)}
-							{!validating && validateError && (
-								<span className={"text-red-400"}>
-									Not a valid BDO install (no Paz/pad00000.meta found here).
-								</span>
-							)}
-						</div>
-
-						<DirPicker
-							label={"Extracted data location"}
-							value={dataDir}
-							onChange={setDataDir}
-							title={"Choose where to store extracted data"}
-						/>
-
-						<div className={"flex flex-col gap-1.5"}>
-							<Label className={"text-xs text-muted-foreground"}>Language</Label>
-							<Select
-								value={lang}
-								onValueChange={v => setLang(v ?? "en")}
-								disabled={languages.length === 0}
-							>
-								<SelectTrigger size={"sm"} className={"w-full"}>
-									<SelectValue placeholder={"Language"} />
-								</SelectTrigger>
-								<SelectContent>
-									{(languages.length ? languages : [lang]).map(l => (
-										<SelectItem key={l} value={l}>{l}</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-
-						<div className={"flex flex-col gap-1.5"}>
-							<Label className={"text-xs text-muted-foreground"}>Server region</Label>
-							<Select
-								value={region || null}
-								onValueChange={v => setRegion(v ?? "")}
-								disabled={regions.length === 0}
-							>
-								<SelectTrigger size={"sm"} className={"w-full"}>
-									<SelectValue placeholder={"Same as language"} />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value={null}>Same as language</SelectItem>
-									{regions.map(r => (
-										<SelectItem key={r} value={r}>{r}</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
+						<GameInstallFields install={install} />
 
 						<div className={"flex flex-col gap-2"}>
 							<Button
-								disabled={!meta || validating || !dataDir}
-								onClick={() => run(gameDir, dataDir, lang, region)}
+								disabled={!install.meta || install.validating || !install.dataDir}
+								onClick={() => run(install.gameDir, install.dataDir, install.lang, install.region)}
 							>
 								{firstRun ? "Extract game data" : "Re-extract game data"}
 							</Button>

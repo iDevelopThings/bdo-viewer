@@ -3,10 +3,12 @@
 
 export {
     BindType,
+    BuffStackingCategory,
     CharacterClassType,
     CharacterKind,
     ItemGrade,
     ItemSetMembershipSource,
+    ItemType,
     LifeSkillType,
     NPCSpawnType,
     SlotName,
@@ -16,6 +18,7 @@ export {
 
 export type {
     Bounds,
+    BuffStackingCategories,
     CaphrasCategory,
     CaphrasEnhancement,
     CaphrasLevel,
@@ -34,14 +37,17 @@ export type {
     Enhancement,
     EquipInfo,
     Item,
+    ItemRentalOffer,
     ItemSet,
     ItemSetBonus,
     KnowledgeEntry,
     KnowledgeTheme,
     NPC,
+    NPCItemService,
     NPCSpawn,
     NPCSpawnTypes,
     NodeRef,
+    QuestConditions,
     QuestRef,
     Ref,
     SlotNameInfo,

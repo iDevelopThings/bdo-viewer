@@ -94,7 +94,7 @@ export const LifeSkillGradeValues: readonly LifeSkillGrade[] = [
   LifeSkillGrades.Guru,
 ] as const;
 
-export const LifeSkillGradeByName: Record<string, LifeSkillGrade> = {
+export const LifeSkillGradeByName = {
   "Unknown": LifeSkillGrades.Unknown,
   "Beginner": LifeSkillGrades.Beginner,
   "Apprentice": LifeSkillGrades.Apprentice,
@@ -104,6 +104,8 @@ export const LifeSkillGradeByName: Record<string, LifeSkillGrade> = {
   "Master": LifeSkillGrades.Master,
   "Guru": LifeSkillGrades.Guru,
 } as const;
+
+export type LifeSkillGradeNames = keyof (typeof LifeSkillGradeByName)
 
 const lifeSkillGradeByLowerName: Record<string, LifeSkillGrade> = {};
 for (const [k, v] of Object.entries(LifeSkillGradeByName)) {

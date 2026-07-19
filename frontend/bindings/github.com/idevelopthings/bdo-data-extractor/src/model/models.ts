@@ -48,6 +48,30 @@ export interface Bounds {
 }
 
 /**
+ * BuffStackingCategories is a set of client-defined broad buff families.
+ */
+export type BuffStackingCategories = BuffStackingCategory[] | null;
+
+/**
+ * BuffStackingCategory is the client category used by broad buff-family rules.
+ * Known consumable values include food (1), elixir/draught (2), perfume (6),
+ * Cron-meal extras (10), and whale-tendon elixirs (21).
+ */
+export enum BuffStackingCategory {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = 0,
+
+    BuffStackingCategoryFood = 1,
+    BuffStackingCategoryElixir = 2,
+    BuffStackingCategoryPerfume = 6,
+    BuffStackingCategoryCronMealExtra = 10,
+    BuffStackingCategoryWhaleTendonElixir = 21,
+    BuffStackingCategoryDraughtResetControl = 26,
+};
+
+/**
  * CaphrasCategory is one Caphras-enhancement cost/stat chart from
  * cronenchant.bss ("CronEnchant" is the game's internal name for the Caphras
  * system). Items map to a category via the client's computed cronKey (the
@@ -268,6 +292,7 @@ export enum CharacterKind {
  * the same group can be transfused at once (Max 1000 = no limit).
  */
 export interface CrystalGroup {
+    "key": number;
     "name": string;
     "max": number;
 }
@@ -280,7 +305,7 @@ export interface EffectGroup {
 }
 
 /**
- * Effects is what a consumable applies on use: a shared cooldown/duration, the
+ * Effects is what a consumable applies on use: a cooldown/maximum duration, the
  * shown stat modifiers, and any hidden buffs the client doesn't display (kept
  * separate; their names may still be untranslated Korean pending a future map).
  */
@@ -291,11 +316,21 @@ export interface Effects {
     "cooldownMs"?: number;
 
     /**
-     * buff duration (shared)
+     * longest timed modifier
      */
     "durationMs"?: number;
     "stats"?: EffectGroup;
     "hidden"?: EffectGroup;
+
+    /**
+     * BuffCategories contains every broad family present in the complete buff chain.
+     */
+    "buffCategories"?: BuffStackingCategories;
+
+    /**
+     * ClearsBuffCategories lists broad families removed when the item is used.
+     */
+    "clearsBuffCategories"?: BuffStackingCategories;
 }
 
 /**
@@ -698,9 +733,9 @@ export interface Item {
     "category"?: string;
 
     /**
-     * itemenchant.dbss  ItemType
+     * itemenchant.dbss EItemType; Title is the tooltip classification
      */
-    "itemType"?: string;
+    "itemType": ItemType;
 
     /**
      * itemenchant.dbss  equip slot/kind/type (equipment)
@@ -1075,6 +1110,11 @@ export interface Item {
     "unresolvedVendors"?: string[] | null;
 
     /**
+     * RentalOffers are contribution-point rentals decoded from NPC dialogue actions.
+     */
+    "rentalOffers"?: ItemRentalOffer[] | null;
+
+    /**
      * GatheredFrom contains <collect> source names such as "Wild Flax".
      */
     "gatheredFrom"?: string[] | null;
@@ -1128,6 +1168,24 @@ export enum ItemGrade {
 };
 
 /**
+ * ItemRentalOffer is one NPC dialogue action that rents the containing item.
+ */
+export interface ItemRentalOffer {
+    "vendor": models$0.EntityRef<NPC> | null;
+    "dialogIndex"?: number;
+    "conditionDsl"?: string;
+    "count": number;
+    "pointType": number;
+    "pointCost": number;
+    "itemSubKey": number;
+
+    /**
+     * Unknown0 separates the dialogue label from its action variant.
+     */
+    "unknown0": number;
+}
+
+/**
  * ItemSet is one skillpiece definition and the items linked to it.
  */
 export interface ItemSet {
@@ -1167,6 +1225,38 @@ export enum ItemSetMembershipSource {
      * ItemSetMembershipExplicit is a confirmed family with no recovered client-side foreign key.
      */
     ItemSetMembershipExplicit = "explicit",
+};
+
+/**
+ * ItemType is a uint8-wide identifier. The zero-cost conversion ItemType(x) is
+ * intentional: the underlying value is the wire value.
+ */
+export enum ItemType {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = 0,
+
+    ItemTypeNormal = 0,
+    ItemTypeEquip = 1,
+    ItemTypeSkill = 2,
+    ItemTypeTent = 3,
+    ItemTypeInstallation = 4,
+    ItemTypeJewel = 5,
+    ItemTypeCannonBall = 6,
+    ItemTypeMapae = 7,
+    ItemTypeMaterial = 8,
+    ItemTypeInteraction = 9,
+    ItemTypeContentsEvent = 10,
+    ItemTypeToVehicle = 11,
+    ItemTypeReserved12 = 12,
+    ItemTypeReserved13 = 13,
+    ItemTypeReserved14 = 14,
+    ItemTypeReserved15 = 15,
+    ItemTypeReserved16 = 16,
+    ItemTypeReserved17 = 17,
+    ItemTypeReserved18 = 18,
+    ItemTypeReserved19 = 19,
 };
 
 /**
@@ -1273,6 +1363,29 @@ export interface NPC {
      */
     "spawnTypes"?: NPCSpawnTypes;
     "spawns"?: NPCSpawn[] | null;
+
+    /**
+     * ItemService describes the NPC's shop, exchange or similar item-service module.
+     */
+    "itemService"?: NPCItemService | null;
+}
+
+/**
+ * NPCItemService is an NPC item service and its client-evaluated access condition.
+ */
+export interface NPCItemService {
+    "name": string;
+    "conditionDsl"?: string;
+
+    /**
+     * UnknownType appears to classify the surrounding character-function record.
+     */
+    "unknownType": number;
+
+    /**
+     * UnknownKey is the trailing key of the item-service module.
+     */
+    "unknownKey": number;
 }
 
 /**
@@ -1559,6 +1672,15 @@ export interface NodeRef {
 }
 
 /**
+ * QuestConditions contains the client expressions evaluated before a quest can
+ * be accepted and when its objective is completed.
+ */
+export interface QuestConditions {
+    "acceptDsl"?: string;
+    "completeDsl"?: string;
+}
+
+/**
  * QuestRef is a "group-index" quest id resolved to its loc texts (filled by the build).
  */
 export interface QuestRef {
@@ -1567,6 +1689,7 @@ export interface QuestRef {
     "desc"?: string;
     "giver"?: string;
     "objective"?: string;
+    "conditions"?: QuestConditions | null;
 }
 
 /**
@@ -1701,13 +1824,25 @@ export enum StatId {
     StatIdStunResistance = "stunResistance",
     StatIdKnockdownResistance = "knockdownResistance",
     StatIdKnockbackResistance = "knockbackResistance",
+    StatIdFearResistance = "fearResistance",
+    StatIdIgnoreAllResistance = "ignoreAllResistance",
+    StatIdIgnoreGrappleResistance = "ignoreGrappleResistance",
+    StatIdIgnoreKnockbackResistance = "ignoreKnockbackResistance",
+    StatIdIgnoreKnockdownResistance = "ignoreKnockdownResistance",
+    StatIdIgnoreStunResistance = "ignoreStunResistance",
     StatIdAttackSpeed = "attackSpeed",
     StatIdCastingSpeed = "castingSpeed",
     StatIdMoveSpeed = "moveSpeed",
     StatIdLuck = "luck",
     StatIdMaxHp = "maxHp",
     StatIdHpRecovery = "hpRecovery",
+    StatIdHpRecoveryOnHit = "hpRecoveryOnHit",
+    StatIdHpRecoveryOnCriticalHit = "hpRecoveryOnCriticalHit",
     StatIdResourceRecovery = "resourceRecovery",
+    StatIdResourceRecoveryOnHit = "resourceRecoveryOnHit",
+    StatIdResourceRecoveryOnCriticalHit = "resourceRecoveryOnCriticalHit",
+    StatIdMaxEnergy = "maxEnergy",
+    StatIdEnergyRecovery = "energyRecovery",
     StatIdBlackSpiritRage = "blackSpiritRage",
     StatIdAllMastery = "allMastery",
     StatIdGatheringMastery = "gatheringMastery",
@@ -1742,6 +1877,7 @@ export enum StatId {
     StatIdMountSkillExp = "mountSkillExp",
     StatIdStrengthExp = "strengthExp",
     StatIdBreathExp = "breathExp",
+    StatIdHealthExp = "healthExp",
     StatIdGatheringTime = "gatheringTime",
     StatIdCookingTime = "cookingTime",
     StatIdAlchemyTime = "alchemyTime",
@@ -1755,6 +1891,12 @@ export enum StatId {
     StatIdDurabilityLossResistance = "durabilityLossResistance",
     StatIdFallDamage = "fallDamage",
     StatIdItemDropRate = "itemDropRate",
+    StatIdItemDropAmount = "itemDropAmount",
+    StatIdHigherGradeKnowledgeChance = "higherGradeKnowledgeChance",
+    StatIdKarmaRecovery = "karmaRecovery",
+    StatIdSwimmingSpeed = "swimmingSpeed",
+    StatIdHeatstrokeResistance = "heatstrokeResistance",
+    StatIdHypothermiaResistance = "hypothermiaResistance",
     StatIdJumpHeight = "jumpHeight",
     StatIdKnowledgeChance = "knowledgeChance",
     StatIdMermaidsWish = "mermaidsWish",
@@ -1784,10 +1926,12 @@ export enum StatId {
     StatIdAwakeningApVsNormal = "awakeningApVsNormal",
     StatIdNormalAp = "normalAp",
     StatIdEdaniaAp = "edaniaAp",
+    StatIdBeastAp = "beastAp",
     StatIdDamageReduction = "damageReduction",
     StatIdTotalDamageReduction = "totalDamageReduction",
     StatIdHiddenDamageReduction = "hiddenDamageReduction",
     StatIdMonsterDamageReduction = "monsterDamageReduction",
+    StatIdMonsterDamageReductionRate = "monsterDamageReductionRate",
     StatIdMeleeMonsterDamageReduction = "meleeMonsterDamageReduction",
     StatIdRangedMonsterDamageReduction = "rangedMonsterDamageReduction",
     StatIdMagicMonsterDamageReduction = "magicMonsterDamageReduction",
@@ -1828,6 +1972,7 @@ export enum StatId {
     StatIdCastingSpeedLevel = "castingSpeedLevel",
     StatIdMovementSpeedLevel = "movementSpeedLevel",
     StatIdGatheringSpeed = "gatheringSpeed",
+    StatIdWorkerStaminaRecovery = "workerStaminaRecovery",
 };
 
 /**
@@ -1838,6 +1983,16 @@ export interface StatMod {
     "func": string;
     "args"?: number[] | null;
     "stat"?: string;
+
+    /**
+     * StatID is the canonical accumulator key for a single-stat effect.
+     */
+    "statId"?: StatId;
+
+    /**
+     * StatIDs contains canonical keys for effects that apply to several peers.
+     */
+    "statIds"?: StatId[] | null;
     "op"?: string;
     "value"?: number;
     "unit"?: string;
@@ -1847,6 +2002,31 @@ export interface StatMod {
      * source buff Index (traceability)
      */
     "buff"?: number;
+
+    /**
+     * BuffModule identifies the buff.dbss EffectData layout.
+     */
+    "buffModule"?: number;
+
+    /**
+     * BuffGroup identifies mutually replacing variants of the same effect.
+     */
+    "buffGroup"?: number;
+
+    /**
+     * BuffCategory identifies the broader family used by reset/stacking rules.
+     */
+    "buffCategory"?: BuffStackingCategory;
+
+    /**
+     * DurationMs is this modifier's duration, independent of sibling effects.
+     */
+    "durationMs"?: number;
+
+    /**
+     * Instant identifies an immediate effect such as Energy or Health EXP gain.
+     */
+    "instant"?: boolean;
 
     /**
      * true if less is better, ie weight

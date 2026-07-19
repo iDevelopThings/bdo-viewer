@@ -1,16 +1,15 @@
-import {IDockviewPanelProps} from "dockview-react";
 import {useDetail} from "@/state/detail.tsx";
 import {ChipList, DetailsHeader, DetailsItemList, DetailsSection, SectionSubtitle} from "@/components/details/details-components.tsx";
 import {getEntryKey} from "@/state/detail-store.tsx";
-import {isKnowledgeEntry, isKnowledgeTheme} from "@/state/sources/knowledge-source.tsx";
 import {KnowledgeEntry} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {GameText} from "@/lib/game-text.tsx";
 import {DetailsStats} from "@/components/details/stats.tsx";
 import {KnowledgeURN} from "@/lib/urn.ts";
 import {goToURN} from "@/state/panels.ts";
+import {isKnowledgeTheme, isKnowledgeEntry} from "@/state/sources/sources.ts";
 
-export function KnowledgeDetails(props: IDockviewPanelProps) {
-	const [details, d] = useDetail();
+export function KnowledgeDetails() {
+	const [, d] = useDetail();
 
 	if (isKnowledgeTheme(d.entry)) {
 		return <KnowledgeThemeDetails />;
@@ -74,7 +73,7 @@ export function KnowledgeDetails(props: IDockviewPanelProps) {
 }
 
 function KnowledgeThemeDetails() {
-	const [details, d] = useDetail();
+	const [, d] = useDetail();
 
 	if (!isKnowledgeTheme(d.entry)) {
 		return null;

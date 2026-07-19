@@ -3,6 +3,7 @@ import {DetailsItem} from "@/components/details/details-item.tsx";
 import {DetailProvider, useDetail} from "@/state/detail.tsx";
 import {SourceKind, UntypedSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import {type ComponentType, useCallback, useEffect, useRef, useState} from "react";
+import {useDebounce} from "@/utils.tsx";
 import {GrindSpotDetails} from "@/components/details/details-grindspot.tsx";
 import {NpcDetails} from "@/components/details/details-npc.tsx";
 import {KnowledgeDetails} from "@/components/details/details-knowledge.tsx";
@@ -21,6 +22,11 @@ function DetailsPanelInner({entry, props}: { entry: UntypedSourceEntry, props: I
 		}
 	}, [details]);
 
+	// Persist only once scrolling settles; each write snapshots the whole detail store.
+	const saveScrollOffset = useDebounce((top: number) => {
+		details.scrollOffset = top;
+	}, 150);
+
 	useEffect(() => {
 		restoreScroll();
 
@@ -37,7 +43,7 @@ function DetailsPanelInner({entry, props}: { entry: UntypedSourceEntry, props: I
 		return () => {
 			disposeDidActiveChange.dispose();
 		};
-	}, [entry, restoreScroll]);
+	}, [entry, props.api, restoreScroll]);
 
 	// While loading, content collapses to the small "Loading..." placeholder,
 	// which shrinks scrollHeight and makes the browser clamp scrollTop to 0 -
@@ -87,7 +93,7 @@ function DetailsPanelInner({entry, props}: { entry: UntypedSourceEntry, props: I
 			data-urn={entry.urn}
 			onScroll={e => {
 				if (d.loading) return;
-				details.scrollOffset = e.currentTarget.scrollTop;
+				saveScrollOffset(e.currentTarget.scrollTop);
 			}}
 		>
 			{DetailsComponent
@@ -120,7 +126,7 @@ export const DetailsPanel = (props: IDockviewPanelProps) => {
 		return () => {
 			disposeDidParametersChange.dispose();
 		};
-	}, []);
+	}, [props.api]);
 
 	if(!props.params?.key || !props.params?.source || !props?.params?.urn) {
 		return (

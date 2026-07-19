@@ -1,14 +1,15 @@
-import {useState} from "react";
+import {memo, useCallback, useMemo, useState} from "react";
 import {Search} from "lucide-react";
 import {Input} from "@/components/ui/input.tsx";
-import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip.tsx";
+import {Tooltip, TooltipContent} from "@/components/ui/tooltip.tsx";
 import {cn} from "@/lib/utils.ts";
 import {type DeepReadonly} from "@/types.ts";
-import {useGearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
+import {gearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
 import {StatId, StatIds, StatIdInfos} from "@/lib/types/stats.gen.ts";
 import {StatSource} from "@bindings/bdo-viewer/internal/gear";
 import {ItemIconImage} from "@/lib/item-icon.tsx";
-import {tryGetGradeColor, ItemGrade, getGradeColor} from "@/lib/types/item-grades.ts";
+import {ItemGrade, getGradeColor} from "@/lib/types/item-grades.ts";
+import {useSnapshot} from "valtio/react";
 
 type StatSources = DeepReadonly<StatSource[]> | null;
 type SourceItem = { urn: string, grade?: ItemGrade };
@@ -94,49 +95,107 @@ const panelConfig: PanelConfig[] = [
 	{title : "Other", rows : [StatIds.WeightLimit]},
 ];
 
+type Row = { label: string, value: string, sources?: StatSources, srcUrns?: string };
+type PanelData = { title: string, rows: Row[] };
+
+// Plain rows — no per-row tooltip. A single shared tooltip in the panel re-anchors to the hovered
+// row (base-ui's controlled Root + Positioner anchor). Memoized so a re-render that didn't touch
+// this row (hover, search typing) skips it — the panel has ~100 rows and used to mount a base-ui
+// Tooltip per sourced row (~84 of them), which was the real re-render cost under rapid updates.
+const StatRow = memo(function StatRow({row, stripe, onHover}: {
+	row: Row,
+	stripe: string,
+	onHover: (row: Row | null, anchor: HTMLElement | null) => void,
+}) {
+	const hasSources = row.sources && row.sources.length > 0;
+	const rowClass   = cn(
+		"flex flex-row items-center justify-between gap-2 px-2.5 py-1 text-sm", stripe,
+		hasSources && "cursor-help hover:bg-zinc-800/60",
+	);
+
+	return (
+		<div
+			className={rowClass}
+			data-hl-src={row.srcUrns}
+			onMouseEnter={e => onHover(hasSources ? row : null, hasSources ? e.currentTarget : null)}
+		>
+			<span className={"text-zinc-400 truncate"}>{row.label}</span>
+			<span className={"text-zinc-100 font-medium shrink-0"}>{row.value}</span>
+		</div>
+	);
+});
+
 export function GearStatsPanel() {
-	const [builder]           = useGearBuilderStore();
-	const [filter, setFilter] = useState("");
+	const {slots, stats, consumables} = useSnapshot(gearBuilderStore);
+
+	const [filter, setFilter]   = useState("");
+	const [hovered, setHovered] = useState<{row: Row, anchor: HTMLElement} | null>(null);
+
+	const handleHover = useCallback((row: Row | null, anchor: HTMLElement | null) => {
+		setHovered(row && anchor ? {row, anchor} : null);
+	}, []);
 
 	// Map an equipped item's display name -> its urn/grade so a stat source
 	// ("Red Nose's Armor", "Red Nose's Armor: Caphras") can show the item's icon.
-	const itemBySource = new Map<string, SourceItem>();
-	for (const slot of builder.slots ?? []) {
-		const it = slot.item;
-		if (it?.name) {
-			itemBySource.set(it.name, {urn : it.urn, grade : it.grade});
+	const itemBySource = useMemo(() => {
+		const m = new Map<string, SourceItem>();
+		for (const slot of slots ?? []) {
+			const it = slot.item;
+			if (it?.title) {
+				m.set(it.title, {urn : it.urn, grade : it.extra?.grade});
+			}
 		}
-	}
-	const resolveSource = (name: string): SourceItem | undefined =>
-		itemBySource.get(name) ?? itemBySource.get(name.split(":")[0].trim());
+		for (const it of consumables ?? []) {
+			if (it?.name) {
+				m.set(it.name, {urn : it.urn, grade : it.grade});
+			}
+		}
+		return m;
+	}, [slots, consumables]);
 
-	type Row = { label: string, value: string, sources?: StatSources };
-	type PanelData = { title: string, rows: Row[] };
+	const resolveSource = useCallback(
+		(name: string): SourceItem | undefined =>
+			itemBySource.get(name) ?? itemBySource.get(name.split(":")[0].trim()),
+		[itemBySource],
+	);
 
-	const sections: PanelData[] = builder.stats
-		? panelConfig.map(cfg => ({
-			title : cfg.title,
-			rows  : cfg.rows.map((statId): Row => {
-				const info = StatIdInfos[statId];
-				if (!info) {
-					return {label : `UNKNOWN STAT ${statId}`, value : "N/A"};
-				}
-				const stat = builder.stats!.stats[statId];
-				return {
-					label   : info.label,
-					value   : `${stat?.total ?? 0}${info.unit ?? ""}`,
-					sources : stat?.sources,
-				};
-			}),
-		}))
-		: [];
+	// Built only when the stats actually change — not on every render (e.g. search keystrokes).
+	const sections: PanelData[] = useMemo(
+		() => stats
+			? panelConfig.map(cfg => ({
+				title : cfg.title,
+				rows  : cfg.rows.map((statId): Row => {
+					const info = StatIdInfos[statId];
+					if (!info) {
+						return {label : `UNKNOWN STAT ${statId}`, value : "N/A"};
+					}
+					const stat = stats.stats[statId];
+					// URNs of the items contributing to this row, for hover highlighting
+					// (computed here so it's memoized with the stats, not per render).
+					const srcUrns = stat?.sources
+						? [...new Set(stat.sources.map(s => resolveSource(s.name)?.urn).filter(Boolean))].join(" ")
+						: undefined;
+					return {
+						label   : info.label,
+						value   : `${stat?.total ?? 0}${info.unit ?? ""}`,
+						sources : stat?.sources,
+						srcUrns : srcUrns || undefined,
+					};
+				}),
+			}))
+			: [],
+		[stats, resolveSource],
+	);
 
 	const query    = filter.trim().toLowerCase();
-	const filtered = query
-		? sections
-			.map(s => ({...s, rows : s.rows.filter(r => r.label.toLowerCase().includes(query))}))
-			.filter(s => s.rows.length > 0)
-		: sections;
+	const filtered = useMemo(
+		() => query
+			? sections
+				.map(s => ({...s, rows : s.rows.filter(r => r.label.toLowerCase().includes(query))}))
+				.filter(s => s.rows.length > 0)
+			: sections,
+		[query, sections],
+	);
 
 	return (
 		<div className={"flex flex-col w-64 shrink-0 border-l border-zinc-800 max-h-full overflow-hidden"}>
@@ -150,66 +209,24 @@ export function GearStatsPanel() {
 				/>
 			</div>
 
-			<div className={"flex flex-col flex-1 min-h-0 gap-3 p-2 overflow-y-auto"}>
+			<div
+				className={"flex flex-col flex-1 min-h-0 gap-3 p-2 overflow-y-auto"}
+				onMouseLeave={() => setHovered(null)}
+			>
 				{filtered.map(section => (
 					<div key={section.title} className={"flex flex-col shrink-0 rounded-md overflow-hidden border border-zinc-800"}>
 						<div className={"px-2.5 py-1.5 bg-zinc-900 text-xs font-semibold text-zinc-200"}>
 							{section.title}
 						</div>
 						<div className={"flex flex-col"}>
-							{section.rows.map((row, i) => {
-								const stripe     = i % 2 === 1 ? "bg-zinc-900/40" : "";
-								const rowClass   = cn("flex flex-row items-center justify-between gap-2 px-2.5 py-1 text-sm", stripe);
-								const hasSources = row.sources && row.sources.length > 0;
-
-								if (!hasSources) {
-									return (
-										<div key={row.label} className={rowClass}>
-											<span className={"text-zinc-400 truncate"}>{row.label}</span>
-											<span className={"text-zinc-100 font-medium shrink-0"}>{row.value}</span>
-										</div>
-									);
-								}
-
-								return (
-									<Tooltip key={row.label}>
-										<TooltipTrigger render={<div className={cn(rowClass, "cursor-help hover:bg-zinc-800/60")} />}>
-											<span className={"text-zinc-400 truncate"}>{row.label}</span>
-											<span className={"text-zinc-100 font-medium shrink-0"}>{row.value}</span>
-										</TooltipTrigger>
-										<TooltipContent
-											side="left"
-											sideOffset={8}
-											className={"flex flex-col items-stretch gap-0 w-60 max-w-none p-0 border border-zinc-800 bg-zinc-950 text-zinc-100 shadow-xl rounded-md overflow-hidden"}
-										>
-											<div className={"flex flex-row items-center justify-between gap-3 px-3 py-2 border-b border-zinc-800 bg-zinc-900/60"}>
-												<span className={"text-sm font-semibold text-zinc-100 truncate"}>{row.label}</span>
-												<span className={"text-sm font-semibold tabular-nums text-emerald-400 shrink-0"}>{row.value}</span>
-											</div>
-											<div className={"flex flex-col py-1 max-h-80 overflow-y-auto"}>
-												{row.sources!.map((src, j) => {
-													const item       = resolveSource(src.name);
-													const gradeColor = getGradeColor(item?.grade);
-													return (
-														<div key={j} className={"flex flex-row items-center gap-2 px-3 py-1"}>
-															{item
-																? <ItemIconImage urn={item.urn} grade={item.grade} imageClass={"size-5"} />
-																: <div className={"size-5 shrink-0 rounded-sm bg-zinc-800/80"} />}
-															<span
-																className={"flex-1 min-w-0 truncate text-xs text-zinc-300"}
-																style={gradeColor ? {color : gradeColor.toString()} : undefined}
-															>
-																{src.name}
-															</span>
-															<span className={"text-xs font-medium tabular-nums text-zinc-400 shrink-0"}>{src.value}</span>
-														</div>
-													);
-												})}
-											</div>
-										</TooltipContent>
-									</Tooltip>
-								);
-							})}
+							{section.rows.map((row, i) => (
+								<StatRow
+									key={row.label}
+									row={row}
+									stripe={i % 2 === 1 ? "bg-zinc-900/40" : ""}
+									onHover={handleHover}
+								/>
+							))}
 						</div>
 					</div>
 				))}
@@ -217,6 +234,45 @@ export function GearStatsPanel() {
 					<div className={"text-sm text-zinc-500 p-2"}>No matching stats</div>
 				)}
 			</div>
+
+			{/* One shared tooltip re-anchored to the hovered row — replaces ~84 per-row tooltips. */}
+			<Tooltip open={hovered !== null} onOpenChange={o => !o && setHovered(null)}>
+				<TooltipContent
+					anchor={hovered?.anchor}
+					side="left"
+					sideOffset={8}
+					className={"flex flex-col items-stretch gap-0 w-60 max-w-none p-0 border border-zinc-800 bg-zinc-950 text-zinc-100 shadow-xl rounded-md overflow-hidden"}
+				>
+					{hovered && (
+						<>
+							<div className={"flex flex-row items-center justify-between gap-3 px-3 py-2 border-b border-zinc-800 bg-zinc-900/60"}>
+								<span className={"text-sm font-semibold text-zinc-100 truncate"}>{hovered.row.label}</span>
+								<span className={"text-sm font-semibold tabular-nums text-emerald-400 shrink-0"}>{hovered.row.value}</span>
+							</div>
+							<div className={"flex flex-col py-1 max-h-80 overflow-y-auto"}>
+								{hovered.row.sources!.map((src, j) => {
+									const item       = resolveSource(src.name);
+									const gradeColor = getGradeColor(item?.grade);
+									return (
+										<div key={j} className={"flex flex-row items-center gap-2 px-3 py-1"}>
+											{item
+												? <ItemIconImage urn={item.urn} grade={item.grade} imageClass={"size-5"} />
+												: <div className={"size-5 shrink-0 rounded-sm bg-zinc-800/80"} />}
+											<span
+												className={"flex-1 min-w-0 truncate text-xs text-zinc-300"}
+												style={gradeColor ? {color : gradeColor.toString()} : undefined}
+											>
+												{src.name}
+											</span>
+											<span className={"text-xs font-medium tabular-nums text-zinc-400 shrink-0"}>{src.value}</span>
+										</div>
+									);
+								})}
+							</div>
+						</>
+					)}
+				</TooltipContent>
+			</Tooltip>
 		</div>
 	);
 }

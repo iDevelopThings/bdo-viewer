@@ -1,19 +1,16 @@
-// @ts-ignore
-import type {Plugin} from "vite";
 import {defineConfig} from "vite";
 import react from "@vitejs/plugin-react";
-
-// @ts-ignore
 import wails from "@wailsio/runtime/plugins/vite";
-
-// @ts-ignore
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+
+
+/*
+// DO NOT DELETE! THIS IS FOR EASY DEBUGGING
 
 import {createRequire} from "node:module";
 
 const require = createRequire(import.meta.url);
-
 function wailsCallLogger(): Plugin {
 	return {
 		name    : "wails-call-logger",
@@ -28,12 +25,11 @@ function wailsCallLogger(): Plugin {
 		},
 	};
 }
+*/
 
-// https://vitejs.dev/config/
-export default defineConfig(({mode}) => ({
+export default defineConfig(() => ({
 	server  : {
-		host : "127.0.0.1",
-		// @ts-ignore
+		host       : "127.0.0.1",
 		port       : Number(process.env.WAILS_VITE_PORT) || 9245,
 		strictPort : true,
 		hmr        : true,
@@ -74,7 +70,7 @@ export default defineConfig(({mode}) => ({
 		// The only chunk over the default 500 kB is deckgl, which is lazy-loaded
 		// with the world map — see world-map-panel.tsx.
 		chunkSizeWarningLimit : 800,
-		rolldownOptions : {
+		rolldownOptions       : {
 			output : {
 				codeSplitting : {
 					groups : [

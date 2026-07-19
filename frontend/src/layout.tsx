@@ -130,7 +130,7 @@ export function AppLayout() {
 				maximumWidth : 400,
 				position     : {referenceGroup : mainGroup}
 			});
-			const listPanel    = event.api.addPanel({
+			event.api.addPanel({
 				id        : "list",
 				component : "list",
 				title     : "List",

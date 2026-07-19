@@ -2,10 +2,11 @@ import {persist} from "valtio-persist";
 import {ref} from "valtio/vanilla";
 import {SourceKind, SourceNavigationNode} from "@bindings/bdo-viewer/internal/sources";
 import {findSourceByType, type WrappedSource} from "@/state/sources/sources.ts";
+import {useSnapshot} from "valtio/react";
 
 export type NavigationState = {
 	activePath?: string;
-	expandedPaths: string[];
+	expandedPaths: Record<string, boolean>;
 	rootNodes: SourceNavigationNode[];
 	nodesByPath: Map<string, SourceNavigationNode>;
 	nodesByURN: Map<string, SourceNavigationNode>;
@@ -22,10 +23,10 @@ export type NavigationListScope = {
 	pathParts: string[];
 }
 
-export const {store: navigation} = await persist<NavigationState>(
+export const {store : navigation} = await persist<NavigationState>(
 	{
 		activePath        : undefined,
-		expandedPaths     : [],
+		expandedPaths     : {},
 		rootNodes         : [],
 		nodesByPath       : new Map<string, SourceNavigationNode>(),
 		nodesByURN        : new Map<string, SourceNavigationNode>(),
@@ -34,9 +35,15 @@ export const {store: navigation} = await persist<NavigationState>(
 	"navigation",
 );
 
+// A build that persisted expandedPaths as an array leaves the restored value an array;
+// reset it so the record stays a plain object (string-keyed props on an array wouldn't persist).
+if (Array.isArray(navigation.expandedPaths)) {
+	navigation.expandedPaths = {};
+}
+
 export function buildNavigationTree(tree: SourceNavigationNode[]) {
-	const nodesByPath = new Map<string, SourceNavigationNode>();
-	const nodesByURN = new Map<string, SourceNavigationNode>();
+	const nodesByPath       = new Map<string, SourceNavigationNode>();
+	const nodesByURN        = new Map<string, SourceNavigationNode>();
 	const originalIdsByPath = new Map<string, string>();
 
 	const indexNode = (node: SourceNavigationNode) => {
@@ -52,9 +59,9 @@ export function buildNavigationTree(tree: SourceNavigationNode[]) {
 
 	tree.forEach(indexNode);
 
-	navigation.rootNodes = ref(tree);
-	navigation.nodesByPath = ref(nodesByPath);
-	navigation.nodesByURN = ref(nodesByURN);
+	navigation.rootNodes         = ref(tree);
+	navigation.nodesByPath       = ref(nodesByPath);
+	navigation.nodesByURN        = ref(nodesByURN);
 	navigation.originalIdsByPath = ref(originalIdsByPath);
 
 	// Nothing to restore (fresh launch), or a persisted path that no longer exists
@@ -93,16 +100,19 @@ export function navigateToURN(urn: string | undefined): boolean {
 }
 
 export function toggleExpanded(path: string) {
-	const idx = navigation.expandedPaths.indexOf(path);
-	if (idx >= 0) {
-		navigation.expandedPaths.splice(idx, 1);
+	if (navigation.expandedPaths[path]) {
+		delete navigation.expandedPaths[path];
 	} else {
-		navigation.expandedPaths.push(path);
+		navigation.expandedPaths[path] = true;
 	}
 }
 
 export function isExpanded(path: string): boolean {
-	return navigation.expandedPaths.includes(path);
+	return !!navigation.expandedPaths[path];
+}
+
+export function useIsExpanded(path: string): boolean {
+	return !!useSnapshot(navigation).expandedPaths[path];
 }
 
 export function getNavigationSource(path?: string): WrappedSource | undefined {
@@ -111,14 +121,14 @@ export function getNavigationSource(path?: string): WrappedSource | undefined {
 }
 
 export function getNavigationListScope(path?: string): NavigationListScope {
-	const source = getNavigationSource(path);
+	const source    = getNavigationSource(path);
 	const pathParts = getOriginalPathParts(path);
 
 	return {
-		kind: getNavigationNode(path)?.source,
+		kind        : getNavigationNode(path)?.source,
 		source,
-		category: pathParts[0],
-		subcategory: pathParts[1],
+		category    : pathParts[0],
+		subcategory : pathParts[1],
 		pathParts,
 	};
 }
@@ -130,10 +140,8 @@ export function getDefaultNavigationPath(): string | undefined {
 function expandPathParents(path: string) {
 	const parts = path.split("/");
 	for (let i = 0; i < parts.length; i++) {
-		const parentPath = parts.slice(0, i + 1).join("/");
-		if (!navigation.expandedPaths.includes(parentPath)) {
-			navigation.expandedPaths.push(parentPath);
-		}
+		const parentPath                     = parts.slice(0, i + 1).join("/");
+		navigation.expandedPaths[parentPath] = true;
 	}
 }
 
@@ -142,7 +150,7 @@ function getOriginalPathParts(path?: string): string[] {
 		return [];
 	}
 
-	const parts = path.split("/");
+	const parts      = path.split("/");
 	const sourcePath = parts.shift();
 	if (!sourcePath) {
 		return [];
@@ -151,7 +159,7 @@ function getOriginalPathParts(path?: string): string[] {
 	const ids: string[] = [];
 	for (let i = 0; i < parts.length; i++) {
 		const partPath = parts.slice(0, i + 1).join("/");
-		const id = navigation.originalIdsByPath.get(`${sourcePath}/${partPath}`);
+		const id       = navigation.originalIdsByPath.get(`${sourcePath}/${partPath}`);
 		if (id !== undefined) {
 			ids.push(id);
 		}

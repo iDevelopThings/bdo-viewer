@@ -1,7 +1,6 @@
-import {IDockviewPanelProps} from "dockview-react";
 import {useSnapshot} from "valtio/react";
 import {applyListFilters, list, loadList, debounceLoadList, clearList} from "@/state/list.tsx";
-import {useEffect, useRef, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import {useIsContentPanelOpen, goToURN} from "@/state/panels.ts";
 import type {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import {SourceKind} from "@bindings/bdo-viewer/internal/sources";
@@ -12,22 +11,22 @@ import {findSourceByType} from "@/state/sources/sources.ts";
 import {getNavigationListScope, navigation} from "@/state/navigation.tsx";
 import {EntryFilterHeader} from "@/components/entry-list/entry-filter-panel.tsx";
 
-export function SourceList(props: IDockviewPanelProps) {
+export function SourceList() {
 	const parentRef = useRef<HTMLDivElement>(null);
 
 	const l = useSnapshot(list);
 	const n = useSnapshot(navigation);
 
-	// The search box is driven by local state, not the valtio snapshot: the
-	// snapshot updates on a deferred tick, so binding value={l.query} makes React
-	// re-write the input a beat after each keystroke and reset the caret to the end.
 	const [query, setQuery] = useState(list.query ?? "");
 
-	const currentScope = getNavigationListScope(n.activePath);
+	const currentScope = useMemo(() => getNavigationListScope(n.activePath), [n.activePath]);
 	const FilterPanel  = getSourceFilterPanel(currentScope.source?.kind);
 
-	const hasActiveFilters = query.trim() !== "" || Object.values(l.filters ?? {}).some(
-		v => Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && v !== "",
+	const hasActiveFilters = useMemo(
+		() => query.trim() !== "" || Object.values(l.filters ?? {}).some(
+			v => Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && v !== "",
+		),
+		[query, l.filters],
 	);
 
 	useEffect(() => {
@@ -61,6 +60,8 @@ export function SourceList(props: IDockviewPanelProps) {
 				/>
 
 				{FilterPanel && (
+					// getSourceFilterPanel returns a stable per-kind component, not one created during render.
+					// eslint-disable-next-line react-hooks/static-components
 					<FilterPanel
 						value={l.filters ?? {}}
 						onChange={applyListFilters}
@@ -74,7 +75,7 @@ export function SourceList(props: IDockviewPanelProps) {
 				parentRef={parentRef}
 				emptyMessage={l.source === SourceKind.All && !query.trim() ? "Search across every source" : undefined}
 				renderRow={entry => (
-					<SourceEntryRow entry={entry} source={list.source ?? SourceKind.Unknown} />
+					<SourceEntryRow entry={entry} source={l.source ?? SourceKind.Unknown} />
 				)}
 			/>
 		</div>

@@ -3,6 +3,7 @@ package gear
 import (
 	"math"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -35,6 +36,7 @@ type Fitness struct {
 
 // StatSheet is the computed character sheet: headline AP/AAP/DP plus every stat
 // keyed by its StatId (see model.StatId(key).Info() for label/category/unit).
+
 type StatSheet struct {
 	AP    int                         `json:"ap"`  // sheet main-hand AP, floor((apMin+apMax)/2)
 	AAP   int                         `json:"aap"` // sheet awakening AP
@@ -119,6 +121,7 @@ func ComputeStats(
 	fitness Fitness,
 	mastery MasterySet,
 	slots []Slot,
+	consumables []*model.Item,
 ) *StatSheet {
 	cls, hasClass := model.GenClassStats[class]
 
@@ -131,6 +134,7 @@ func ComputeStats(
 	addLevelMilestones(a, level)
 	addGear(a, slots)
 	addSetEffects(a, slots)
+	addConsumables(a, consumables)
 	applyBrackets(a)
 	addMastery(a, mastery)
 	deriveCritChance(a)
@@ -185,6 +189,63 @@ func addMastery(a *accumulator, ms MasterySet) {
 	for stat, m := range ms {
 		if pts := MasteryPoints(m.Rank, m.Lvl); pts != 0 {
 			a.add(stat, float64(pts), "Mastery")
+		}
+	}
+}
+
+// addConsumables folds active consumables' timed buff stats into the sheet,
+// applying the client's stacking rules across items in activation order:
+//  1. Using an item first clears active effects whose broad family (BuffCategory)
+//     is listed in the item's ClearsBuffCategories — e.g. a draught clears other
+//     draughts (category 2) but leaves perfumes (6) and whale-tendon (21).
+//  2. Each incoming stat with a nonzero BuffGroup replaces any active stat sharing
+//     that group (latest wins; never summed).
+//  3. Remaining stats add normally.
+//
+// Instant effects (Energy / Health EXP) are metadata, not persistent stats, and
+// are skipped. ConditionType is a trigger (on-hit/on-crit), not a stacking key.
+func addConsumables(a *accumulator, items []*model.Item) {
+	type activeMod struct {
+		mod    model.StatMod
+		source string
+	}
+	var active []activeMod
+
+	for _, it := range items {
+		if it == nil || it.Effects == nil {
+			continue
+		}
+		if clears := it.Effects.ClearsBuffCategories; len(clears) > 0 {
+			active = slices.DeleteFunc(active, func(e activeMod) bool {
+				return e.mod.BuffCategory != 0 && slices.Contains(clears, e.mod.BuffCategory)
+			})
+		}
+		for _, sm := range it.Effects.Stats.Stats {
+			if sm.EffectDsl != nil || sm.Instant {
+				continue
+			}
+			if sm.StatID == "" && len(sm.StatIDs) == 0 {
+				continue
+			}
+			if sm.BuffGroup != 0 {
+				active = slices.DeleteFunc(active, func(e activeMod) bool {
+					return e.mod.BuffGroup == sm.BuffGroup
+				})
+			}
+			active = append(active, activeMod{mod: sm, source: it.Name})
+		}
+	}
+
+	for _, e := range active {
+		value := e.mod.Value
+		if e.mod.Op == "-" {
+			value = -value
+		}
+		if e.mod.StatID != "" {
+			a.add(e.mod.StatID, value, e.source)
+		}
+		for _, id := range e.mod.StatIDs {
+			a.add(id, value, e.source)
 		}
 	}
 }

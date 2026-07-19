@@ -3,13 +3,13 @@ import {parseURN} from "@/lib/urn.ts";
 import {cn} from "@/lib/utils.ts";
 import {MaybeReadonly} from "@/types.ts";
 import {HTMLAttributes, ReactNode} from "react";
-import {useMiddleClickProps} from "@/utils.tsx";
-import {openItemPanel} from "@/state/panels.ts";
-import {Item} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import {getMiddleClickProps} from "@/utils.tsx";
+import {openItemPanel, type ItemPanelItem} from "@/state/panels.ts";
 import {ItemGrade, getGradeColor} from "@/lib/types/item-grades.ts";
+import type {Item} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 
 type ItemIconImageProps = {
-	urn: string | MaybeReadonly<Item>
+	urn: string | MaybeReadonly<ItemPanelItem> | MaybeReadonly<Item>
 	grade?: ItemGrade
 	imageClass?: string
 	className?: string
@@ -19,7 +19,10 @@ type ItemIconImageProps = {
 // ItemIconImage is the bare grade-tinted icon visual — no tooltip or navigation.
 // It's the shared building block for ItemIcon and anywhere a plain item icon is needed.
 export function ItemIconImage({urn, grade, imageClass, className, children, ...rest}: ItemIconImageProps) {
-	const urnStr         = typeof urn === "string" ? urn : urn.urn;
+	const urnStr = typeof urn === "string" ? urn : urn?.id?.toString() ?? (urn as Item)?.urn ?? undefined;
+	if (urnStr === undefined) {
+		return null;
+	}
 	const id             = parseURN(urnStr).id;
 	const gradeColor     = getGradeColor(grade);
 	const imageClassName = cn("w-5 h-5 shrink-0", imageClass);
@@ -39,7 +42,7 @@ export function ItemIconImage({urn, grade, imageClass, className, children, ...r
 }
 
 type ItemIconProps = {
-	urn: string | MaybeReadonly<Item>
+	urn: string | MaybeReadonly<ItemPanelItem> | MaybeReadonly<Item>
 	className?: string
 	imageClass?: string
 	grade?: ItemGrade,
@@ -48,7 +51,7 @@ type ItemIconProps = {
 }
 
 export function ItemIcon({urn, className, imageClass, grade, children, clickable}: ItemIconProps) {
-	const urnStr = typeof urn === "string" ? urn : urn.urn;
+	const urnStr = typeof urn === "string" ? urn : urn?.id?.toString() ?? (urn as Item)?.urn ?? undefined;
 
 	if (clickable && typeof urn === "string") {
 		console.error("ItemIcon: clickable is true but urn is a string, cannot open item panel without an Item object");
@@ -60,7 +63,7 @@ export function ItemIcon({urn, className, imageClass, grade, children, clickable
 				urn={urn}
 				grade={grade}
 				imageClass={cn(imageClass, typeof urn !== "string" && clickable ? "cursor-pointer" : undefined)}
-				{...(clickable && typeof urn !== "string" ? useMiddleClickProps(
+				{...(clickable && typeof urn !== "string" ? getMiddleClickProps(
 					() => openItemPanel(urn, false),
 					() => openItemPanel(urn, true),
 				) : {})}

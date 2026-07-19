@@ -1,19 +1,19 @@
-import {IDockviewPanelProps} from "dockview-react";
-import {useDetail, useDetailItem} from "@/state/detail.tsx";
+import {useDetailStore} from "@/state/detail.tsx";
 import {Chip, ChipList, DetailsHeader, DetailsItemList, DetailsSection} from "@/components/details/details-components.tsx";
-import {isGrindSpot} from "@/state/sources/grindspot-source.tsx";
 import {numberFormat, parseARGB} from "@/utils.tsx";
 import {MapPinIcon} from "lucide-react";
 import {openMapAt, openMapAtNode} from "@/state/panels.ts";
+import {useSnapshot} from "valtio/react";
+import {isGrindSpot} from "@/state/sources/sources.ts";
 
-export function GrindSpotDetails(props: IDockviewPanelProps) {
-	const [details, d] = useDetail();
+export function GrindSpotDetails() {
+	const {entry} = useSnapshot(useDetailStore())
 
-	if (!isGrindSpot(d.entry)) {
+	if (!isGrindSpot(entry)) {
 		return null;
 	}
 
-	const e = d.entry.value;
+	const e = entry.value;
 
 
 	return (
@@ -22,8 +22,6 @@ export function GrindSpotDetails(props: IDockviewPanelProps) {
 		>
 			<DetailsHeader
 				title={e.name}
-				// icon={e.icon}
-				// grade={e.grade as Grade}
 				lines={{
 					"ID"           : e.key.toString(),
 					"Zone"         : () => e.mainCategory?.name,

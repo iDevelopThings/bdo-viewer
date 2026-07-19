@@ -1,4 +1,3 @@
-import {IDockviewPanelProps} from "dockview-react";
 import {useSnapshot} from "valtio";
 import {mapState} from "@/components/world-map/map-state.ts";
 import {lazy, Suspense, useEffect} from "react";
@@ -9,7 +8,7 @@ import {NodeInfoPanel} from "@/components/world-map/node-info-panel.tsx";
 // only when the map panel is first opened.
 const GameMap = lazy(() => import("./game-map").then(m => ({default : m.GameMap})));
 
-export function WorldMapPanel(_props: IDockviewPanelProps) {
+export function WorldMapPanel() {
 	const map = useSnapshot(mapState);
 
 	useEffect(() => {
