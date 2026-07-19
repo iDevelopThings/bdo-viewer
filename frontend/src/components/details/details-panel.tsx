@@ -86,13 +86,17 @@ function DetailsPanelInner({entry, props}: { entry: UntypedSourceEntry, props: I
 
 	return (
 		<div
-			className="flex flex-col grow max-h-full overflow-auto"
+			// overflow-anchor:none — the detail's sections stream in after the scroll offset is
+			// restored; without this the browser's scroll anchoring drifts the view to the bottom.
+			className="flex flex-col grow max-h-full overflow-auto [overflow-anchor:none]"
 			ref={containerRef}
 			data-panel={"detail"}
 			data-source={entry.type}
 			data-urn={entry.urn}
 			onScroll={e => {
-				if (d.loading) return;
+				// Hiding a dockview tab resets scrollTop to 0 and fires a scroll event; the
+				// active guard stops that from debounce-saving 0 over the real offset.
+				if (d.loading || !props.api.isActive) return;
 				saveScrollOffset(e.currentTarget.scrollTop);
 			}}
 		>

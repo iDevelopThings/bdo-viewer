@@ -37,8 +37,8 @@ export function DetailProvider({entry, children}: DetailProviderProps) {
 							value : getEntryKey(state.entry),
 						},
 						source        : state.source,
-						_caphrasStep  : state.level,
-						_caphrasLevel : state.caphrasStep,
+						_level        : state.level,
+						_caphrasStep  : state.caphrasStep,
 						scrollOffset  : state.scrollOffset,
 					});
 
