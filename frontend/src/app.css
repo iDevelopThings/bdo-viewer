@@ -278,11 +278,11 @@ html, body, #root {
 }
 
 /*
- * Experimental v2 shell. The content canvas sits at surface-0; the nav chrome (tree +
- * list) is lifted one step to surface-1 so the zones read as distinct surfaces instead
- * of one flat wall. Panel roots are transparent, so the group background does the work.
+ * App shell. The content canvas sits at surface-0; the nav chrome (tree + list) is lifted
+ * one step to surface-1 so the zones read as distinct surfaces instead of one flat wall.
+ * Panel roots are transparent, so the group background does the work.
  */
-.bdo-layout-v2 {
+.bdo-layout {
     --dv-tabs-and-actions-container-height: 34px;
     --dv-group-view-background-color: var(--surface-0);
     --dv-tabs-and-actions-container-background-color: var(--surface-1);
@@ -295,8 +295,8 @@ html, body, #root {
  * The tab-background vars are cleared to transparent so the tab blends into the surface-1
  * strip instead of painting --background as a dark box.
  */
-.bdo-layout-v2 .dv-groupview:has([data-panel="tree"]),
-.bdo-layout-v2 .dv-groupview:has([data-panel="list"]) {
+.bdo-layout .dv-groupview:has([data-panel="tree"]),
+.bdo-layout .dv-groupview:has([data-panel="list"]) {
     --dv-group-view-background-color: var(--surface-1);
     --dv-tabs-and-actions-container-background-color: var(--surface-1);
     --dv-activegroup-visiblepanel-tab-background-color: transparent;
@@ -305,8 +305,8 @@ html, body, #root {
     --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
 }
 
-.bdo-layout-v2 .dv-groupview:has([data-panel="tree"]) .dv-tab,
-.bdo-layout-v2 .dv-groupview:has([data-panel="list"]) .dv-tab {
+.bdo-layout .dv-groupview:has([data-panel="tree"]) .dv-tab,
+.bdo-layout .dv-groupview:has([data-panel="list"]) .dv-tab {
     width: 100%;
     padding: 0;
 }

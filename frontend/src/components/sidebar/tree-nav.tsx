@@ -3,8 +3,8 @@ import {sources} from "@/state/sources/sources.ts";
 import {navigation} from "@/state/navigation.tsx";
 import {SidebarNode} from "@/components/sidebar/sidebar.tsx";
 
-// The v2 shell's left panel: the multi-source navigation tree on its own, without the
-// tool shortcuts the classic Sidebar stacks on top (those live in the rail now).
+// The left nav panel: the multi-source navigation tree on its own. Tool shortcuts live
+// in the rail, so this is purely the data hierarchy.
 export function TreeNav() {
 	const {loading}   = useSnapshot(sources);
 	const {rootNodes} = useSnapshot(navigation);

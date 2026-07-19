@@ -13,7 +13,7 @@ import {CompareItemsPanel} from "@/components/compare/compare-items-panel.tsx";
 import {WorldMapPanel} from "@/components/world-map/world-map-panel.tsx";
 import {ToolRail} from "@/components/rail/tool-rail.tsx";
 
-const LAYOUT_KEY = "layout-v2";
+const LAYOUT_KEY = "bdo-layout";
 
 // Leaf panels drag from a slim grip instead of a labelled tab; content panels keep the
 // normal closable tab since several stack in the same group.
@@ -89,7 +89,7 @@ export function AppLayout() {
 			api.fromJSON(JSON.parse(serialized), {reuseExistingPanels : true});
 			return true;
 		} catch (err) {
-			console.error("Failed to load v2 layout from localStorage", err);
+			console.error("Failed to load layout from localStorage", err);
 			return false;
 		}
 	}
@@ -157,7 +157,7 @@ export function AppLayout() {
 			/>
 			<div className={"flex-1 min-w-0 h-full"}>
 				<DockviewReact
-					className={"dockview-theme-shadcn bdo-layout-v2"}
+					className={"dockview-theme-shadcn bdo-layout"}
 					onReady={onReady}
 					scrollbars={"native"}
 					components={components}
