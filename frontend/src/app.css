@@ -20,6 +20,11 @@ html, body, #root {
     --color-sidebar-primary: var(--sidebar-primary);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar: var(--sidebar);
+    --color-surface-0: var(--surface-0);
+    --color-surface-1: var(--surface-1);
+    --color-surface-2: var(--surface-2);
+    --color-surface-3: var(--surface-3);
+    --color-surface-border: var(--surface-border);
     --color-chart-5: var(--chart-5);
     --color-chart-4: var(--chart-4);
     --color-chart-3: var(--chart-3);
@@ -85,7 +90,14 @@ html, body, #root {
     --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
     --sidebar-border: oklch(0.92 0.004 286.32);
     --sidebar-ring: oklch(0.705 0.015 286.067);
-    
+
+    /* Elevation ramp: surface-0 is the content canvas, each step sits visually above it. */
+    --surface-0: oklch(1 0 0);
+    --surface-1: oklch(0.975 0.001 286.375);
+    --surface-2: oklch(0.945 0.002 286.375);
+    --surface-3: oklch(0.915 0.004 286.32);
+    --surface-border: oklch(0.9 0.004 286.32);
+
 
     font-synthesis: none;
     text-rendering: optimizeLegibility;
@@ -127,6 +139,12 @@ html, body, #root {
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.552 0.016 285.938);
+
+    --surface-0: oklch(0.141 0.005 285.823);
+    --surface-1: oklch(0.2 0.006 285.9);
+    --surface-2: oklch(0.24 0.006 285.9);
+    --surface-3: oklch(0.285 0.006 286);
+    --surface-border: oklch(1 0 0 / 14%);
 }
 
 @layer base {
@@ -245,4 +263,43 @@ html, body, #root {
 .dockview-theme-shadcn .dv-drop-target-container .dv-drop-target-anchor.dv-drop-target-anchor-container-changed {
     opacity: 0;
     transition: none;
+}
+
+/*
+ * Experimental v2 shell. The content canvas sits at surface-0; the nav chrome (tree +
+ * list) is lifted one step to surface-1 so the zones read as distinct surfaces instead
+ * of one flat wall. Panel roots are transparent, so the group background does the work.
+ */
+.bdo-layout-v2 {
+    --dv-tabs-and-actions-container-height: 24px;
+    --dv-group-view-background-color: var(--surface-0);
+    --dv-tabs-and-actions-container-background-color: var(--surface-1);
+    --dv-separator-border: var(--surface-border);
+    --dv-sash-color: transparent;
+}
+
+/*
+ * Leaf panels keep a normal-height tab as their drag handle (a grip glyph, see GripTab).
+ * The tab-background vars are cleared to transparent so the tab blends into the surface-1
+ * strip instead of painting --background as a dark box.
+ */
+.bdo-layout-v2 .dv-groupview:has([data-panel="tree"]),
+.bdo-layout-v2 .dv-groupview:has([data-panel="list"]) {
+    --dv-group-view-background-color: var(--surface-1);
+    --dv-tabs-and-actions-container-background-color: var(--surface-1);
+    --dv-activegroup-visiblepanel-tab-background-color: transparent;
+    --dv-inactivegroup-visiblepanel-tab-background-color: transparent;
+    --dv-activegroup-hiddenpanel-tab-background-color: transparent;
+    --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
+}
+
+.bdo-layout-v2 .dv-groupview:has([data-panel="tree"]) .dv-tab,
+.bdo-layout-v2 .dv-groupview:has([data-panel="list"]) .dv-tab {
+    width: 100%;
+    padding: 0;
+}
+
+/* The list header hardcodes its own background, so lift it to match its zone. */
+.bdo-layout-v2 .dv-groupview:has([data-panel="list"]) [data-panel="list"] > .sticky {
+    background-color: var(--surface-1);
 }

@@ -76,14 +76,14 @@ export function Sidebar() {
 
 const sidebarNodeVariants = cva(
 	"flex w-full items-center gap-1.5 py-1.5 pr-2 cursor-pointer select-none " +
-	"data-[active=true]:bg-zinc-800 data-[active=true]:text-white",
+	"data-[active=true]:bg-surface-3 data-[active=true]:text-foreground",
 	{
 		variants        : {
 			variant : {
 				// Top-level source categories read as section headers.
-				root : "text-xs font-semibold uppercase tracking-wide text-zinc-300 hover:bg-zinc-900 hover:text-white",
+				root : "text-xs font-semibold uppercase tracking-wide text-zinc-300 hover:bg-surface-2 hover:text-foreground",
 				// Nested items are regular, lower-emphasis nav rows.
-				child : "text-sm text-zinc-400 hover:bg-zinc-900 hover:text-white",
+				child : "text-sm text-zinc-400 hover:bg-surface-2 hover:text-foreground",
 			}
 		},
 		defaultVariants : {

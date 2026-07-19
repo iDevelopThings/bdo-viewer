@@ -23,13 +23,13 @@ export type DetailsHeaderProps = {
 export function DetailsHeader({title, icon, grade, lines}: DetailsHeaderProps) {
 	const gradeColor = grade ? getGradeColor(grade, ItemGrades.White) : undefined;
 	return (
-		<div className={"flex flex-row gap-8 items-center p-8"}
+		<div className={"flex flex-row gap-5 items-center px-6 py-5"}
 		     style={{
 			     background : grade ? `linear-gradient(to bottom, ${gradeColor.darken(0.5)}, ${gradeColor.darken(0.8)})` : undefined,
 		     }}>
-			{icon && <img src={icon.startsWith("/icons") ? icon : `/icons/${icon}`} alt={title} className={"w-16 h-16"} />}
-			<div className={"flex flex-col gap-2"}>
-				<div className={"text-2xl font-bold"}>{title}</div>
+			{icon && <img src={icon.startsWith("/icons") ? icon : `/icons/${icon}`} alt={title} className={"w-14 h-14"} />}
+			<div className={"flex flex-col gap-1.5"}>
+				<div className={"text-xl font-bold"}>{title}</div>
 				<div>
 					{lines && Object.entries(lines).map(([key, value]) => {
 						const v = typeof value === "function" ? value() : value;
