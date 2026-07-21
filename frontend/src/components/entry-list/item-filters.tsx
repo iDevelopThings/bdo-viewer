@@ -5,9 +5,9 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import {Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList} from "@/components/ui/combobox.tsx";
 import {toggleExpanded, useIsExpanded} from "@/state/global.tsx";
 import {FilterRow} from "@/components/entry-list/entry-filter-panel.tsx";
-import {SlotName} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import type {SlotName} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {iterTitle} from "@/lib/types/character-classes.gen.ts";
-import {ItemGrade} from "@/lib/types/item-grades.gen.ts";
+import type {ItemGrade} from "@/lib/types/item-grades.gen.ts";
 import {gradeOptions} from "@/lib/types/item-grades.ts";
 
 const CLASS_TITLES = [...iterTitle()];

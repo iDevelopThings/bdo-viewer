@@ -1,8 +1,9 @@
 import {InputGroup, InputGroupAddon, InputGroupInput} from "@/components/ui/input-group";
 import {SearchIcon, XIcon} from "lucide-react";
-import {SortControls, SortControlsProps} from "@/components/entry-list/entry-list.tsx";
+import type { SortControlsProps} from "@/components/entry-list/entry-list.tsx";
+import {SortControls} from "@/components/entry-list/entry-list.tsx";
 import {Button} from "@/components/ui/button.tsx";
-import {ReactNode} from "react";
+import type {ReactNode} from "react";
 import {Label} from "@/components/ui/label.tsx";
 
 export function FilterRow({label, children}: { label: string, children: ReactNode }) {
