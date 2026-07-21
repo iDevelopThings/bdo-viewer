@@ -1,7 +1,7 @@
 import {proxy} from "valtio";
 import {proxyMap} from "valtio/utils";
 import {persist} from "valtio-persist";
-import {RecipeSelection, CraftPlan, Requirement} from "@bindings/bdo-viewer/internal/recipe";
+import type {RecipeSelection, CraftPlan, Requirement} from "@bindings/bdo-viewer/internal/recipe";
 import {BillOfMaterials, ResolveCraftPlan} from "@bindings/bdo-viewer/internal/recipe/resolver.ts";
 import {fetchMarket, marketLoaded} from "@/lib/market-data.tsx";
 

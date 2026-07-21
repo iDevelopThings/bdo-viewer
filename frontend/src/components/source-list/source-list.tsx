@@ -7,7 +7,6 @@ import {SourceKind} from "@bindings/bdo-viewer/internal/sources";
 import type {DeepReadonly} from "@/types.ts";
 import {EntryRowBase, EntrySourceBadge, VirtualEntryList} from "@/components/entry-list/entry-list.tsx";
 import {getSourceFilterPanel} from "@/components/entry-list/source-filters.tsx";
-import {findSourceByType} from "@/state/sources/sources.ts";
 import {getNavigationListScope, navigation} from "@/state/navigation.tsx";
 import {EntryFilterHeader} from "@/components/entry-list/entry-filter-panel.tsx";
 
@@ -49,7 +48,7 @@ export function SourceList() {
 					}}
 					sortControls={{
 						sortKey: l.sort,
-						dir: l.sortDir,
+						dir: l.sortDir ?? "asc",
 						sorts: currentScope.source?.sorts ?? [],
 						onChange: (key, dir) => {
 							list.sort    = key;
@@ -85,8 +84,8 @@ export function SourceList() {
 }
 
 function SourceEntryRow({entry, source}: { entry: DeepReadonly<ListSourceEntry>, source: SourceKind }) {
-	const urn    = entry.urn ?? findSourceByType(source)?.entryURN(entry.id);
-	const isOpen = useIsContentPanelOpen(source, entry.id, urn);
+	const urn    = entry.urn;
+	const isOpen = useIsContentPanelOpen(urn);
 
 	// Global search mixes sources, so each result carries the source it came from.
 	const entrySource = entry.extra?.source as SourceKind | undefined;

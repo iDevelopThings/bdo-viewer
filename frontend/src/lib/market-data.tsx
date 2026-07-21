@@ -1,9 +1,7 @@
 import {proxy} from "valtio";
 import {useSnapshot} from "valtio/react";
 import {proxyMap} from "valtio/utils";
-import {useEffect} from "react";
 import {moneyLabel} from "@/utils.tsx";
-import {ItemURN} from "@/lib/urn.ts";
 import {Fetch as FetchMarket, Snapshot} from "@bindings/bdo-viewer/internal/market/service.ts";
 import type {Entry, Status} from "@bindings/bdo-viewer/internal/market";
 import {GetMarketRegion} from "@bindings/bdo-viewer/internal/config/config.ts";
@@ -39,23 +37,14 @@ function applyStatus(s: Status) {
 	market.fetched = s.fetched || undefined;
 }
 
-// toURN accepts an item URN string or a numeric id (many call sites still carry
-// plain ids) and normalises to the item URN the price map is keyed by.
-function toURN(idOrURN: number | string): string {
-	if (typeof idOrURN === "string" && idOrURN.startsWith("urn::")) {
-		return idOrURN;
-	}
-	return ItemURN.new(idOrURN);
-}
-
 export function marketLoaded(): boolean {
 	return market.fetched !== undefined;
 }
 
-// marketPrice returns the live listing for an item (URN or id), or undefined when
-// it isn't listed / prices aren't loaded.
-export function marketPrice(idOrURN: number | string): MarketEntry | undefined {
-	return market.byURN.get(toURN(idOrURN));
+// marketPrice returns the live listing for an item urn, or undefined when it isn't
+// listed / prices aren't loaded.
+export function marketPrice(urn: string): MarketEntry | undefined {
+	return market.byURN.get(urn);
 }
 
 // fetchMarket loads the central-market snapshot for the configured region through
@@ -88,36 +77,27 @@ export async function fetchMarket() {
 	}
 }
 
-export function marketPriceLabel(idOrURN: number | string): string | undefined {
-	if (!market.fetched) {
-		void fetchMarket();
+export function marketPriceLabel(urn: string): string | undefined {
+	if (!market.fetched || market.loading) {
 		return "loading…";
 	}
-	if (market.loading) {
-		return "loading…";
-	}
-	const e = marketPrice(idOrURN);
+	const e = marketPrice(urn);
 	return e ? moneyLabel(e.price) : undefined;
 }
 
-// useMarketPriceLabel reads through useSnapshot() so it re-renders on load, and
-// triggers a fetch on first use.
-export function useMarketPriceLabel(idOrURN: number | string | undefined): string | undefined {
-	const snap = useSnapshot(market);
+// useMarketPriceLabel reads the live price label for an item urn via useSnapshot(),
+// re-rendering when prices load. It does not trigger a fetch: prices are loaded once
+// at startup (see layout) and refreshed explicitly (settings / calc).
+export function useMarketPriceLabel(urn: string | undefined): string | undefined {
+	const {fetched, loading, byURN} = useSnapshot(market);
 
-	useEffect(() => {
-		if (idOrURN !== undefined && !snap.fetched && !snap.loading) {
-			void fetchMarket();
-		}
-	}, [idOrURN, snap.fetched, snap.loading]);
-
-	if (idOrURN === undefined) {
+	if (urn === undefined) {
 		return undefined;
 	}
-	if (!snap.fetched || snap.loading) {
+	if (!fetched || loading) {
 		return "loading…";
 	}
-	const e = snap.byURN.get(toURN(idOrURN));
+	const e = byURN.get(urn);
 	return e ? moneyLabel(e.price) : undefined;
 }
 

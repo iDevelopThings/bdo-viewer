@@ -9,6 +9,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"bdo-viewer/internal/sources"
+	"bdo-viewer/internal/stats"
 	"bdo-viewer/internal/util"
 	"github.com/idevelopthings/bdo-data-extractor/src/model"
 	"github.com/idevelopthings/bdo-data-extractor/src/models"
@@ -22,13 +23,16 @@ const (
 )
 
 type EventLoadoutUpdatedPayload struct {
-	GearMastery MasteryConfigSet                  `json:"gearMastery"`
-	Level       int                               `json:"level"`
-	Consumables []*model.Item                     `json:"consumables"`
-	Class       model.CharacterClassTypeInfo      `json:"class,omitempty"`
-	Slots       [model.SlotNameMAX]SimpleSlotData `json:"slots"`
-	MaxOnEquip  bool                              `json:"maxOnEquip"`
-	Stats       *StatSheet                        `json:"stats"`
+	GearMastery     MasteryConfigSet                  `json:"gearMastery"`
+	Level           int                               `json:"level"`
+	Consumables     []*model.Item                     `json:"consumables"`
+	Crystals        []SimpleCrystalSlot               `json:"crystals"`
+	CrystalGroups   []CrystalGroupUsage               `json:"crystalGroups"`
+	CrystalEffects  []stats.StatGroup                 `json:"crystalEffects"`
+	Class           model.CharacterClassTypeInfo      `json:"class,omitempty"`
+	Slots           [model.SlotNameMAX]SimpleSlotData `json:"slots"`
+	MaxOnEquip      bool                              `json:"maxOnEquip"`
+	Stats           *StatSheet                        `json:"stats"`
 }
 type EventSlotBlockUpdatedPayload struct {
 	SlotId       model.SlotName  `json:"slotId"`
@@ -71,6 +75,9 @@ type BuilderService struct {
 	// addConsumables). Deduped by URN so the exact same item can't stack.
 	Consumables models.EntityRefList[model.Item] `json:"consumables"`
 
+	// Crystals is the active transfusion preset (fixed socket layout).
+	Crystals [model.CrystalPresetSlotMAX]CrystalSocket `json:"crystals"`
+
 	Class model.CharacterClassType `json:"class"`
 	Slots [model.SlotNameMAX]Slot  `json:"slots"`
 
@@ -84,7 +91,18 @@ type BuilderService struct {
 
 	// See this almost like an inventory, when you remove an item from a slot, we'll store it here
 	// Useful when trying to compare things, and when an item gets de-equipped because of another consuming slots.
-	EquipHistory []models.EntityRef[model.Item] `json:"equipHistory"`
+	EquipHistory []EquipHistoryEntry `json:"equipHistory"`
+
+	// Set when a save exists but couldn't be read, which leaves this service holding defaults.
+	// Saving then would write those defaults over a build we simply failed to parse.
+	loadFailed bool
+}
+
+// EquipHistoryEntry keeps the slot the item came out of so re-equipping from the history
+// panel can put it back where it was — an item's URN alone doesn't pin down one slot.
+type EquipHistoryEntry struct {
+	Item models.EntityRef[model.Item] `json:"item"`
+	Slot model.SlotName               `json:"slot"`
 }
 
 var Service *BuilderService
@@ -98,7 +116,8 @@ func NewBuilderService() *BuilderService {
 		GearMastery: MasteryConfigSet{},
 
 		Consumables:  models.NewEntityRefList[model.Item](),
-		EquipHistory: []models.EntityRef[model.Item]{},
+		Crystals:     emptyCrystalPreset(),
+		EquipHistory: []EquipHistoryEntry{},
 
 		Slots: [model.SlotNameMAX]Slot{},
 		Class: model.CharacterClassTypeUnknown,
@@ -156,13 +175,12 @@ func (s *BuilderService) SetClass(class model.CharacterClassType) {
 	s.emitLoadoutUpdated()
 }
 
-func (s *BuilderService) Equip(itemRef *models.EntityRef[model.Item]) bool {
+func (s *BuilderService) Equip(itemRef *models.EntityRef[model.Item], slotId model.SlotName) bool {
 	item := itemRef.GetValue()
 	if item == nil || item.EquipInfo == nil {
 		return false
 	}
 
-	slotId := item.EquipInfo.Slot
 	if !slotId.Valid() {
 		return false
 	}
@@ -178,6 +196,7 @@ func (s *BuilderService) Equip(itemRef *models.EntityRef[model.Item]) bool {
 	}
 
 	slotsBlocked := s.equipInternal(slotId, item, itemRef)
+	s.syncDawnCrystals()
 
 	if len(slotsBlocked) > 0 {
 		s.emitSlotBlockStatusChange(slotsBlocked)
@@ -238,6 +257,7 @@ func (s *BuilderService) Unequip(slotId model.SlotName) bool {
 	}
 
 	slotsBlocked := s.unequipInternal(slotId)
+	s.syncDawnCrystals()
 
 	if len(slotsBlocked) > 0 {
 		s.emitSlotBlockStatusChange(slotsBlocked)
@@ -262,7 +282,7 @@ func (s *BuilderService) unequipInternal(slotId model.SlotName) []EventSlotBlock
 	s.Slots[slotId].Reset(SlotResetKindFull)
 
 	if item != nil {
-		s.addToEquipHistory(item)
+		s.addToEquipHistory(slotId, item)
 	}
 
 	return slotsBlocked
@@ -354,7 +374,7 @@ func applyEnhancementLevels(slot *Slot, enhanceLevel int, caphrasLevel int) {
 // computeStats runs the stat pipeline for the current loadout. The caller must
 // hold s.mu.
 func (s *BuilderService) computeStats() *StatSheet {
-	return ComputeStats(s.Class, s.Level, s.Fitness, s.playerMastery(), s.Slots[:], s.activeConsumables())
+	return ComputeStats(s.Class, s.Level, s.Fitness, s.playerMastery(), s.Slots[:], s.activeConsumables(), s.activeCrystals())
 }
 
 // activeConsumables resolves the active consumable refs to their items, in
@@ -393,15 +413,15 @@ func (s *BuilderService) GetStats() *StatSheet {
 // GetEquipHistory intentionally has no lock so it can be used inside lock-protected code paths (like equip/unequip) without deadlocking.
 func (s *BuilderService) getEquipHistory() []sources.ListSourceEntry {
 	history := make([]sources.ListSourceEntry, 0, len(s.EquipHistory))
-	for _, ref := range s.EquipHistory {
-		if it := ref.GetValue(); it != nil {
+	for _, entry := range s.EquipHistory {
+		if it := entry.Item.GetValue(); it != nil {
 			history = append(history, sources.ListSourceEntry{
-				ID:    it.ID,
 				URN:   it.GetURN().String(),
 				Title: it.Name,
 				Icon:  it.Icon,
 				Extra: map[string]any{
 					"grade": it.Grade,
+					"slot":  entry.Slot,
 				},
 			})
 		}
@@ -503,16 +523,18 @@ func (s *BuilderService) RemoveConsumable(urnStr string) {
 	})
 }
 
-func (s *BuilderService) addToEquipHistory(item ...*model.Item) {
-	for _, it := range item {
-		if it == nil {
-			continue
-		}
-		s.EquipHistory = slices.DeleteFunc(s.EquipHistory, func(ref models.EntityRef[model.Item]) bool {
-			return ref.URN == it.GetURN()
-		})
-		s.EquipHistory = append([]models.EntityRef[model.Item]{*it.ToEntityRef()}, s.EquipHistory...)
+func (s *BuilderService) addToEquipHistory(slotId model.SlotName, item *model.Item) {
+	if item == nil {
+		return
 	}
+
+	s.EquipHistory = slices.DeleteFunc(s.EquipHistory, func(entry EquipHistoryEntry) bool {
+		return entry.Item.URN == item.GetURN()
+	})
+	s.EquipHistory = append([]EquipHistoryEntry{{
+		Item: *item.ToEntityRef(),
+		Slot: slotId,
+	}}, s.EquipHistory...)
 
 	if len(s.EquipHistory) > 30 {
 		s.EquipHistory = s.EquipHistory[:30]
@@ -539,13 +561,16 @@ func (s *BuilderService) emitLoadoutUpdated() {
 	}
 
 	s.app.Event.Emit(EventLoadoutUpdated, EventLoadoutUpdatedPayload{
-		GearMastery: s.GearMastery,
-		Level:       s.Level,
-		Consumables: s.activeConsumables(),
-		Class:       s.Class.Info(),
-		Slots:       slots,
-		MaxOnEquip:  s.MaxOnEquip,
-		Stats:       s.computeStats(),
+		GearMastery:    s.GearMastery,
+		Level:          s.Level,
+		Consumables:    s.activeConsumables(),
+		Crystals:       s.simpleCrystalSlots(),
+		CrystalGroups:  s.crystalGroupUsage(),
+		CrystalEffects: stats.NewStatBuilder().ExtendCrystalPreset(s.activeCrystals()).Build(),
+		Class:          s.Class.Info(),
+		Slots:          slots,
+		MaxOnEquip:     s.MaxOnEquip,
+		Stats:          s.computeStats(),
 	})
 }
 
@@ -567,7 +592,6 @@ func (s *BuilderService) buildSimpleSlotData(slot Slot) SimpleSlotData {
 		}
 		d.ItemRef = model.ItemRef(slot.Item.ID)
 		d.Item = &sources.ListSourceEntry{
-			ID:    slot.Item.ID,
 			URN:   slot.Item.GetURN().String(),
 			Title: slot.Item.Name,
 			Icon:  slot.Item.Icon,

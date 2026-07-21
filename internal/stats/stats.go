@@ -1,6 +1,7 @@
 package stats
 
 import (
+	"strings"
 	"time"
 
 	"github.com/idevelopthings/bdo-data-extractor/src/model"
@@ -120,6 +121,77 @@ func (b *StatBuilder) ExtendWithEffectGroup(g model.EffectGroup) *StatBuilder {
 	return b
 }
 
+// ExtendCrystalPreset aggregates equipped crystal StatMods into one effects
+// section (game-facing labels/units — not the gear sheet's fanout expansion).
+func (b *StatBuilder) ExtendCrystalPreset(items []*model.Item) *StatBuilder {
+	type keyed struct {
+		mod model.StatMod
+	}
+	var order []string
+	byKey := map[string]*keyed{}
+
+	for _, it := range items {
+		if it == nil || it.Effects == nil {
+			continue
+		}
+		for group := range it.Effects.AllStatGroups() {
+			for _, sm := range group.Stats {
+				if skipCrystalStatMod(sm) {
+					continue
+				}
+				key := crystalModKey(sm)
+				if existing := byKey[key]; existing != nil {
+					existing.mod.Value += sm.Value
+					continue
+				}
+				order = append(order, key)
+				cp := sm
+				byKey[key] = &keyed{mod: cp}
+			}
+		}
+	}
+	if len(order) == 0 {
+		return b
+	}
+
+	sec := b.NamedSection(StatGroupKindEffects, "Applied Crystal Effects")
+	for _, key := range order {
+		sec.FormattedStatMod(byKey[key].mod)
+	}
+	return b
+}
+
+// CrystalEffectSummary joins a crystal's Stat/Hidden mods with " / ", matching
+// the transfusion sidebar's per-crystal line (same formatting as FormattedStatMod).
+func (b *StatBuilder) CrystalEffectSummary(item *model.Item) string {
+	if item == nil || item.Effects == nil {
+		return ""
+	}
+	var parts []string
+	for group := range item.Effects.AllStatGroups() {
+		for _, sm := range group.Stats {
+			if skipCrystalStatMod(sm) {
+				continue
+			}
+			if line := formatStatModLine(sm); line != "" {
+				parts = append(parts, line)
+			}
+		}
+	}
+	return strings.Join(parts, " / ")
+}
+
+func skipCrystalStatMod(sm model.StatMod) bool {
+	return sm.EffectDsl != nil || sm.Instant || sm.Stat == ""
+}
+
+func crystalModKey(sm model.StatMod) string {
+	if sm.StatID != "" {
+		return string(sm.StatID) + "\x00" + sm.Op + "\x00" + sm.Unit
+	}
+	return sm.Stat + "\x00" + sm.Op + "\x00" + sm.Unit
+}
+
 func (s *Section) add(title, value string, raw *float64) *Stat {
 	s.stats = append(s.stats, Stat{
 		Title: title,
@@ -184,16 +256,27 @@ func (s *Section) Range(title string, min, max, raw float64) {
 	s.add(title, util.FormatNumber(min)+"-"+util.FormatNumber(max), new(raw))
 }
 func (s *Section) FormattedStatMod(mod model.StatMod) {
-	var st *Stat
-	if mod.Value == 0 {
-		st = s.add(mod.Stat, "", nil)
-	} else {
-		st = s.add(
-			mod.Stat,
-			mod.Op+util.FormatNumber(mod.Value)+mod.Unit,
-			new(mod.Value),
-		)
+	st := s.add(mod.Stat, formatStatModValue(mod), nil)
+	if mod.Value != 0 {
+		st.Raw = new(mod.Value)
 	}
-
 	st.Negate = mod.Negate
+}
+
+func formatStatModValue(mod model.StatMod) string {
+	if mod.Value == 0 {
+		return ""
+	}
+	return mod.Op + util.FormatNumber(mod.Value) + mod.Unit
+}
+
+// formatStatModLine is the in-game single-line form, e.g. "Weight Limit +20 LT".
+func formatStatModLine(mod model.StatMod) string {
+	if mod.Stat == "" {
+		return ""
+	}
+	if v := formatStatModValue(mod); v != "" {
+		return mod.Stat + " " + v
+	}
+	return mod.Stat
 }

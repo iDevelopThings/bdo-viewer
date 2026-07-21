@@ -1,16 +1,18 @@
 import {persistSync} from "@/lib/persist-sync.ts";
-import {Snapshot} from "valtio";
+import type {Snapshot} from "valtio";
 import type {MapLink, MapLinkSegment, NpcMarker, RegionBound, RegionPoint} from "@/components/world-map/types.ts";
-import {NPC, NPCSpawn, NPCSpawnType} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import type {NPC, NPCSpawn, NPCSpawnType} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import {WorldNodeKind} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {GetItemsByURN, GetNpcsByURN, GetPlacedNpcs, GetWorldNodes, GetWorldRegions, GetWorldTerritories} from "@bindings/bdo-viewer/internal/catalog/catalog.ts";
 import {NPC_ROLES} from "@/components/world-map/npc-roles.ts";
 import {ref} from "valtio/vanilla";
-import {WorldMeta, fetchWorldMeta, MAP_LABEL_MIN_Z, WORLD_LAYER, INITIAL_ZOOM, FOCUS_ZOOM, worldToTile} from "@/components/world-map/map-config.ts";
+import type {WorldMeta} from "@/components/world-map/map-config.ts";
+import {fetchWorldMeta, MAP_LABEL_MIN_Z, WORLD_LAYER, INITIAL_ZOOM, FOCUS_ZOOM, worldToTile} from "@/components/world-map/map-config.ts";
 import type {OrthographicViewState, ViewStateChangeParameters} from "@deck.gl/core";
-import {NodeGraph, WrappedWorldNode} from "@/components/world-map/world-node.ts";
-import {WorldNodeKind} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import type {WrappedWorldNode} from "@/components/world-map/world-node.ts";
+import {NodeGraph} from "@/components/world-map/world-node.ts";
 import memoizeOne from "memoize-one";
-import {MaybeReadonly} from "@/types.ts";
+import type {MaybeReadonly} from "@/types.ts";
 
 /** Where the camera is: the world point at the centre of the viewport, and the zoom. */
 export interface MapView {
@@ -28,7 +30,7 @@ function nearestSpawn(npc: MaybeReadonly<NPC>, to: [number, number]) {
 	let best: MaybeReadonly<NPCSpawn> | undefined;
 	let bestDist = Infinity;
 	for (const s of npc.spawns ?? []) {
-		if (!s.pos || s.pos.length < 3) {
+		if (s.pos.length < 3) {
 			continue;
 		}
 		const dx   = s.pos[0] - to[0];
@@ -66,7 +68,7 @@ const EMPTY_NPC_MARKERS: NpcMarker[]  = [];
 // referentially stable while its inputs are unchanged, so deck.gl skips regenerating GPU buffers on
 // unrelated renders (e.g. hover). graph.nodes is a ref() (stable until data reloads), so this holds
 // across both proxy and snapshot reads. The getters below compose these (icon/dot/label off filtered).
-const filteredNodesOf = memoizeOne((nodes: WrappedWorldNode[], debugOverlay: boolean, showNodes: boolean, showSubNodes: boolean) =>
+const filteredNodesOf     = memoizeOne((nodes: WrappedWorldNode[], debugOverlay: boolean, showNodes: boolean, showSubNodes: boolean) =>
 	nodes.filter(n => (n.named || debugOverlay) && (n.main ? showNodes : showSubNodes)));
 const iconNodesOf         = memoizeOne((nodes: WrappedWorldNode[]) => nodes.filter(n => n.hasIcon));
 const dotNodesOf          = memoizeOne((nodes: WrappedWorldNode[]) => nodes.filter(n => !n.hasIcon));
@@ -88,7 +90,7 @@ const labelNodesOf        = memoizeOne((nodes: WrappedWorldNode[], showSubLabels
 // n.named || debugOverlay to reuse the flag.
 const visibleNpcMarkersOf    = memoizeOne((markers: NpcMarker[], graph: NodeGraph, debugOverlay: boolean) =>
 	markers.filter(m => {
-		const node = graph.node(m.nodeURN);
+		const node = m.nodeURN ? graph.node(m.nodeURN) : undefined;
 		return !node || node.named || debugOverlay;
 	}));
 const visibleAllNpcMarkersOf = memoizeOne((markers: NpcMarker[], roles: NPCSpawnType[] | null) =>
@@ -146,7 +148,7 @@ export class MapController {
 	public linkSegments: MapLinkSegment[] = [];
 
 	/** Node managers / town representatives, at the placement nearest their node. */
-	public npcMarkers: NpcMarker[] = [];
+	public npcMarkers: NpcMarker[]    = [];
 	/** Every placed NPC, one marker per placement — loaded on demand, see ensureAllNpcs. */
 	public allNpcMarkers: NpcMarker[] = [];
 
@@ -205,7 +207,7 @@ export class MapController {
 			// The map mounts at the restored view, so seed the pyramid level from that zoom — deriving
 			// it from INITIAL_ZOOM would leave everything keyed off tileZ (which labels to draw) wrong
 			// until the first view change corrected it.
-			this.tileZ = this.getMapPyramidZ(this.view?.zoom ?? INITIAL_ZOOM);
+			this.tileZ = this.getMapPyramidZ(this.view?.zoom ?? INITIAL_ZOOM, this.meta);
 		} catch (err) {
 			console.error("Failed to load world meta", err);
 		}
@@ -269,7 +271,7 @@ export class MapController {
 	// character template with several placements, so pick the one nearest the owning node.
 	private buildNpcMarkers() {
 		const markers: NpcMarker[] = [];
-		const add = (node: WrappedWorldNode, npc: NPC | undefined, role: NpcMarker["role"]) => {
+		const add                  = (node: WrappedWorldNode, npc: NPC | undefined, role: NpcMarker["role"]) => {
 			if (!npc) {
 				return;
 			}
@@ -312,7 +314,7 @@ export class MapController {
 					continue;
 				}
 				for (const s of npc.spawns ?? []) {
-					if (!s.pos || s.pos.length < 3) {
+					if (s.pos.length < 3) {
 						continue;
 					}
 					markers.push({
@@ -357,7 +359,7 @@ export class MapController {
 						polygon : [[min[0], min[2]], [max[0], min[2]], [max[0], max[2]], [min[0], max[2]]],
 					});
 				}
-				if (r.position) {
+				if (r.position.length) {
 					marks.push({position : [r.position[0], r.position[2]], name : r.name, kind : "mark"});
 				}
 				for (const e of r.extraPositions ?? []) {
@@ -622,19 +624,24 @@ export class MapController {
 	// screen pixel is 2^Z world units; a native (z=maxZoom) tile pixel is unitsPerPixel world
 	// units. They're 1:1 when z = Z + maxZoom + log2(unitsPerPixel) — round to that so tiles
 	// render ~1:1 instead of upscaled (blurry) or heavily downscaled.
-	public getMapPyramidZ(viewZoom: number): number {
-		if (!this.meta) {
+	public getMapPyramidZ(viewZoom: number, meta?: WorldMeta): number {
+		if (this.loading && !meta) {
 			throw new Error("World meta not loaded");
 		}
 
-		const crisp = viewZoom + this.meta.maxZoom + Math.log2(this.meta.unitsPerPixel);
-		return Math.max(0, Math.min(this.meta.maxZoom, Math.round(crisp)));
+		const m = meta ?? this.meta;
+		if (!m) {
+			throw new Error("World meta not loaded");
+		}
+
+		const crisp = viewZoom + m.maxZoom + Math.log2(m.unitsPerPixel);
+		return Math.max(0, Math.min(m.maxZoom, Math.round(crisp)));
 	}
 
 	// Fires every frame while panning, but we only re-render (setTileZ) when the integer
 	// pyramid level actually changes — so pure panning triggers zero React renders.
 	public onViewStateChange(params: ViewStateChangeParameters<OrthographicViewState>): void {
-		this.tileZ = this.meta ? this.getMapPyramidZ(params.viewState.zoom as number) : 0;
+		this.tileZ = this.getMapPyramidZ(params.viewState.zoom as number);
 
 		const {target, zoom} = params.viewState;
 		this.trackView([(target as number[])[0], (target as number[])[1]], zoom as number);
@@ -699,14 +706,14 @@ export class MapController {
 		const v = node ? ref(node) : null;
 		if (mode === "hover") {
 			this.hoveredNode = v;
-		} else if (mode === "select") {
+		} else {
 			this.selectedNode = v;
 		}
 	}
 }
 
 
-export const {store : mapState} = persistSync<MapController>(new MapController(), "map", {
+const mapPersist = persistSync<MapController>(new MapController(), "map", {
 	debounceTime          : 500,
 	mergeStrategy         : {
 		isAsync : false,
@@ -739,3 +746,8 @@ export const {store : mapState} = persistSync<MapController>(new MapController()
 		}
 	}
 });
+// Long-lived singleton: subscribe for the app's lifetime. On HMR drop the old subscription so a
+// re-executed module doesn't stack a second persist writer over the previous instance.
+const stopMapPersist = mapPersist.subscribe();
+import.meta.hot?.dispose(() => stopMapPersist());
+export const mapState = mapPersist.store;

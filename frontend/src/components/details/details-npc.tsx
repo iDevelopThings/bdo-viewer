@@ -1,9 +1,7 @@
 import {useDetail} from "@/state/detail.tsx";
-import {ChipList, DetailsHeader} from "@/components/details/details-components.tsx";
-import {getEntryKey} from "@/state/detail-store.tsx";
+import {DetailsHeader, DetailsSection, DetailsShell, EntityMapChip} from "@/components/details/details-components.tsx";
 import {DetailsKnowledge} from "@/components/details/details-item.tsx";
-import {WorldURN} from "@/lib/urn.ts";
-import {goToURN} from "@/state/panels.ts";
+import {goToURN, openMapAt} from "@/state/panels.ts";
 import {isNpc} from "@/state/sources/sources.ts";
 
 export function NpcDetails() {
@@ -14,33 +12,44 @@ export function NpcDetails() {
 	}
 
 	const e = d.entry.value;
-
+	const spawns = (e.spawns ?? []).filter(s => s.region || s.pos.length >= 3);
 
 	return (
-		<div
-			className="flex flex-col grow "
-		>
-			<DetailsHeader
-				title={e.name}
-				lines={{
-					"ID" : getEntryKey(d.entry).toString(),
-				}}
-			/>
-			<div className={"gap-8 pb-8"}>
-
-				<ChipList
-					section={"Location"}
-					items={e.spawns?.map(s => ({id : s.region, name : s.regionName}))}
-					onClick={(s, pinned) => {
-						goToURN(WorldURN.new("region", s.id), {title : s.name, pinned});
+		<DetailsShell
+			header={(
+				<DetailsHeader
+					title={e.name}
+					urn={d.entry.urn}
+					lines={{
+						"ID"    : d.entry.urn,
+						"Title" : () => e.title || undefined,
 					}}
 				/>
+			)}
+		>
+			{spawns.length > 0 && (
+				<DetailsSection title={"Location"} borderTop>
+					<div className="flex flex-row items-center flex-wrap gap-2">
+						{spawns.map((s, i) => {
+							const regionURN  = s.region;
+							const regionName = s.regionName || "Location";
+							const hasPos     = s.pos.length >= 3;
+							return (
+								<EntityMapChip
+									key={`spawn-${regionURN ?? i}-${i}`}
+									name={regionName}
+									onOpen={regionURN
+										? (pinned) => goToURN(regionURN, {title : regionName, pinned})
+										: undefined}
+									onMap={hasPos ? () => openMapAt(s.pos) : undefined}
+								/>
+							);
+						})}
+					</div>
+				</DetailsSection>
+			)}
 
-				<DetailsKnowledge />
-
-			</div>
-
-		</div>
+			<DetailsKnowledge />
+		</DetailsShell>
 	);
 }
-

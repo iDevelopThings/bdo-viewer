@@ -15,7 +15,7 @@ export async function connectReduxDevtools(
 	proxyObject: object,
 	options: RemoteDevtoolsOptions,
 ): Promise<(() => void) | undefined> {
-	if (!import.meta.env?.DEV) {
+	if (!import.meta.env.DEV) {
 		return;
 	}
 

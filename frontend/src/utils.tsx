@@ -1,4 +1,4 @@
-import {useRef, useCallback, useEffect} from "react";
+import {useRef, useCallback, useEffect, useState} from "react";
 
 export const numberFormat = new Intl.NumberFormat("en-US", {
 	style                    : "decimal",
@@ -49,7 +49,10 @@ export function durationLabel(ms: number | undefined): string | undefined {
 }
 
 // Convert a BDO 0xAARRGGBB (or 0xRRGGBB) hex to a CSS colour.
-export function parseARGB(hex: string, alpha?: number): string | undefined {
+export function parseARGB(hex?: string, alpha?: number): string | undefined {
+	if (!hex) {
+		return undefined;
+	}
 	if (hex.startsWith("0x") || hex.startsWith("0X")) {
 		hex = hex.slice(2);
 	}
@@ -96,12 +99,18 @@ export function moneyLabel(value: number | undefined): string | undefined {
 	}
 }
 
+// getMiddleClickProps wires a self-contained nav control: left-click acts, middle-click
+// runs the alt action (e.g. open pinned). Clicks stop here so the control never also
+// triggers a clickable ancestor (an icon inside a clickable recipe row, a chip in a card).
 export function getMiddleClickProps(
 	handleAction: () => void,
 	handleRegularClick: () => void
 ) {
 	return {
-		onClick     : handleRegularClick,
+		onClick     : e => {
+			e.stopPropagation();
+			handleRegularClick();
+		},
 		onMouseDown : e => {
 			if (e.button === 1) {
 				e.preventDefault();
@@ -109,6 +118,7 @@ export function getMiddleClickProps(
 		},
 		onAuxClick  : e => {
 			if (e.button === 1) {
+				e.stopPropagation();
 				handleAction();
 			}
 		}
@@ -136,12 +146,13 @@ export function wrap<T extends object, S extends symbol, M extends object>(
 
 	const extra = typeof merge === "function" ? merge(object) : merge;
 
-	Object.defineProperty(object, symbol, { value: true });
+	Object.defineProperty(object, symbol, {value : true});
 	Object.defineProperties(object, Object.getOwnPropertyDescriptors(extra));
 
 	return object as Fold<T & Record<S, true> & M>;
 	// return Object.assign(object, { [symbol]: true } as Record<S, true>, extra);
 }
+
 /*
 export function wrap<T, S extends symbol, M extends ((obj: T) => object), MM extends M extends (obj: T) => infer R ? R : M
 >(
@@ -190,4 +201,88 @@ export function useDebounce<T extends (...args: any[]) => void>(callback: T, del
 	}, []);
 
 	return debouncedCallback;
+}
+
+export function useDebouncedValue<T>(value: T, delay: number): T {
+	const [debouncedValue, setDebouncedValue] = useState(value);
+
+	useEffect(() => {
+		const handler = setTimeout(() => {
+			setDebouncedValue(value);
+		}, delay);
+
+		return () => {
+			clearTimeout(handler);
+		};
+	}, [value, delay]);
+
+	return debouncedValue;
+}
+
+/*
+
+export function useDisposableEventListener<
+	TEventTarget extends NonUndefined<object>,
+	TListener extends FunctionKeys<NonUndefined<TEventTarget>>
+>(
+	obj: TEventTarget,
+	eventName: TListener,
+	listener: NonNullable<NonUndefined<TEventTarget>[TListener]> extends (...args: any[]) => any ? NonNullable<NonUndefined<TEventTarget>[TListener]> : never
+) {
+	if (!obj || !eventName || !listener) {
+		throw new Error("useDisposableEventListener: obj, eventName, and listener must be provided");
+	}
+
+	useEffect(() => {
+		const dispose = (obj[eventName] as any)(listener);
+		console.log("subscribed to event", eventName, "on", obj, "with listener", listener, "dispose function:", dispose);
+
+		return () => {
+			if (dispose && typeof dispose === "function") {
+				console.log("disposing event listener for", eventName, "on", obj);
+				dispose();
+			} else {
+				console.warn("dispose is not a function for event", eventName, "on", obj);
+			}
+		};
+	}, [obj, eventName, listener]);
+}
+*/
+
+
+interface IDisposable {
+	dispose(): void;
+}
+
+// vscode/dockview event shape: subscribe → disposable
+type Event<T> = (listener: (e: T) => void) => IDisposable;
+
+// keys of T whose value is an Event<...>
+type EventKeys<T> = {
+	[K in keyof T]: T[K] extends Event<any> ? K : never;
+}[keyof T];
+
+// payload of a specific event key
+type EventPayload<T, K extends keyof T> =
+	T[K] extends Event<infer P> ? P : never;
+
+export function useDisposableEventListener<
+	T,
+	K extends EventKeys<NonNullable<T>>,
+>(
+	target: T | null | undefined,
+	eventName: K,
+	handler: (e: EventPayload<NonNullable<T>, K>) => void,
+): void {
+	const handlerRef = useRef(handler);
+	useEffect(() => {
+		handlerRef.current = handler;
+	});
+
+	useEffect(() => {
+		if (!target) return;
+		const subscribe  = (target as NonNullable<T>)[eventName] as Event<EventPayload<NonNullable<T>, K>>;
+		const disposable = subscribe.call(target, (e) => handlerRef.current(e));
+		return () => disposable.dispose();
+	}, [target, eventName]);
 }

@@ -1,10 +1,10 @@
 import {type MouseEvent, type MutableRefObject, type ReactNode, useCallback} from "react";
 import {useVirtualizer} from "@tanstack/react-virtual";
 import {ArrowDown, ArrowUp} from "lucide-react";
-import {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
+import type {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import type {DeepReadonly} from "@/types.ts";
 import {cn} from "@/lib/utils.ts";
-import {ItemIcon} from "@/lib/item-icon.tsx";
+import {EntryIcon} from "@/lib/entry-icon.tsx";
 import {tryGetGradeColor} from "@/lib/types/item-grades.ts";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {Button} from "@/components/ui/button.tsx";
@@ -72,7 +72,7 @@ export type EntryRowBaseProps = {
 };
 
 export function EntryRowBase({entry, active, badge, onClick, onAuxClick}: EntryRowBaseProps) {
-	const gradeColor = tryGetGradeColor(entry?.extra?.grade);
+	const gradeColor = tryGetGradeColor(entry.extra?.grade);
 
 	return (
 		<div
@@ -95,7 +95,7 @@ export function EntryRowBase({entry, active, badge, onClick, onAuxClick}: EntryR
 				}
 			}}
 		>
-			{entry.icon && <ItemIcon urn={entry.urn} className={"min-w-0 gap-2"} imageClass={"w-6 h-6 shrink-0"} />}
+			{entry.icon && <EntryIcon urn={entry.urn} className={"min-w-0 gap-2"} imageClass={"w-6 h-6 shrink-0"} />}
 			<div className={"flex flex-col flex-1 min-w-0 gap-1"}>
 				<div className={"flex-1 truncate"} style={gradeColor ? {color : gradeColor.toString()} : undefined}>
 					{entry.title}
@@ -131,7 +131,7 @@ export type VirtualEntryListProps = {
 
 export function VirtualEntryList({loading, entries, parentRef, renderRow, emptyMessage}: VirtualEntryListProps) {
 	// Key by URN (unique across sources); many non-item sources share id 0.
-	const getItemKey       = useCallback((index: number) => entries[index].urn || entries[index].id, [entries]);
+	const getItemKey       = useCallback((index: number) => entries[index].urn, [entries]);
 	const getScrollElement = useCallback(() => parentRef.current, [parentRef]);
 	const estimateSize     = useCallback(() => {
 		// Check the first 5 entries to see if they have a subtitle, and adjust the height accordingly.

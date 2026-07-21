@@ -1,5 +1,5 @@
 import {useDetailStore} from "@/state/detail.tsx";
-import {DetailsHeader, DetailsNpcList, DetailsSection} from "@/components/details/details-components.tsx";
+import {DetailsHeader, DetailsNpcList, DetailsSection, DetailsShell} from "@/components/details/details-components.tsx";
 import {isCharacter} from "@/state/sources/sources.ts";
 import {useSnapshot} from "valtio/react";
 
@@ -17,18 +17,23 @@ export function CharacterDetails() {
 	const c = entry.value;
 
 	return (
-		<div className="flex flex-col grow">
-			<DetailsHeader
-				title={c.name ?? ""}
-				lines={{Kind : c.kind ?? "—"}}
-			/>
-			<div className={"gap-8 pb-8"}>
-				{c.npcs?.urns?.length ? (
-					<DetailsSection title={"NPCs"} borderTop>
-						<DetailsNpcList npcUrns={c.npcs.urns} />
-					</DetailsSection>
-				) : null}
-			</div>
-		</div>
+		<DetailsShell
+			header={(
+				<DetailsHeader
+					title={c.name ?? ""}
+					urn={entry.urn}
+					lines={{
+						"ID"   : entry.urn,
+						"Kind" : c.kind ?? "—",
+					}}
+				/>
+			)}
+		>
+			{c.npcs?.urns?.length ? (
+				<DetailsSection title={"NPCs"} borderTop>
+					<DetailsNpcList npcUrns={c.npcs.urns} />
+				</DetailsSection>
+			) : null}
+		</DetailsShell>
 	);
 }

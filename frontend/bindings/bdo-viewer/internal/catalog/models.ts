@@ -6,6 +6,9 @@
 import * as model$0 from "../../../github.com/idevelopthings/bdo-data-extractor/src/model/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as models$0 from "../../../github.com/idevelopthings/bdo-data-extractor/src/models/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as urn$0 from "../../../github.com/idevelopthings/bdo-data-extractor/src/urn/models.js";
 
 /**
@@ -19,6 +22,12 @@ export interface BindingTypes {
     "knowledgeTheme"?: model$0.KnowledgeTheme | null;
     "knowledgeEntry"?: model$0.KnowledgeEntry | null;
     "character"?: model$0.Character | null;
+    "crystalRules"?: model$0.CrystalRules | null;
+}
+
+export interface CrystalStatIdInfo {
+    "statId": model$0.StatId;
+    "name": string;
 }
 
 /**
@@ -33,4 +42,173 @@ export interface ItemVendorData {
     "title"?: string;
     "urns"?: urn$0.URN[] | null;
     "spawns"?: model$0.NPCSpawn[] | null;
+}
+
+export interface NodeInfoRef {
+    "urn": urn$0.URN;
+    "key": number;
+    "name": string;
+    "kind": model$0.WorldNodeKind;
+
+    /**
+     * Territory is the world territory this node sits in (urn::world:territory:<idx>),
+     * derived from the nearest region because the node record stores no territory.
+     */
+    "territory": models$0.EntityRef<model$0.Territory> | null;
+    "position": number[];
+
+    /**
+     * ExplorationPosition is the family/label anchor at exploration.bss +104.
+     * It is omitted when it already equals Position.
+     */
+    "explorationPosition"?: number[] | null;
+
+    /**
+     * LinkedKey is a second node reference; == Key in every current record (a redundant copy).
+     */
+    "linkedKey"?: number;
+
+    /**
+     * SubKey is the node's waypoint-space key.
+     */
+    "subKey"?: number;
+
+    /**
+     * Knowledge references every knowledge entry the game associates with this node — its NPCs, creatures and topography (urn::knowledge:entry:<key>, see knowledge.json).
+     */
+    "knowledge"?: models$0.EntityRefList<model$0.KnowledgeEntry> | null;
+
+    /**
+     * Main is the primary/sub node distinction (the byte at +116): true for towns, gateways,
+     * farms and castles that carry knowledge; false for resource/sub nodes. Validated 100%
+     * against bdolytics' `main` flag across 999 shared nodes.
+     */
+    "main": boolean;
+
+    /**
+     * Contribution is the contribution-point cost to activate this node (0 for towns, else 1-3).
+     */
+    "contribution"?: number;
+
+    /**
+     * Radius is the node's map influence radius (f32 at +31); +35 caches Radius² and is not
+     * stored separately.
+     */
+    "radius"?: number;
+
+    /**
+     * Manager is the NPC template that manages this exact node. The build rejects
+     * non-main kind-0 pseudo families and retains repeated character keys only on
+     * the owner selected by characterfunction.dbss.
+     */
+    "manager"?: models$0.EntityRef<model$0.NPC> | null;
+
+    /**
+     * ManagerNode points from an affiliated node to the node that owns its
+     * manager. Resolve that node's Manager to reach the NPC template.
+     */
+    "managerNode"?: models$0.EntityRef<model$0.WorldNode> | null;
+
+    /**
+     * TownRepresentative is the ruler or representative stored at exploration.bss +45.
+     */
+    "townRepresentative"?: models$0.EntityRef<model$0.NPC> | null;
+
+    /**
+     * Children are the non-main nodes directly connected to this main node in the
+     * mapdata_realexplore2.bwp graph.
+     */
+    "children"?: models$0.EntityRefList<model$0.WorldNode> | null;
+
+    /**
+     * Links are the node's client-side graph edges from mapdata_realexplore2.bwp.
+     */
+    "links"?: models$0.EntityRefList<model$0.WorldNode> | null;
+
+    /**
+     * Products are the normal worker-production items available at this node.
+     * Quantities and lucky bonus drops are not present in the client tables.
+     */
+    "products"?: models$0.EntityRefList<model$0.Item> | null;
+
+    /**
+     * Enabled is false on unused, unlocalized node records.
+     */
+    "enabled": boolean;
+
+    /**
+     * Unknown17 closely tracks Main but is false on three active main nodes.
+     */
+    "unknown17"?: boolean;
+
+    /**
+     * SubKey2 (a key at +27, == SubKey for 997/1037 nodes)
+     */
+    "subKey2"?: number;
+
+    /**
+     * GroupHash is list-0 (a coarser grouping hash, 33 distinct values)
+     */
+    "groupHash"?: number[] | null;
+    "unknown2"?: number;
+    "unknown8"?: number;
+
+    /**
+     * The +16..+22 bytes are a small "location/zone class" subsystem, mapped by testing values
+     * against shrddr's dump and the in-game world map. The names are best-guess (the exact game
+     * terms aren't confirmed. +18 is an exact copy of Main and is dropped.
+     * 
+     * Special marks the 119 non-network "special locations" (byte +16 == 0): every town
+     * (kind 2), investment bank (kind 10), sea zone (Margoria/Ross/Juur), trade district and
+     * battlefield. The other 918 nodes are standard, contribution-investable network nodes.
+     */
+    "special"?: boolean;
+
+    /**
+     * ZoneIndex is a unique index (7..247, byte +19) on 63 "special content" nodes — islands,
+     * grind zones, castles, battlefields — a foreign key into an as-yet unidentified table.
+     */
+    "zoneIndex"?: number;
+
+    /**
+     * ZoneCategory classifies the ZoneIndex nodes (byte +20): 1 island · 2 coastal · 5 inland/
+     * desert grind · 6 battlefield & ocean "Great Spot"; set on 47 of them.
+     */
+    "zoneCategory"?: number;
+
+    /**
+     * GrindZone marks the 25 monster grind zones (byte +21, the Marni/Elvia set: Manshaum,
+     * Mirumok, Gyfin, Star's End, Hexe, …); the value is a unique index. Disjoint from zones.json
+     * (the drop-UI hunting grounds).
+     */
+    "grindZone"?: number;
+
+    /**
+     * GrindTier is the difficulty tier (byte +22) of the 12 endgame grind zones the in-game world
+     * map labels with a Recommended-AP value (2, or 3 for Star's End). A subset of GrindZone.
+     */
+    "grindTier"?: number;
+
+    /**
+     * Unknown39 is a small internal value (byte +39; 13 distinct: 1, 6, 10, 12, 18, 77, …) — still
+     * unidentified.
+     */
+    "unknown39"?: number;
+
+    /**
+     * NodeIndex is a per-node enumeration id (the low bits of +47; +47 also carries a constant
+     * 0x20000 flag that is masked off here). 0 for sub-nodes; a near-sequential id on the ~229
+     * main nodes, assigned roughly in region order (Balenos low, the islands 606-642 consecutive,
+     * Valencia/Land of Morning Light high). Looks like the node's index into another table.
+     */
+    "nodeIndex"?: number;
+
+    /**
+     * AreaID is a worldmap area/sector id (the high word of +51, which is stored as AreaID<<16).
+     * 44 areas that group nodes geographically — the whole contiguous old-world landmass is one
+     * 525-node sector, with islands, the Valencia desert and Land of Morning Light split into
+     * their own. Finer than territory, coarser than region.
+     */
+    "areaId"?: number;
+    "parentNode": model$0.WorldNode | null;
 }

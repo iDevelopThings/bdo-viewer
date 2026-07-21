@@ -28,7 +28,7 @@ function humanize(name: string): string {
 }
 
 export function npcRoleLabel(type: NPCSpawnType): string {
-	return ROLE_LABEL_OVERRIDES[type] ?? humanize(NPCSpawnType[type] ?? `Role ${type}`);
+	return ROLE_LABEL_OVERRIDES[type] ?? humanize(NPCSpawnType[type]);
 }
 
 /** Every role the enum defines, deduped (Normal and the generated $zero share 0). */

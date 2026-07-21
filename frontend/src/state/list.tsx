@@ -1,7 +1,8 @@
 import {persist, type SerializationStrategy} from "valtio-persist";
 import {ref} from "valtio/vanilla";
 import {getDefaultNavigationPath, getNavigationListScope, getNavigationNode, navigation} from "@/state/navigation.tsx";
-import {CancelError, CancellablePromise} from "@wailsio/runtime";
+import type { CancellablePromise} from "@wailsio/runtime";
+import {CancelError} from "@wailsio/runtime";
 import {subscribeKey} from "valtio/utils";
 import {ListSourceEntries} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
 import {type ListSourceEntry, SourceKind} from "@bindings/bdo-viewer/internal/sources";

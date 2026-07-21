@@ -9,12 +9,7 @@ export const {store : history} = await persist<HistoryState>({
 }, "history");
 
 export function addHistoryEntry(entry: UntypedSourceEntry) {
-	const idx = history.entries.findIndex(e => {
-		if (e.urn || entry.urn) {
-			return e.urn === entry.urn;
-		}
-		return e.type === entry.type && e.value?.id === entry.value?.id;
-	});
+	const idx = history.entries.findIndex(e => e.urn === entry.urn);
 
 	if (idx >= 0) {
 		history.entries.splice(idx, 1);

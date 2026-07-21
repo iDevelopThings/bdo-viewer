@@ -1,30 +1,38 @@
 import {X, LucideLock} from "lucide-react";
-import {ItemIcon} from "@/lib/item-icon.tsx";
+import {EntryIcon} from "@/lib/entry-icon.tsx";
 import {cn, cj} from "@/lib/utils.ts";
 import {gearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
-import {SlotName} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import type {SlotName} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {getGradeColorScale} from "@/lib/types/item-grades.ts";
 import {useSnapshot} from "valtio/react";
-import type {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
-import {memo, useCallback} from "react";
+import {type ListSourceEntry, SourceKind} from "@bindings/bdo-viewer/internal/sources";
+import {type ComponentPropsWithoutRef, forwardRef, memo, useCallback, type ReactNode} from "react";
 import {setHighlightSource} from "@/components/gear-builder/stat-highlight.ts";
+import {ComboboxTriggerNoChevron} from "@/components/ui/combobox.tsx";
+import type {SimpleSlotData as Slot} from "@bindings/bdo-viewer/internal/gear";
+import {type EntryListComboPickerProps, EntryListComboPicker} from "@/components/entry-list/entry-list-combo-picker.tsx";
+import {EntryFilterProvider} from "@/components/entry-list/filters/entry-filter-provider.tsx";
 
-export type GearSlotButtonVariant = "xs" | "sm" | "md"
+export type GearSlotButtonVariant = "xs" | "sm" | "md" | "lg" | "xl"
 
-export const ItemSlotButton = memo(function ItemSlotButton(
-	{item, slotTitle, enhanceTitle, onClick, onRemove, onHoverChange, selected, lockedByItem, className, size = "md"}:
-	{
-		item?: ListSourceEntry
-		size?: GearSlotButtonVariant
-		slotTitle?: string
-		enhanceTitle?: string
-		selected?: boolean
-		lockedByItem?: ListSourceEntry
-		onClick?: (item: ListSourceEntry | undefined) => void
-		onRemove?: (item: ListSourceEntry | undefined) => void
-		onHoverChange?: (hovered: boolean) => void
-		className?: string
-	}
+// Root props are forwarded so base-ui can drive this as a trigger via `render={<ItemSlotButton />}`.
+export type ItemSlotButtonProps = ComponentPropsWithoutRef<"div"> & {
+	item?: ListSourceEntry
+	size?: GearSlotButtonVariant
+	slotTitle?: string
+	enhanceTitle?: string
+	selected?: boolean
+	lockedByItem?: ListSourceEntry
+	onRemove?: (item: ListSourceEntry | undefined) => void
+	onHoverChange?: (hovered: boolean) => void
+	backgroundIcon?: string
+	// Shown in place of the slot title while the slot is empty (an add icon, usually).
+	placeholder?: ReactNode
+}
+
+export const ItemSlotButton = memo(forwardRef<HTMLDivElement, ItemSlotButtonProps>(function ItemSlotButton(
+	{item, slotTitle, enhanceTitle, onRemove, onHoverChange, selected, lockedByItem, className, backgroundIcon, placeholder, size = "md", ...rest},
+	ref
 ) {
 	const grade = getGradeColorScale(item?.extra?.grade);
 
@@ -37,11 +45,15 @@ export const ItemSlotButton = memo(function ItemSlotButton(
 
 	return (
 		<div
-			onMouseEnter={() => {
+			ref={ref}
+			{...rest}
+			onMouseEnter={e => {
+				rest.onMouseEnter?.(e);
 				onHoverChange?.(true);
 				setHighlightSource(item?.urn ?? null);
 			}}
-			onMouseLeave={() => {
+			onMouseLeave={e => {
+				rest.onMouseLeave?.(e);
 				onHoverChange?.(false);
 				setHighlightSource(null);
 			}}
@@ -57,9 +69,11 @@ export const ItemSlotButton = memo(function ItemSlotButton(
 					selected && "ring-2 ring-fg-subtle",
 				],
 
-				size === "xs" && "w-12 h-12",
-				size === "sm" && "w-13 h-13",
-				size === "md" && "w-16 h-16",
+				size === "xs" && "w-8 h-8",
+				size === "sm" && "w-9 h-9",
+				size === "md" && "w-10 h-10",
+				size === "lg" && "w-12 h-12",
+				size === "xl" && "w-14 h-14",
 
 				item ? "border-surface-border" : "border-dashed border-surface-border",
 
@@ -69,11 +83,11 @@ export const ItemSlotButton = memo(function ItemSlotButton(
 				borderColor : grade.color.toString(),
 			} : undefined}
 			title={slotTitle}
-			onClick={() => {
+			onClick={e => {
 				if (disabled) {
 					return;
 				}
-				onClick?.(item);
+				rest.onClick?.(e);
 			}}
 		>
 			{item ? (
@@ -87,12 +101,12 @@ export const ItemSlotButton = memo(function ItemSlotButton(
 						background     : `radial-gradient(circle, ${grade.itemBackground[0]} 0%, ${grade.itemBackground[1]} 40%, transparent 90%)`,
 					} : undefined}
 				>
-					<ItemIcon urn={item.urn} className={"shrink-0"} imageClass={cn(
+					<EntryIcon urn={item.urn} className={"shrink-0"} imageClass={cn(
 						size === "sm" ? "w-8 h-8" : "w-10 h-10",
 						disabled && "opacity-75"
 					)} />
 					{enhanceTitle && (
-						<span className={"absolute top-0.5 left-1 text-[10px] font-semibold text-amber-300 pointer-events-none"}>
+						<span className={"absolute bottom-0.5 left-1 text-[7px] text-shadow-sm font-semibold text-amber-300 pointer-events-none"}>
 							{enhanceTitle}
 						</span>
 					)}
@@ -106,7 +120,7 @@ export const ItemSlotButton = memo(function ItemSlotButton(
 							className={"absolute top-0.5 right-0.5 p-0.5 rounded text-fg-muted hover:text-fg hover:bg-surface-3"}
 							onClick={e => {
 								e.stopPropagation();
-								onRemove?.(item);
+								onRemove(item);
 							}}
 						>
 							<X className={"size-3"} />
@@ -114,18 +128,60 @@ export const ItemSlotButton = memo(function ItemSlotButton(
 					)}
 				</div>
 			) : (
-				<span className={cn(
-					"text-fg-subtle text-center px-1 leading-tight",
-					size === "xs" && "text-[8px]",
-					size === "sm" && "text-[9px]",
-					size === "md" && "text-[11px]",
-				)}>
-					{slotTitle}
-				</span>
+				<div style={{
+					backgroundImage    : backgroundIcon ? `url(${backgroundIcon})` : undefined,
+					backgroundSize     : "contain",
+					backgroundRepeat   : "no-repeat",
+					backgroundPosition : "center",
+					width              : "100%",
+					height             : "100%",
+					display            : "flex",
+					alignItems         : "center",
+					justifyContent     : "center",
+				}}>
+					{placeholder ?? (!backgroundIcon && <span className={cn(
+						"text-fg-subtle text-center px-1 leading-tight",
+						size === "xs" && "text-[8px]",
+						size === "sm" && "text-[9px]",
+						size === "md" && "text-[11px]",
+					)}>
+						{slotTitle}
+					</span>)}
+				</div>
 			)}
 		</div>
 	);
-});
+}));
+
+// Scopes the generic entry picker to one gear slot: the slot's equip slots + the build's class.
+export function GearSlotPicker({slot, trigger, positioning}: {
+	slot: Slot
+	trigger: ReactNode
+	positioning?: EntryListComboPickerProps["positioning"]
+}) {
+	const {selectedClass} = useSnapshot(gearBuilderStore);
+
+	return (
+		<EntryFilterProvider
+			params={{
+				source   : SourceKind.Item,
+				sort     : "grade",
+				sort_dir : "desc",
+				filters  : {
+					equipSlots : [slot.info.SlotName],
+					class      : selectedClass?.Name,
+				},
+			}}
+		>
+			<EntryListComboPicker
+				trigger={trigger}
+				placeholder={`Search ${slot.info.Title}…`}
+				positioning={positioning}
+				onSelect={entry => void gearBuilderStore.equip(entry.urn, slot.id)}
+			/>
+		</EntryFilterProvider>
+	);
+}
 
 export function GearSlotButton({slotId, size = "md"}: {
 	slotId?: SlotName,
@@ -133,7 +189,7 @@ export function GearSlotButton({slotId, size = "md"}: {
 }) {
 	const {slots, selectedSlot, highlightSlots} = useSnapshot(gearBuilderStore);
 
-	const slot = slots?.[slotId] ?? undefined;
+	const slot = slotId != null ? slots[slotId] : undefined;
 
 	const highlight = slotId != null ? highlightSlots[slotId] : undefined;
 
@@ -156,14 +212,9 @@ export function GearSlotButton({slotId, size = "md"}: {
 			.forEach(x => gearBuilderStore.setHoverState(s.id, x.id, hovered, "locked"));
 	}, [slotId]);
 
-	const onSlotClick = useCallback((clicked?: ListSourceEntry) => {
-		if (slotId == null) {
-			return;
-		}
-		if (clicked) {
+	const onSlotClick = useCallback(() => {
+		if (slotId != null) {
 			gearBuilderStore.selectedSlot = slotId;
-		} else {
-			gearBuilderStore.openPicker(slotId);
 		}
 	}, [slotId]);
 
@@ -173,29 +224,50 @@ export function GearSlotButton({slotId, size = "md"}: {
 		}
 	}, [slotId]);
 
-	if (!slot || !slot.info) {
+	if (!slot) {
 		return null;
 	}
 	const item = slot.item;
 
-	const lockedByItem = slot.lockedBy ? slots[slot.lockedBy]?.item : undefined;
+	const lockedByItem = slot.lockedBy ? slots[slot.lockedBy].item ?? undefined : undefined;
 
-	return (
+	const button = (
 		<ItemSlotButton
-			item={item}
+			onClick={onSlotClick}
+			item={item ?? undefined}
 			slotTitle={slot.info.Title}
 			enhanceTitle={slot.enhancementTitle}
 			selected={selectedSlot?.id === slot.id}
 			size={size}
 			lockedByItem={lockedByItem}
-			onClick={onSlotClick}
 			onRemove={onSlotRemove}
 			onHoverChange={onHoverChange}
+			backgroundIcon={`/equipment/${slot.info.Name}.png`}
 
 			className={cn([
 				highlight?.reason === "locker" && "ring-2 ring-amber-400",
 				highlight?.reason === "locked" && "ring-2 ring-rose-400",
 			])}
+		/>
+	);
+
+	// Only an empty slot picks: a filled one selects instead, so the detail panel takes over
+	// (change it from there). A locked slot mirrors its locker's item, so it has nothing to pick.
+	if (item || lockedByItem) {
+		return button;
+	}
+
+	return (
+		<GearSlotPicker
+			slot={slot}
+			positioning={{
+				side             : "right",
+				align            : "start",
+				collisionPadding : 8,
+			}}
+			trigger={
+				<ComboboxTriggerNoChevron nativeButton={false} render={button} />
+			}
 		/>
 	);
 }

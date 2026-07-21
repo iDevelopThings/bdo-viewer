@@ -1,8 +1,8 @@
 import {type PropsWithChildren, useContext, useEffect, useMemo} from "react";
 import {useSnapshot} from "valtio/react";
-import {DetailStore, getEntryKey, type PartialSourceEntry} from "@/state/detail-store.tsx";
+import {DetailStore, type PartialSourceEntry} from "@/state/detail-store.tsx";
 import {persistSync} from "@/lib/persist-sync.ts";
-import {Snapshot} from "valtio";
+import type {Snapshot} from "valtio";
 import {DetailContext} from "@/state/detail-context.ts";
 import {isItem} from "@/state/sources/sources.ts";
 
@@ -11,17 +11,18 @@ export type DetailProviderProps = PropsWithChildren<{
 }>;
 
 export function DetailProvider({entry, children}: DetailProviderProps) {
-	const storageKey = entry ? `details-${entry.type}-${getEntryKey(entry)}` : "details";
+	const storageKey = entry ? `details-${entry.type}-${entry.urn}` : "details";
 
 	const persisted = useMemo(() => {
 		return persistSync(new DetailStore(entry), storageKey, {
 			debounceTime          : 500,
 			mergeStrategy         : {
 				isAsync : false,
-				merge   : (initialState, restoredState) => {
-					const result = Object.assign(initialState, restoredState);
-					result.postLoad();
-					return result;
+				// Only restore the persisted fields here. Hydration (initialize/load) must run on
+				// the proxied store via the provider useEffect below — doing it here mutates the
+				// pre-proxy object, so valtio never sees those writes and persistence stops firing.
+				merge : (initialState, restoredState) => {
+					return Object.assign(initialState, restoredState);
 				},
 			},
 			serializationStrategy : {
@@ -32,16 +33,15 @@ export function DetailProvider({entry, children}: DetailProviderProps) {
 					}
 
 					return JSON.stringify({
-						entry         : {
-							type  : state.entry?.type,
-							value : getEntryKey(state.entry),
+						entry        : {
+							type : state.entry?.type,
+							urn  : state.entry?.urn,
 						},
-						source        : state.source,
-						_level        : state.level,
-						_caphrasStep  : state.caphrasStep,
-						scrollOffset  : state.scrollOffset,
+						source       : state.source,
+						_level       : state.level,
+						_caphrasStep : state.caphrasStep,
+						scrollOffset : state.scrollOffset,
 					});
-
 				},
 				deserialize(data: string): DetailStore {
 					if (!data || data === "{}") {
@@ -55,14 +55,14 @@ export function DetailProvider({entry, children}: DetailProviderProps) {
 
 	const store = persisted.store as DetailStore;
 
-	// Each navigation builds a new per-entry store; dispose the previous one so its
-	// persistence subscription doesn't leak.
+	// Bind persistence here (not eagerly in persistSync) so subscribe/unsubscribe stay symmetric:
+	// a StrictMode remount re-subscribes, and navigating away unsubscribes so it doesn't leak.
 	useEffect(() => {
-		return () => persisted.dispose();
+		return persisted.subscribe();
 	}, [persisted]);
 
 	useEffect(() => {
-		store?.initialize(entry);
+		store.initialize(entry);
 	}, [entry, store]);
 
 	if (!store) {

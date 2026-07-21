@@ -1,4 +1,4 @@
-import {WrappedWorldNode} from "@/components/world-map/world-node.ts";
+import type {WrappedWorldNode} from "@/components/world-map/world-node.ts";
 import type {NpcMarker} from "@/components/world-map/types.ts";
 import {npcRoleLabels} from "@/components/world-map/npc-roles.ts";
 

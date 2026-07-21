@@ -6,10 +6,23 @@
 import * as sources$0 from "../sources/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as stats$0 from "../stats/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as model$0 from "../../../github.com/idevelopthings/bdo-data-extractor/src/model/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as models$0 from "../../../github.com/idevelopthings/bdo-data-extractor/src/models/models.js";
+
+/**
+ * CrystalGroupUsage is one transfusion family's current / max count in the preset.
+ */
+export interface CrystalGroupUsage {
+    "key": number;
+    "name": string;
+    "max": number;
+    "used": number;
+}
 
 export interface EventEquipHistoryUpdatedPayload {
     "equipHistory"?: sources$0.ListSourceEntry[] | null;
@@ -19,6 +32,9 @@ export interface EventLoadoutUpdatedPayload {
     "gearMastery": MasteryConfigSet;
     "level": number;
     "consumables": (model$0.Item | null)[] | null;
+    "crystals": SimpleCrystalSlot[] | null;
+    "crystalGroups": CrystalGroupUsage[] | null;
+    "crystalEffects": stats$0.StatGroup[] | null;
     "class"?: model$0.CharacterClassTypeInfo;
     "slots": SimpleSlotData[];
     "maxOnEquip": boolean;
@@ -37,6 +53,16 @@ export type MasteryConfigSet = { [_ in model$0.LifeSkillType]?: MasteryData } | 
 export interface MasteryData {
     "rank": number;
     "lvl": number;
+}
+
+/**
+ * SimpleCrystalSlot is the loadout wire shape for one preset socket.
+ */
+export interface SimpleCrystalSlot {
+    "id": model$0.CrystalPresetSlot;
+    "unlocked": boolean;
+    "item"?: sources$0.ListSourceEntry | null;
+    "itemRef"?: models$0.EntityRef<model$0.Item> | null;
 }
 
 /**

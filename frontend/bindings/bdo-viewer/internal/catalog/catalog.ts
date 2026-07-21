@@ -30,6 +30,10 @@ export function DataDir(): $CancellablePromise<string> {
     return $Call.ByName("bdo-viewer/internal/catalog.Catalog.DataDir");
 }
 
+export function GetCrystalStatIds(): $CancellablePromise<$models.CrystalStatIdInfo[] | null> {
+    return $Call.ByName("bdo-viewer/internal/catalog.Catalog.GetCrystalStatIds");
+}
+
 export function GetItemVendorData(u: urn$0.URN): $CancellablePromise<$models.ItemVendorData[] | null> {
     return $Call.ByName("bdo-viewer/internal/catalog.Catalog.GetItemVendorData", u);
 }
@@ -40,6 +44,13 @@ export function GetItemVendorData(u: urn$0.URN): $CancellablePromise<$models.Ite
  */
 export function GetItemsByURN(urns: urn$0.URN[] | null): $CancellablePromise<(model$0.Item | null)[] | null> {
     return $Call.ByName("bdo-viewer/internal/catalog.Catalog.GetItemsByURN", urns);
+}
+
+/**
+ * GetNodesByUrn resolves Node URNs
+ */
+export function GetNodesByUrn(urns: urn$0.URN[] | null): $CancellablePromise<$models.NodeInfoRef[] | null> {
+    return $Call.ByName("bdo-viewer/internal/catalog.Catalog.GetNodesByUrn", urns);
 }
 
 /**

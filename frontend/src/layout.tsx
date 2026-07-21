@@ -1,6 +1,6 @@
-import {DockviewApi, DockviewDefaultTab, DockviewReact, DockviewReadyEvent, IDockviewPanelHeaderProps, SerializedDockview} from "dockview-react";
-import "dockview-react/dist/styles/dockview.css";
-import {useEffect, useRef, useState} from "react";
+import type {DockviewApi, DockviewReadyEvent, IDockviewPanelHeaderProps, SerializedDockview} from "dockview-react";
+import {DockviewDefaultTab, DockviewReact} from "dockview-react";
+import {useEffect, useState} from "react";
 import {GripHorizontal} from "lucide-react";
 import {setDockviewApi} from "@/state/panels.ts";
 import {TreeNav} from "@/components/sidebar/tree-nav.tsx";
@@ -12,8 +12,14 @@ import {CraftCalculatorPanel} from "@/components/calc/craft-calculator-panel.tsx
 import {CompareItemsPanel} from "@/components/compare/compare-items-panel.tsx";
 import {WorldMapPanel} from "@/components/world-map/world-map-panel.tsx";
 import {ToolRail} from "@/components/rail/tool-rail.tsx";
+import {fetchMarket} from "@/lib/market-data.tsx";
+import {useAsync} from "react-async-hook";
+import {pinWidths} from "@/lib/dock-layout.ts";
 
 const LAYOUT_KEY = "bdo-layout";
+
+// The left column is fixed-width by intent; the details column is the one that flexes.
+const PINNED_WIDTH_PANELS = ["tree", "list"];
 
 // Leaf panels drag from a slim grip instead of a labelled tab; content panels keep the
 // normal closable tab since several stack in the same group.
@@ -76,9 +82,10 @@ function buildDefault(api: DockviewApi) {
 
 export function AppLayout() {
 
-	const [api, setApi] = useState<DockviewApi>();
-	const lastTreeWidth = useRef<number>(260);
+	const [api, setApi]                 = useState<DockviewApi>();
 	const [treeVisible, setTreeVisible] = useState(true);
+
+	useAsync(fetchMarket, [], {executeOnMount : true, executeOnUpdate : false});
 
 	function tryLoadLayout(api: DockviewApi): boolean {
 		const serialized = localStorage.getItem(LAYOUT_KEY);
@@ -105,8 +112,9 @@ export function AppLayout() {
 		setTreeVisible(!!event.api.getPanel("tree"));
 	};
 
-	// Collapse reclaims the tree's width for list + detail; the tree's own state
+	// Collapse reclaims the tree's width for the details column; the tree's own state
 	// (expanded/active) lives in the navigation store, so removing the panel loses nothing.
+	// pinWidths remembers its width across the round trip.
 	function toggleTree() {
 		if (!api) {
 			return;
@@ -114,14 +122,13 @@ export function AppLayout() {
 
 		const existing = api.getPanel("tree");
 		if (existing) {
-			lastTreeWidth.current = existing.api.width || lastTreeWidth.current;
 			api.removePanel(existing);
 			setTreeVisible(false);
 			return;
 		}
 
 		const listPanel = api.getPanel("list");
-		const panel     = api.addPanel({
+		api.addPanel({
 			id        : "tree",
 			component : "tree",
 			title     : "Navigation",
@@ -129,7 +136,6 @@ export function AppLayout() {
 				? {referencePanel : listPanel.id, direction : "left"}
 				: undefined,
 		});
-		panel.api.setSize({width : lastTreeWidth.current});
 		setTreeVisible(true);
 	}
 
@@ -138,12 +144,14 @@ export function AppLayout() {
 			return;
 		}
 
+		const pinned     = pinWidths(api, PINNED_WIDTH_PANELS);
 		const disposable = api.onDidLayoutChange(() => {
 			const layout: SerializedDockview = api.toJSON();
 			localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout));
 		});
 
 		return () => {
+			pinned.dispose();
 			disposable.dispose();
 			setDockviewApi(undefined);
 		};

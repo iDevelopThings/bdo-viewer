@@ -1,19 +1,22 @@
-import {MutableRefObject, useCallback, useEffect, useMemo, useRef, useState} from "react";
+import type {MutableRefObject} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import DeckGL from "@deck.gl/react";
-import {OrthographicView, type PickingInfo, ViewStateChangeParameters, OrthographicViewState, LinearInterpolator} from "@deck.gl/core";
+import type {ViewStateChangeParameters, OrthographicViewState} from "@deck.gl/core";
+import {OrthographicView, type PickingInfo, LinearInterpolator} from "@deck.gl/core";
 import {TileLayer} from "@deck.gl/geo-layers";
 import {BitmapLayer, LineLayer, TextLayer, IconLayer, ScatterplotLayer, PolygonLayer} from "@deck.gl/layers";
 import {useSnapshot} from "valtio";
 import {tileURL, tileWorldBounds, worldExtent, type WorldMeta, WORLD_LAYER, INITIAL_TARGET, INITIAL_ZOOM, MIN_ZOOM, MAX_ZOOM, MAP_WORLD_BASE_Z, FOCUS_TRANSITION_MS,} from "./map-config";
 import {mapState} from "@/components/world-map/map-state.ts";
 import type {MapLinkSegment, NpcMarker, RegionBound, RegionPoint} from "./types";
-import {WrappedWorldNode} from "@/components/world-map/world-node.ts";
+import type {WrappedWorldNode} from "@/components/world-map/world-node.ts";
 import {nodeTooltip, npcTooltip} from "@/components/world-map/node-tooltip.ts";
 import {SourceKind} from "@bindings/bdo-viewer/internal/sources";
 import {openSourceDetails} from "@/state/panels.ts";
-import {MaybeReadonly} from "@/types.ts";
+import type {MaybeReadonly} from "@/types.ts";
 import {cn} from "@/lib/utils.ts";
 import {PlusIcon, MinusIcon} from "lucide-react";
+import {WorldNodeKind} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 
 const NODE_LAYER_IDS   = ["node-icons", "node-dots", "sub-node-icons"];
 const NPC_LAYER_ID     = "npc-markers";
@@ -240,7 +243,7 @@ export function GameMap() {
 
 		const out: any[] = [];
 
-		if (map.meta) {
+		if (!map.loading) {
 			const baseZ = Math.min(MAP_WORLD_BASE_Z, map.tileZ);
 			out.push(worldTileLayer(map.meta, baseZ, "world-base"));
 			if (map.tileZ > baseZ) {
@@ -337,8 +340,8 @@ export function GameMap() {
 
 		const nodeKindScale = (n: WrappedWorldNode) => {
 			switch (n.kind) {
-				case 0:
-				case 5:
+				case WorldNodeKind.WorldNodeKindNormal:
+				case WorldNodeKind.WorldNodeKindTrade:
 					return 1.1;
 				default:
 					return 0.9;
@@ -484,7 +487,7 @@ export function GameMap() {
 			data                 : map.labelNodes,
 			coordinateSystem     : "cartesian",
 			getPosition          : n => n.mapPos,
-			getText              : n => n.name ?? "",
+			getText              : n => n.name ,
 			getSize              : LABEL_SIZE_PX,
 			sizeUnits            : "pixels",
 			sizeMinPixels        : 8,
@@ -525,20 +528,20 @@ export function GameMap() {
 	]);
 
 	const pickedNode = (info: PickingInfo): WrappedWorldNode | null => {
-		return NODE_LAYER_IDS.includes(info.layer?.id ?? "") ? ((info.object as WrappedWorldNode) ?? null) : null;
+		return NODE_LAYER_IDS.includes(info.layer?.id ?? "") ? ((info.object as WrappedWorldNode | undefined) ?? null) : null;
 	};
 
 	const pickedNpc = (info: PickingInfo): NpcMarker | null => {
 		const id = info.layer?.id ?? "";
 
-		return id === NPC_LAYER_ID || id === ALL_NPC_LAYER_ID ? ((info.object as NpcMarker) ?? null) : null;
+		return id === NPC_LAYER_ID || id === ALL_NPC_LAYER_ID ? ((info.object as NpcMarker | undefined) ?? null) : null;
 	};
 
 	const handleClick = useCallback(
 		(info: PickingInfo) => {
 			const npc = pickedNpc(info);
 			if (npc) {
-				openSourceDetails(SourceKind.Npc, {id : npc.id, name : npc.name, urn : npc.urn});
+				openSourceDetails(SourceKind.Npc, npc.urn, {title : npc.name});
 
 				return;
 			}
@@ -596,7 +599,8 @@ export function GameMap() {
 	return (
 		<div
 			style={{
-				background : map.meta ? `rgb(${map.meta?.oceanColor[0]}, ${map.meta?.oceanColor[1]}, ${map.meta?.oceanColor[2]})` : "#0e1013"
+				// map.meta is populated once the map loads; keep the fallback for the first paint.
+				background : map.meta ? `rgb(${map.meta.oceanColor[0]}, ${map.meta.oceanColor[1]}, ${map.meta.oceanColor[2]})` : "#0e1013"
 			}}
 			className={"absolute inset-0 overflow-hidden w-full h-full"}
 		>
@@ -648,7 +652,7 @@ export function GameMap() {
 							</div>
 						)}
 
-						{map?.selectedNode && (
+						{map.selectedNode && (
 							<div>
 								<div className="text-xs font-semibold text-fg mb-1">
 									Node

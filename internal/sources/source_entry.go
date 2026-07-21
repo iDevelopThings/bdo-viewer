@@ -4,7 +4,7 @@ import "github.com/idevelopthings/bdo-data-extractor/src/urn"
 
 type SourceEntry[T any] struct {
 	Type  SourceKind `json:"type"`
-	URN   string     `json:"urn,omitempty"`
+	URN   string     `json:"urn"`
 	Value T          `json:"value"`
 }
 
@@ -31,7 +31,7 @@ func NewEntry[T any](kind SourceKind, ref urn.URN, value T, ok bool) ISourceEntr
 
 type UntypedSourceEntry struct {
 	Type  SourceKind `json:"type"`
-	URN   string     `json:"urn,omitempty"`
+	URN   string     `json:"urn"`
 	Value any        `json:"value"`
 }
 

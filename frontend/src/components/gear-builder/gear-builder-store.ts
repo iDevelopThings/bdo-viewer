@@ -1,5 +1,5 @@
 import {proxy} from "valtio";
-import type {CharacterClassTypeInfo, Item, SlotName} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import type {CharacterClassType, CharacterClassTypeInfo, Item, SlotName} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {GetAllClasses, SetClass, Equip, Unequip, Upgrade, ToggleMaxOnEquip, GetEquipHistory} from "@bindings/bdo-viewer/internal/gear/builderservice.ts";
 import {ref} from "valtio/vanilla";
 import {Events} from "@wailsio/runtime";
@@ -7,20 +7,9 @@ import type {SimpleSlotData as Slot, MasteryConfigSet} from "@bindings/bdo-viewe
 import {useSnapshot} from "valtio/react";
 import {useEffect} from "react";
 import {batch} from "valtio-reactive";
-import {persistSync} from "@/lib/persist-sync.ts";
-import type {StatSheet} from "@bindings/bdo-viewer/internal/gear/models.ts";
+import type {StatSheet, SimpleCrystalSlot, CrystalGroupUsage} from "@bindings/bdo-viewer/internal/gear/models.ts";
+import type {StatGroup} from "@bindings/bdo-viewer/internal/stats";
 import type {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
-
-export const GearBuilderTabs = [
-	{id : "combat", label : "Equipment"},
-	{id : "life", label : "Life Tools"},
-	{id : "settings", label : "Settings"},
-] as const;
-
-
-export const {store : gearBuilderPersistent} = persistSync({
-	tab : "combat" as typeof GearBuilderTabs[number]["id"],
-}, "gear-builder");
 
 type HighlightSlot = { highlighter: SlotName, highlightee: SlotName, reason: "locker" | "locked" };
 
@@ -32,13 +21,12 @@ function slotsEqual(a: Slot, b: Slot): boolean {
 export class GearBuilderStore {
 	public loading = true;
 
-	public classes: CharacterClassTypeInfo[]            = [];
-	public selectedClass: CharacterClassTypeInfo | null = null;
+	public classes: CharacterClassTypeInfo[]                        = [];
+	public selectedClass: CharacterClassTypeInfo | null | undefined = null;
 
 	private _slots: Slot[] = [];
 
 	private _selectedSlot: SlotName | null = null;
-	private _pickerSlot: SlotName | null   = null;
 
 	public maxOnEquip: boolean          = false;
 	public stats: StatSheet | undefined = undefined;
@@ -46,6 +34,9 @@ export class GearBuilderStore {
 	public gearMastery: MasteryConfigSet | undefined = undefined;
 	public level: number                             = 65;
 	public consumables: (Item | null)[]              = [];
+	public crystals: SimpleCrystalSlot[]             = [];
+	public crystalGroups: CrystalGroupUsage[]        = [];
+	public crystalEffects: StatGroup[]               = [];
 
 	// Keyed by highlighter slot so each gear slot subscribes to only its own key.
 	public highlightSlots: Partial<Record<SlotName, HighlightSlot>> = {};
@@ -59,6 +50,9 @@ export class GearBuilderStore {
 				this.gearMastery   = payload.data.gearMastery;
 				this.level         = payload.data.level;
 				this.consumables   = payload.data.consumables ?? [];
+				this.crystals        = payload.data.crystals ? ref(payload.data.crystals) : [];
+				this.crystalGroups   = payload.data.crystalGroups ? ref(payload.data.crystalGroups) : [];
+				this.crystalEffects  = payload.data.crystalEffects ? ref(payload.data.crystalEffects) : [];
 				this.reconcileSlots(payload.data.slots);
 				this.stats = payload.data.stats ? ref(payload.data.stats) : undefined;
 			});
@@ -67,7 +61,7 @@ export class GearBuilderStore {
 		const offSlotLockChange = Events.On("gear-builder:slot-block-status-change", payload => {
 			const changed = payload.data.slotId;
 			for (const [key, h] of Object.entries(this.highlightSlots)) {
-				if (h && (h.highlighter === changed || h.highlightee === changed)) {
+				if (h.highlighter === changed || h.highlightee === changed) {
 					delete this.highlightSlots[key as unknown as SlotName];
 				}
 			}
@@ -75,7 +69,7 @@ export class GearBuilderStore {
 
 
 		const offHistoryUpdated = Events.On("gear-builder:equip-history-updated", payload => {
-			this.gearHistory = payload.data?.equipHistory ? ref(payload.data.equipHistory) : [];
+			this.gearHistory = payload.data.equipHistory ? ref(payload.data.equipHistory) : [];
 		});
 
 
@@ -95,13 +89,13 @@ export class GearBuilderStore {
 
 	public async load() {
 		this.classes = ref(
-			(await GetAllClasses())
+			(await GetAllClasses() ?? [])
 				.filter(cls => !cls.Reserved)
 				.sort((a, b) => a.Title.localeCompare(b.Title))
 		);
 
 		// Seed history once; equip-history-updated keeps it current after.
-		const hist = await GetEquipHistory()
+		const hist       = await GetEquipHistory();
 		this.gearHistory = hist ? ref(hist) : [];
 	}
 
@@ -137,28 +131,11 @@ export class GearBuilderStore {
 	}
 
 	public set selectedSlot(slot: SlotName | null | undefined) {
-		this._selectedSlot = slot;
+		this._selectedSlot = slot ?? null;
 	}
 
-	public openPicker(slotId: SlotName) {
-		this._pickerSlot   = slotId;
-		this._selectedSlot = slotId;
-	}
-
-	public get pickerSlot(): Slot | undefined {
-		if (this._pickerSlot === null) {
-			return undefined;
-		}
-
-		return this.slots[this._pickerSlot];
-	}
-
-	public closePicker() {
-		this._pickerSlot = null;
-	}
-
-	public async equip(urn: string) {
-		await Equip(urn);
+	public async equip(urn: string, slot: SlotName) {
+		await Equip(urn, slot);
 	}
 
 	public async unequip(slotId: SlotName) {
@@ -167,6 +144,7 @@ export class GearBuilderStore {
 
 	public async upgrade(slotId: SlotName, enhancement?: number, caphras?: number) {
 		const slot = this.slots[slotId];
+		// A slot may be missing/empty at runtime even though the type says every slot is present.
 		if (!slot || !slot.item) {
 			console.error("No item equipped in slot", slotId);
 			return;
@@ -181,7 +159,8 @@ export class GearBuilderStore {
 
 	public clearClass() {
 		this.selectedClass = null;
-		void SetClass(null);
+		// The binding types the param non-null, but clearing sends null (Go's zero value).
+		void SetClass(null as unknown as CharacterClassType);
 	}
 
 	public toggleMaxOnEquip() {
@@ -214,6 +193,7 @@ function ensureGearBuilderMounted() {
 		_gearBuilderStoreUnmount = gearBuilderStore.onMount();
 	}
 }
+
 
 if (import.meta.hot) {
 	import.meta.hot.dispose(() => {

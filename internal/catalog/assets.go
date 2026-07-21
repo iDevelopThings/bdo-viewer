@@ -13,6 +13,8 @@ import (
 	"bdo-viewer/internal/config"
 )
 
+const iconByURNPrefix = "/by-urn/"
+
 // redirectCache serves a generic path-alias table (asset_redirects.json): a request
 // for one served path is transparently served from another file under the data dir.
 // Item and knowledge icons use it to share one decoded file across the many ids that
@@ -83,6 +85,17 @@ func (rc *redirectCache) lookup(dataDir, urlPath string) (string, bool) {
 // redirects.json are served from the shared target instead.
 func (c *Catalog) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	dataDir := config.GetExtractedDataDir()
+
+	// /icons/by-urn/<urn>: the extractor keys asset_redirects.json by urn, so the icon
+	// resolves straight from the alias table — 404 when the entity has no icon.
+	if urnKey, ok := strings.CutPrefix(r.URL.Path, iconByURNPrefix); ok {
+		if target, found := redirects.lookup(dataDir, urnKey); found {
+			http.ServeFile(w, r, filepath.Join(dataDir, filepath.FromSlash(target)))
+			return
+		}
+		http.NotFound(w, r)
+		return
+	}
 
 	// World-map tiles live in a per-layer tiles.pack, not as individual files; serve them
 	// by (z,x,y) from the pack. meta.json and everything else fall through to the files.

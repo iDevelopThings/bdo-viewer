@@ -32,7 +32,7 @@ export function DetailsStats() {
 	// rather than from d.stats - spliced in right after Sell Price to match
 	// where it sat in the old per-field layout.
 	const item        = isItem(d.entry) ? d.entry.value : undefined;
-	const marketPrice = useMarketPriceLabel(item?.id);
+	const marketPrice = useMarketPriceLabel(item?.urn);
 
 	const stats: Stat[] = flatStats(d.stats);
 	if (marketPrice) {

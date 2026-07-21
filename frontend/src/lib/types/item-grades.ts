@@ -1,5 +1,7 @@
-import {ItemGrade, ItemGradeByName, ItemGradeInfos, type ItemGradeNames} from "@/lib/types/item-grades.gen.ts";
-import Color, {ColorInstance} from "color";
+import type {ItemGrade} from "@/lib/types/item-grades.gen.ts";
+import { ItemGradeByName, ItemGradeInfos, type ItemGradeNames} from "@/lib/types/item-grades.gen.ts";
+import type {ColorInstance} from "color";
+import Color from "color";
 
 export * from "./item-grades.gen.ts";
 
@@ -44,7 +46,7 @@ export const gradeColorScalesByGrade: { [key in ItemGrade]?: GradeColorData } = 
 		.map(([name, data]) => [ItemGradeByName[name as ItemGradeNames], data])
 );
 
-export function getGradeColorScale(grade?: ItemGrade | ItemGradeNames, fallback?: ItemGrade | ItemGradeNames | undefined): GradeColorData | undefined {
+export function getGradeColorScale(grade?: ItemGrade | ItemGradeNames, fallback?: ItemGrade | ItemGradeNames  ): GradeColorData | undefined {
 	if (grade == null && fallback == null) {
 		return undefined;
 	}
@@ -63,10 +65,11 @@ export function getGradeColorScale(grade?: ItemGrade | ItemGradeNames, fallback?
 	return gradeColorScalesByGrade[grade as ItemGrade];
 }
 
-export function tryGetGradeColor(grade?: string, fallback?: ItemGrade | undefined): ColorInstance | undefined {
+export function tryGetGradeColor(grade?: string, fallback?: ItemGrade  ): ColorInstance | undefined {
 	// check if grade looks like a number:
 	if (grade != null && !isNaN(Number(grade))) {
 		const gradeNum = Number(grade);
+		// gradeNum is an arbitrary parsed number cast to ItemGrade — it may not be a real grade.
 		return getGradeColor(ItemGradeInfos[gradeNum as ItemGrade]?.value, fallback);
 	}
 
@@ -78,21 +81,13 @@ export function tryGetGradeColor(grade?: string, fallback?: ItemGrade | undefine
 
 export function getGradeColor(
 	grade?: ItemGrade | string,
-	fallback?: ItemGrade | undefined
+	fallback?: ItemGrade,
 ): ColorInstance | undefined {
-	if (grade == null)
-		return undefined;
-
-
-	if (typeof grade === "string") {
-		grade = ItemGradeByName[grade];
-	}
-	if (grade == null && fallback == null) {
+	const resolved = typeof grade === "string" ? ItemGradeByName[grade] : grade;
+	const g        = resolved ?? fallback;
+	if (g == null) {
 		return undefined;
 	}
-
-	grade = grade ?? fallback;
-
-	return Color(ItemGradeInfos[grade].color);
+	return Color(ItemGradeInfos[g].color);
 }
 

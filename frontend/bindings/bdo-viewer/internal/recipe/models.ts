@@ -42,6 +42,13 @@ export interface RecipeCluster {
     "type": string;
     "station"?: string;
     "slots": RecipeSlot[] | null;
+
+    /**
+     * Variants are the cluster's real recipes as option-index tuples (one per slot).
+     * The UI lists these instead of the cartesian product of Slots, which for
+     * non-independent slots is astronomically larger (9715: 43 real vs 240M combos).
+     */
+    "variants": (number[] | null)[] | null;
 }
 
 /**

@@ -2,6 +2,7 @@ import {useContext, createContext} from "react";
 import type {DeepReadonly, MaybeReadonly} from "@/types.ts";
 import type {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
 import type {RecipeTree, RecipeTreeNode, RecipeSelection} from "@bindings/bdo-viewer/internal/recipe";
+import type {ItemMap} from "@/components/calc/craft-calculator-panel.tsx";
 
 export type RItems = MaybeReadonly<RecipeTree["items"]>;
 export type RNode = MaybeReadonly<RecipeTreeNode>;
@@ -25,7 +26,7 @@ export function useRecipeTree(): RecipeTreeCtx {
 	return ctx;
 }
 
-export function itemOf(items: RItems, itemUrn: string): DeepReadonly<ListSourceEntry> | undefined {
+export function itemOf(items: RItems|ItemMap, itemUrn: string): DeepReadonly<ListSourceEntry> | undefined {
 	return items?.[itemUrn] ?? undefined;
 }
 
@@ -39,39 +40,27 @@ type Alt = {
 	station: string;
 	inputs: { item: string, count: number }[];
 };
-// enumerateAlts expands a node's clusters into every concrete recipe: within a
-// cluster, the cartesian product of each slot's options. So the collapsed per-slot
-// grid becomes a flat, readable list of "make it this exact way" choices.
+// enumerateAlts lists a node's real recipes: each cluster carries its actual
+// variants (concrete slot-pick tuples) from the backend, so we map those to
+// ingredient lists — never the cartesian product of options, which for
+// non-independent slots is astronomically larger than the real recipe count.
 export function enumerateAlts(node: RNode): Alt[] {
 	const alts: Alt[] = [];
-	for (let ci = 0; ci < (node.clusters?.length ?? 0); ci++) {
-		const cl    = node.clusters![ci];
+	node.clusters?.forEach((cl, ci) => {
 		const slots = cl.slots ?? [];
-		const picks = cartesian(slots.map(s => Math.max(1, s.options?.length ?? 1)));
-		for (const pick of picks) {
-			const inputs = slots.map((s, si) => {
-				const opt = s.options?.[pick[si]] ?? s.options?.[0];
+		for (const variant of cl.variants ?? []) {
+			if (!variant) {
+				continue;
+			}
+			const picks  = [...variant];
+			const inputs = picks.map((oi, si) => {
+				const opt = slots[si]?.options?.[oi] ?? slots[si]?.options?.[0];
 				return {item : opt?.item ?? "", count : opt?.count ?? 0};
 			});
-			alts.push({cluster : ci, slots : pick, type : cl.type, station : cl.station, inputs});
+			alts.push({cluster : ci, slots : picks, type : cl.type, station : cl.station ?? "", inputs});
 		}
-	}
+	});
 	return alts;
-}
-
-// cartesian returns every index combination for slots with the given option counts.
-function cartesian(counts: number[]): number[][] {
-	let result: number[][] = [[]];
-	for (const n of counts) {
-		const next: number[][] = [];
-		for (const combo of result) {
-			for (let i = 0; i < n; i++) {
-				next.push([...combo, i]);
-			}
-		}
-		result = next;
-	}
-	return result;
 }
 
 export function isSameSelection(a: Alt, sel: RNode["selected"]): boolean {

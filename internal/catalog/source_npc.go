@@ -155,7 +155,6 @@ func (s *NpcSource) List(params sources.ListSourceParams) []sources.ListSourceEn
 	out := make([]sources.ListSourceEntry, len(items))
 	for i, it := range items {
 		out[i] = sources.ListSourceEntry{
-			ID:    it.ID,
 			URN:   it.GetURN().String(),
 			Title: it.Name,
 		}

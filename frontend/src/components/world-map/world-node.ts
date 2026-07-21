@@ -1,4 +1,5 @@
-import {Item, NPC, Territory, WorldNode, WorldNodeKind} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import type {Item, NPC, Territory, WorldNode} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import {WorldNodeKind} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {wrap} from "@/utils.tsx";
 
 const KIND_LABEL: Record<number, string> = {
@@ -69,20 +70,34 @@ export type WrappedWorldNode = WorldNode & {
 	totalCP(): number;
 };
 
+
 /** NodeGraph owns the loaded worldmap nodes and the indexes their wrappers resolve against
  *  (node urn, parent, item, territory). Built once per data load. */
 export class NodeGraph {
-	public readonly nodes: WrappedWorldNode[]            = [];
-	public readonly byURN: Map<string, WrappedWorldNode> = new Map();
+	public nodes: WrappedWorldNode[]            = [];
+	public byURN: Map<string, WrappedWorldNode> = new Map();
 
-	private readonly parentByURN      = new Map<string, string>(); // sub-node urn -> main node urn
-	private readonly productURNs      = new Map<string, string[]>(); // node urn -> its item urns
-	private readonly managerURNs      = new Map<string, string>(); // node urn -> its manager npc urn
-	private readonly itemsByURN       = new Map<string, Item>();
-	private readonly npcsByURN        = new Map<string, NPC>();
-	private readonly territoriesByURN = new Map<string, string>();
+	private parentByURN      = new Map<string, string>(); // sub-node urn -> main node urn
+	private productURNs      = new Map<string, string[]>(); // node urn -> its item urns
+	private managerURNs      = new Map<string, string>(); // node urn -> its manager npc urn
+	private itemsByURN       = new Map<string, Item>();
+	private npcsByURN        = new Map<string, NPC>();
+	private territoriesByURN = new Map<string, string>();
 
 	public constructor(nodes: WorldNode[], items: Item[], territories: Territory[], npcs: NPC[] = []) {
+		this.initialize(nodes, items, territories, npcs);
+	}
+
+	public initialize(nodes: WorldNode[], items: Item[], territories: Territory[], npcs: NPC[] = []) {
+		this.territoriesByURN.clear();
+		this.itemsByURN.clear();
+		this.npcsByURN.clear();
+		this.productURNs.clear();
+		this.managerURNs.clear();
+		this.parentByURN.clear();
+		this.nodes = [];
+		this.byURN.clear();
+
 		for (const t of territories) {
 			this.territoriesByURN.set(t.urn, t.name);
 		}
@@ -117,75 +132,79 @@ export class NodeGraph {
 	private wrapNode(node: WorldNode): WrappedWorldNode {
 		// Captured because the returned object's methods rebind `this` to the wrapped node.
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const graph       = this;
-		const productURNs = node.products?.urns ?? [];
-		const childURNs   = node.children?.urns ?? [];
-		const linkURNs    = node.links?.urns ?? [];
+		const graph          = this;
+		const productURNs    = node.products?.urns ?? [];
+		const childURNs      = node.children?.urns ?? [];
+		const linkURNs       = node.links?.urns ?? [];
 		const managerURN     = node.manager;
 		const managerNodeURN = node.managerNode;
 		const repURN         = node.townRepresentative;
 
 		let items: Item[] | undefined;
 
-		return wrap(node, sym, (n: WorldNode): Partial<WrappedWorldNode> => ({
-			mapPos        : [n.position[0], n.position[2]] as [number, number],
-			kindLabel     : KIND_LABEL[n.kind] ?? `Kind ${n.kind}`,
-			color         : KIND_COLOR[n.kind] ?? [232, 120, 42] as [number, number, number],
-			cp            : n.contribution ?? 0,
-			territoryName : n.territory ? graph.territoriesByURN.get(n.territory) : undefined,
+		return wrap(
+			node,
+			sym,
+			(n: WorldNode): Partial<WrappedWorldNode> => ({
+				mapPos        : [n.position[0], n.position[2]] as [number, number],
+				kindLabel     : KIND_LABEL[n.kind],
+				color         : KIND_COLOR[n.kind],
+				cp            : n.contribution ?? 0,
+				territoryName : n.territory ? graph.territoriesByURN.get(n.territory) : undefined,
 
-			hasIcon : n.kind >= 0 && n.kind <= 15,
-			icon(hover: boolean = false): string {
-				return `/nodes/node_${n.kind ?? 0}${hover ? "_h" : ""}.png`;
-			},
-			named       : !!n.name && n.name.toLowerCase() !== "unknown",
-			ownsManager : !!managerURN,
-			managerOwner() {
-				return managerNodeURN ? graph.byURN.get(managerNodeURN) : graph.byURN.get(n.urn);
-			},
-			managerNpc() {
-				// A manager sits on one node and covers its affiliates, which point back at it via
-				// managerNode — so resolve through the owner rather than off this node.
-				const owner = managerNodeURN ? graph.managerURNs.get(managerNodeURN) : managerURN;
+				hasIcon : Number(n.kind) >= 0 && Number(n.kind) <= 15,
+				icon(hover: boolean = false): string {
+					return `/nodes/node_${n.kind}${hover ? "_h" : ""}.png`;
+				},
+				named       : !!n.name && n.name.toLowerCase() !== "unknown",
+				ownsManager : !!managerURN,
+				managerOwner() {
+					return managerNodeURN ? graph.byURN.get(managerNodeURN) : graph.byURN.get(n.urn);
+				},
+				managerNpc() {
+					// A manager sits on one node and covers its affiliates, which point back at it via
+					// managerNode — so resolve through the owner rather than off this node.
+					const owner = managerNodeURN ? graph.managerURNs.get(managerNodeURN) : managerURN;
 
-				return owner ? graph.npcsByURN.get(owner) : undefined;
-			},
-			representativeNpc() {
-				return repURN ? graph.npcsByURN.get(repURN) : undefined;
-			},
-			parent() {
-				const p = graph.parentByURN.get(n.urn);
-				return p ? graph.byURN.get(p) : undefined;
-			},
-			childNodes() {
-				return graph.resolve(childURNs);
-			},
-			productionChildren() {
-				return graph.resolve(childURNs).filter(c => c.productItems().length > 0);
-			},
-			linkedNodes() {
-				return graph.resolve(linkURNs);
-			},
-			productItems() {
-				if (!items) {
-					const urns = new Set(productURNs);
-					for (const c of graph.resolve(childURNs)) {
-						for (const u of graph.productURNs.get(c.urn) ?? []) {
-							urns.add(u);
+					return owner ? graph.npcsByURN.get(owner) : undefined;
+				},
+				representativeNpc() {
+					return repURN ? graph.npcsByURN.get(repURN) : undefined;
+				},
+				parent() {
+					const p = graph.parentByURN.get(n.urn);
+					return p ? graph.byURN.get(p) : undefined;
+				},
+				childNodes() {
+					return graph.resolve(childURNs);
+				},
+				productionChildren() {
+					return graph.resolve(childURNs).filter(c => c.productItems().length > 0);
+				},
+				linkedNodes() {
+					return graph.resolve(linkURNs);
+				},
+				productItems() {
+					if (!items) {
+						const urns = new Set(productURNs);
+						for (const c of graph.resolve(childURNs)) {
+							for (const u of graph.productURNs.get(c.urn) ?? []) {
+								urns.add(u);
+							}
 						}
+						items = [...urns].flatMap(u => graph.itemsByURN.get(u) ?? []);
 					}
-					items = [...urns].flatMap(u => graph.itemsByURN.get(u) ?? []);
-				}
-				return items;
-			},
-			totalCP() {
-				let total = n.contribution ?? 0;
-				for (const c of graph.resolve(childURNs)) {
-					total += c.cp;
-				}
-				return total;
-			},
-		})) as unknown as WrappedWorldNode;
+					return items;
+				},
+				totalCP() {
+					let total = n.contribution ?? 0;
+					for (const c of graph.resolve(childURNs)) {
+						total += c.cp;
+					}
+					return total;
+				},
+			})
+		) as unknown as WrappedWorldNode;
 	}
 
 	// Wrapping runs in graph order, so a child/link ref can point at a node that isn't wrapped yet
@@ -194,3 +213,4 @@ export class NodeGraph {
 		return (urns ?? []).flatMap(u => this.byURN.get(u) ?? []);
 	}
 }
+

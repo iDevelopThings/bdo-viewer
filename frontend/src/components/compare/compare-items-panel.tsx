@@ -8,6 +8,7 @@ import {addToCompare, type CompareEntry, clearCompare, compare, removeFromCompar
 import {EffectSections} from "@/components/details/effects.tsx";
 import {flatStats, namedGroups} from "@/lib/stat-groups.ts";
 import {cn} from "@/lib/utils.ts";
+import {EntryIconImage} from "@/lib/entry-icon.tsx";
 import {GetStatsByURN, GetEntryDetailsByURN} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
 import {SourceKind} from "@bindings/bdo-viewer/internal/sources";
 import type {Stat, StatGroup} from "@bindings/bdo-viewer/internal/stats";
@@ -90,7 +91,7 @@ function CompareColumn({entry, onRemove, onResult}: {
 	return (
 		<div className={"flex flex-col gap-2 p-2 border-b border-surface-border min-w-0"}>
 			<div className={"flex flex-row items-center gap-1.5"}>
-				{entry.icon && <img src={entry.icon} alt={entry.title} className={"w-6 h-6 shrink-0"} />}
+				{entry.icon && <EntryIconImage urn={entry.urn} imageClass={"w-6 h-6 shrink-0"} />}
 				<span className={"text-sm font-semibold truncate flex-1"} title={entry.title}>
 					{entry.title}
 				</span>
@@ -143,7 +144,7 @@ export function CompareItemsPanel() {
 		const seen             = new Set<string>();
 		for (const urn of urns) {
 			const m = new Map<string, Stat>();
-			for (const stat of flatStats(results[urn]?.stats)) {
+			for (const stat of flatStats(results[urn].stats)) {
 				if (!m.has(stat.title)) {
 					m.set(stat.title, stat);
 				}
@@ -165,7 +166,7 @@ export function CompareItemsPanel() {
 			const raws: number[] = [];
 			for (const urn of urns) {
 				const raw = byUrn.get(urn)?.get(title)?.raw;
-				if (raw !== undefined) {
+				if (raw != null) {
 					raws.push(raw);
 				}
 			}
@@ -242,7 +243,7 @@ export function CompareItemsPanel() {
 
 						<div className={"flex flex-row gap-4 p-4"}>
 							{entries.map(entry => {
-								const groups = namedGroups(results[entry.urn]?.stats);
+								const groups = namedGroups(results[entry.urn].stats);
 								if (groups.length === 0) {
 									return <div key={entry.urn} className={"flex-1 min-w-35"} />;
 								}
@@ -262,9 +263,7 @@ export function CompareItemsPanel() {
 					title={"Add item to compare"}
 					fields={["grade", "effect"]}
 					onPick={entry => {
-						if (entry.urn) {
-							addToCompare({urn : entry.urn, title : entry.title, icon : entry.icon});
-						}
+						addToCompare({urn : entry.urn, title : entry.title, icon : entry.icon});
 					}}
 					onClose={() => setPickerOpen(false)}
 				/>

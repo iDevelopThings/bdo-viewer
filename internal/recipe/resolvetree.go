@@ -14,7 +14,6 @@ import (
 // enhancement curve, which a wide tree multiplies into tens of MB the UI never uses.
 func itemEntry(it *model.Item) sources.ListSourceEntry {
 	return sources.ListSourceEntry{
-		ID:    it.ID,
 		URN:   urn.Item.New(it.ID).String(),
 		Title: it.Name,
 		Icon:  it.Icon,
@@ -24,17 +23,12 @@ func itemEntry(it *model.Item) sources.ListSourceEntry {
 	}
 }
 
-// This is the lazy, selection-aware crafting-tree model that replaces the old
-// BuildFullRecipes (which fully materialised every alternative at every depth — a
-// single draught serialised to ~4 MB / 1,150 nodes). Here only the SELECTED path
-// is expanded; every node carries its alternatives as lightweight (item, count)
-// metadata so the UI can re-pick a recipe or ingredient at any depth and re-request
-// ResolveRecipeTree with the updated selections. Items are deduped into one map and
-// referenced by id, so a full item object is sent once rather than per node.
-//
-// All exported types here are Recipe-prefixed on purpose: Wails generates frontend
-// bindings for them as top-level names, so generic names (Node/Slot/Option) would
-// collide.
+// The lazy, selection-aware crafting tree: only the SELECTED path is expanded,
+// and each node carries its alternatives as (item, count) metadata so the UI can
+// re-pick a recipe or ingredient at any depth and re-request ResolveRecipeTree.
+// Items are deduped into one map keyed by urn — each full entry sent once, not
+// per node. Exported types are Recipe-prefixed because Wails emits their bindings
+// as top-level names, where generic names (Node/Slot/Option) would collide.
 
 // RecipeSlotOption is one ingredient choice for a slot: the item and how many.
 type RecipeSlotOption struct {
@@ -54,6 +48,11 @@ type RecipeCluster struct {
 	Type    string       `json:"type"`
 	Station string       `json:"station,omitempty"`
 	Slots   []RecipeSlot `json:"slots"`
+
+	// Variants are the cluster's real recipes as option-index tuples (one per slot).
+	// The UI lists these instead of the cartesian product of Slots, which for
+	// non-independent slots is astronomically larger (9715: 43 real vs 240M combos).
+	Variants [][]int `json:"variants"`
 }
 
 // RecipeSelection is which cluster and which option per slot a node resolved with.
@@ -321,6 +320,7 @@ func buildClusters(recs []*model.Recipe) ([]RecipeCluster, func(recIdx int) Reci
 		for s := range seen {
 			seen[s] = map[optKey]int{}
 		}
+		seenVariant := map[string]bool{} // dedup recipes that resolve to the same slot picks
 		for _, ri := range idxs {
 			rec := recs[ri]
 			picks := make([]int, len(cl.Slots))
@@ -336,6 +336,16 @@ func buildClusters(recs []*model.Recipe) ([]RecipeCluster, func(recIdx int) Reci
 				picks[s] = oi
 			}
 			recSel[ri] = RecipeSelection{Cluster: ci, Slots: picks}
+
+			vk := make([]byte, 0, len(picks)*3)
+			for _, p := range picks {
+				vk = strconv.AppendInt(vk, int64(p), 10)
+				vk = append(vk, ',')
+			}
+			if key := string(vk); !seenVariant[key] {
+				seenVariant[key] = true
+				cl.Variants = append(cl.Variants, picks)
+			}
 		}
 		clusters[ci] = cl
 	}

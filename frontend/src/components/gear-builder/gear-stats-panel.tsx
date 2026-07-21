@@ -5,10 +5,12 @@ import {Tooltip, TooltipContent} from "@/components/ui/tooltip.tsx";
 import {cn} from "@/lib/utils.ts";
 import {type DeepReadonly} from "@/types.ts";
 import {gearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
-import {StatId, StatIds, StatIdInfos} from "@/lib/types/stats.gen.ts";
-import {StatSource} from "@bindings/bdo-viewer/internal/gear";
-import {ItemIconImage} from "@/lib/item-icon.tsx";
-import {ItemGrade, getGradeColor} from "@/lib/types/item-grades.ts";
+import type {StatId} from "@/lib/types/stats.gen.ts";
+import {StatIds, StatIdInfos} from "@/lib/types/stats.gen.ts";
+import type {StatSource} from "@bindings/bdo-viewer/internal/gear";
+import {EntryIconImage} from "@/lib/entry-icon.tsx";
+import type {ItemGrade} from "@/lib/types/item-grades.ts";
+import {getGradeColor} from "@/lib/types/item-grades.ts";
 import {useSnapshot} from "valtio/react";
 
 type StatSources = DeepReadonly<StatSource[]> | null;
@@ -119,17 +121,17 @@ const StatRow = memo(function StatRow({row, stripe, onHover}: {
 			data-hl-src={row.srcUrns}
 			onMouseEnter={e => onHover(hasSources ? row : null, hasSources ? e.currentTarget : null)}
 		>
-			<span className={"text-fg-subtle truncate"}>{row.label}</span>
+			<span className={"text-fg-subtle truncate min-w-0 flex-1"}>{row.label}</span>
 			<span className={"text-fg font-medium shrink-0"}>{row.value}</span>
 		</div>
 	);
 });
 
 export function GearStatsPanel() {
-	const {slots, stats, consumables} = useSnapshot(gearBuilderStore);
+	const {slots, stats, consumables, crystals} = useSnapshot(gearBuilderStore);
 
 	const [filter, setFilter]   = useState("");
-	const [hovered, setHovered] = useState<{row: Row, anchor: HTMLElement} | null>(null);
+	const [hovered, setHovered] = useState<{ row: Row, anchor: HTMLElement } | null>(null);
 
 	const handleHover = useCallback((row: Row | null, anchor: HTMLElement | null) => {
 		setHovered(row && anchor ? {row, anchor} : null);
@@ -139,19 +141,25 @@ export function GearStatsPanel() {
 	// ("Red Nose's Armor", "Red Nose's Armor: Caphras") can show the item's icon.
 	const itemBySource = useMemo(() => {
 		const m = new Map<string, SourceItem>();
-		for (const slot of slots ?? []) {
+		for (const slot of slots) {
 			const it = slot.item;
 			if (it?.title) {
 				m.set(it.title, {urn : it.urn, grade : it.extra?.grade});
 			}
 		}
-		for (const it of consumables ?? []) {
+		for (const it of consumables) {
 			if (it?.name) {
 				m.set(it.name, {urn : it.urn, grade : it.grade});
 			}
 		}
+		for (const slot of crystals) {
+			const it = slot.item;
+			if (it?.title) {
+				m.set(it.title, {urn : it.urn, grade : it.extra?.grade});
+			}
+		}
 		return m;
-	}, [slots, consumables]);
+	}, [slots, consumables, crystals]);
 
 	const resolveSource = useCallback(
 		(name: string): SourceItem | undefined =>
@@ -169,7 +177,8 @@ export function GearStatsPanel() {
 					if (!info) {
 						return {label : `UNKNOWN STAT ${statId}`, value : "N/A"};
 					}
-					const stat = stats.stats[statId];
+					const stat = stats.stats?.[statId];
+
 					// URNs of the items contributing to this row, for hover highlighting
 					// (computed here so it's memoized with the stats, not per render).
 					const srcUrns = stat?.sources
@@ -198,7 +207,7 @@ export function GearStatsPanel() {
 	);
 
 	return (
-		<div className={"flex flex-col w-64 shrink-0 border-l border-surface-border max-h-full overflow-hidden"}>
+		<div className={"flex h-full w-full flex-col overflow-hidden"}>
 			<div className={"relative p-2 border-b border-surface-border"}>
 				<Search className={"absolute left-4 top-1/2 -translate-y-1/2 size-3.5 text-fg-subtle pointer-events-none"} />
 				<Input
@@ -215,7 +224,7 @@ export function GearStatsPanel() {
 			>
 				{filtered.map(section => (
 					<div key={section.title} className={"flex flex-col shrink-0 rounded-md overflow-hidden border border-surface-border"}>
-						<div className={"px-2.5 py-1.5 bg-surface-1 text-xs font-semibold text-fg"}>
+						<div className={"px-2.5 py-1.5 bg-surface-1 text-xs font-semibold text-fg truncate"}>
 							{section.title}
 						</div>
 						<div className={"flex flex-col"}>
@@ -256,7 +265,7 @@ export function GearStatsPanel() {
 									return (
 										<div key={j} className={"flex flex-row items-center gap-2 px-3 py-1"}>
 											{item
-												? <ItemIconImage urn={item.urn} grade={item.grade} imageClass={"size-5"} />
+												? <EntryIconImage urn={item.urn} grade={item.grade} imageClass={"size-5"} />
 												: <div className={"size-5 shrink-0 rounded-sm bg-surface-2/80"} />}
 											<span
 												className={"flex-1 min-w-0 truncate text-xs text-fg-muted"}

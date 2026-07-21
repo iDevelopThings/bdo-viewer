@@ -7,8 +7,9 @@ import {load} from "@/state/load.ts";
 import {type GearBuilderStore, gearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
 
 export interface DevHelpers {
-	__errors: string[];
-	__app: {
+	__logs?: string[];
+	get errors(): string[];
+	__app?: {
 		goToURN: typeof goToURN;
 		openItemPanel: typeof openItemPanel;
 		openSourceDetails: typeof openSourceDetails;
@@ -25,6 +26,7 @@ export interface DevHelpers {
 		};
 		state: () => Record<string, unknown>;
 		clearErrors: () => void;
+		clearLogs: () => void;
 	};
 }
 
@@ -37,22 +39,49 @@ export function installDevHelpers() {
 		return;
 	}
 
-	const errors: string[] = [];
-	const record           = (label: string, value: unknown) => {
+	let logs: string[] = [];
+
+	const record = (label: string, value: unknown) => {
 		const v = value as { stack?: string };
-		errors.push(`${label}: ${v?.stack ?? String(value)}`);
+		logs.push(`${label}: ${v.stack ?? String(value)}`);
 	};
 
 	const origError = console.error.bind(console);
 	console.error   = (...args: unknown[]) => {
-		record("console.error", args.map(a => (a as { stack?: string })?.stack ?? String(a)).join(" "));
+		record("console.error", args.map(a => (a as { stack?: string }).stack ?? String(a)).join(" "));
 		origError(...args);
 	};
+	const origLog   = console.log.bind(console);
+	console.log     = (...args: unknown[]) => {
+		record("console.log", args.map(a => (a as { stack?: string }).stack ?? String(a)).join(" "));
+		origLog(...args);
+	};
+	const origDebug = console.debug.bind(console);
+	console.debug   = (...args: unknown[]) => {
+		record("console.debug", args.map(a => (a as { stack?: string }).stack ?? String(a)).join(" "));
+		origDebug(...args);
+	};
+	const origInfo  = console.info.bind(console);
+	console.info    = (...args: unknown[]) => {
+		record("console.info", args.map(a => (a as { stack?: string }).stack ?? String(a)).join(" "));
+		origInfo(...args);
+	};
+	const origWarn  = console.warn.bind(console);
+	console.warn    = (...args: unknown[]) => {
+		record("console.warn", args.map(a => (a as { stack?: string }).stack ?? String(a)).join(" "));
+		origWarn(...args);
+	};
+
+
 	window.addEventListener("error", e => record("error", e.error ?? e.message));
 	window.addEventListener("unhandledrejection", e => record("unhandledrejection", e.reason));
 
-	window.__errors = errors;
-	window.__app    = {
+	window.__logs = logs;
+	Object.defineProperty(window, "__errors", {
+		get : () => logs.filter(l => l.startsWith("console.error") || l.startsWith("error") || l.startsWith("unhandledrejection")),
+	});
+
+	window.__app = {
 		// navigate / open panels by URN or entity
 		goToURN,
 		openItemPanel,
@@ -68,23 +97,26 @@ export function installDevHelpers() {
 			}
 		},
 		// live valtio stores (snapshot() them yourself for a full dump)
-		stores : {sources, navigation, list, load, gearBuilder: gearBuilderStore},
+		stores : {sources, navigation, list, load, gearBuilder : gearBuilderStore},
 		// lean, JSON-safe summary — avoids dumping the whole nav tree / entry list
 		state       : () => {
 			const nav = snapshot(navigation);
 			const l   = snapshot(list) as unknown as { entries?: unknown[]; loading?: boolean };
 			return {
 				loadingSources : sources.loading,
-				sourceKinds    : sources.wrappedSources?.map(s => s.kind),
+				sourceKinds    : sources.wrappedSources.map(s => s.kind),
 				activePath     : nav.activePath,
 				expandedPaths  : nav.expandedPaths,
-				rootNodeCount  : nav.rootNodes?.length,
+				rootNodeCount  : nav.rootNodes.length,
 				listLoading    : l.loading,
 				listCount      : l.entries?.length,
 			};
 		},
+		clearLogs   : () => {
+			logs.length = 0;
+		},
 		clearErrors : () => {
-			errors.length = 0;
+			logs = logs.filter(l => !l.startsWith("console.error") && !l.startsWith("error") && !l.startsWith("unhandledrejection"));
 		},
 	};
 

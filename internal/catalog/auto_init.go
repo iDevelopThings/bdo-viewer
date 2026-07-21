@@ -14,6 +14,7 @@ func init() {
 	sources.Registry.RegisterSource(NewWorldRegionSource())
 	sources.Registry.RegisterSource(NewCharacterSource())
 	sources.Registry.RegisterSource(NewMasterySource())
+	sources.Registry.RegisterSource(NewCrystalRulesSource())
 }
 
 var eventReporter pipeline.Reporter = pipeline.GetLogReporter()

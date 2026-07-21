@@ -1,10 +1,9 @@
 import {useCallback, useMemo, useState} from "react";
 import {CheckIcon, ChevronRightIcon, Repeat2} from "lucide-react";
 import {cn} from "@/lib/utils.ts";
-import {RecipeSelection} from "@bindings/bdo-viewer/internal/recipe";
+import type {RecipeSelection} from "@bindings/bdo-viewer/internal/recipe";
 import {RECIPE_TYPE_COLOR, recipeTypeLabel} from "@/lib/recipe-labels.ts";
-import {openItemPanel} from "@/state/panels.ts";
-import {ItemIcon} from "@/lib/item-icon.tsx";
+import {EntryIcon} from "@/lib/entry-icon.tsx";
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from "@/components/ui/dialog.tsx";
 import {tryGetGradeColor, ItemGradeInfos, ItemGrades} from "@/lib/types/item-grades.ts";
 import {RecipeTreeContext, type RNode, type RItems, itemOf, useRecipeTree, enumerateAlts, isSameSelection} from "@/components/recipes/recipe-tree-context.tsx";
@@ -83,9 +82,9 @@ function NodeAltsButton({node, items, className}: { node: RNode, items: RItems, 
 											const it = itemOf(items, inp.item);
 											return (
 												<span key={`${inp.item}:${si}`} className={"flex flex-row items-center gap-1 bg-surface-3/50 rounded px-1.5 py-0.5"}>
-													<ItemIcon urn={inp.item} className={"shrink-0"} imageClass={"w-4 h-4"} />
+													<EntryIcon urn={inp.item} className={"shrink-0"} imageClass={"w-4 h-4"} />
 													<span className={"text-sm"} style={{color : tryGetGradeColor(it?.extra?.grade)?.toString()}}>{it?.title ?? inp.item}</span>
-													<span className={"text-xs text-fg-subtle"}>×{inp.count}</span>
+													{!!inp.count && <span className={"text-xs text-fg-subtle"}>×{inp.count}</span>}
 												</span>
 											);
 										})}
@@ -187,17 +186,16 @@ function RecipeRow({node, items, depth, prefix, isLast}: { node: RNode, items: R
 				data-path={node.path}
 				data-craftable={craftable}
 				data-crafted={crafted}
-				className={cn("relative flex flex-row gap-1.5 items-center py-1 pr-2 rounded-sm cursor-pointer", stripe, "hover:bg-surface-3/40")}
+				className={cn("relative flex flex-row gap-1.5 items-center py-1 pr-2 rounded-sm", craftable && "cursor-pointer", stripe, "hover:bg-surface-3/40")}
 				style={{paddingLeft : `${8 + depth * INDENT}px`}}
-				onClick={() => craftable ? onToggleCraft(node.path, !crafted) : (item && openItemPanel({id : item.id, name : item.title}, false))}
-				onMouseDown={e => {
-					if (e.button === 1) {
-						e.preventDefault();
+				onClick={e => {
+					// The alts dialog is portaled to <body> but is a React descendant of this row, so
+					// its clicks bubble here through the portal — ignore anything not physically inside.
+					if (!e.currentTarget.contains(e.target as Node)) {
+						return;
 					}
-				}}
-				onAuxClick={e => {
-					if (e.button === 1 && item) {
-						openItemPanel({id : item.id, name : item.title}, true);
+					if (craftable) {
+						onToggleCraft(node.path, !crafted);
 					}
 				}}
 			>
@@ -222,7 +220,7 @@ function RecipeRow({node, items, depth, prefix, isLast}: { node: RNode, items: R
 				) : (
 					<span className={"size-3.5 shrink-0"} />
 				)}
-				<ItemIcon urn={node.item} className={"shrink-0"} imageClass={"w-5 h-5"} />
+				<EntryIcon urn={node.item} title={item?.title} clickable className={"shrink-0"} imageClass={"w-5 h-5"} />
 				<span className={"text-sm min-w-0 truncate"} style={color ? {color} : undefined}>{item?.title}</span>
 				{!!node.count && <span className={"text-sm text-fg-subtle shrink-0"}>×{node.count}</span>}
 				{node.gathered ? (

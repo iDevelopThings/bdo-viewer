@@ -122,6 +122,7 @@ func ComputeStats(
 	mastery MasterySet,
 	slots []Slot,
 	consumables []*model.Item,
+	crystals []*model.Item,
 ) *StatSheet {
 	cls, hasClass := model.GenClassStats[class]
 
@@ -135,6 +136,7 @@ func ComputeStats(
 	addGear(a, slots)
 	addSetEffects(a, slots)
 	addConsumables(a, consumables)
+	addCrystals(a, crystals)
 	applyBrackets(a)
 	addMastery(a, mastery)
 	deriveCritChance(a)
@@ -246,6 +248,34 @@ func addConsumables(a *accumulator, items []*model.Item) {
 		}
 		for _, id := range e.mod.StatIDs {
 			a.add(id, value, e.source)
+		}
+	}
+}
+
+// addCrystals folds socket-crystal Effects into the sheet. Crystals stack (no
+// buff-group clear/replace); Instant rows are skipped like consumables.
+func addCrystals(a *accumulator, items []*model.Item) {
+	for _, it := range items {
+		if it == nil || it.Effects == nil {
+			continue
+		}
+		for _, sm := range it.Effects.Stats.Stats {
+			if sm.EffectDsl != nil || sm.Instant {
+				continue
+			}
+			if sm.StatID == "" && len(sm.StatIDs) == 0 {
+				continue
+			}
+			value := sm.Value
+			if sm.Op == "-" {
+				value = -value
+			}
+			if sm.StatID != "" {
+				a.add(sm.StatID, value, it.Name)
+			}
+			for _, id := range sm.StatIDs {
+				a.add(id, value, it.Name)
+			}
 		}
 	}
 }

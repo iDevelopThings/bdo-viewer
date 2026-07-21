@@ -28,6 +28,7 @@ const (
 	Region    SourceKind = "region"
 	Character SourceKind = "character"
 	Mastery   SourceKind = "mastery"
+	CrystalRules SourceKind = "crystalrules"
 )
 
 type ListSourceParams struct {
@@ -51,8 +52,7 @@ type SortOption struct {
 	Label string `json:"label"`
 }
 type ListSourceEntry struct {
-	ID       uint32         `json:"id"`
-	URN      string         `json:"urn,omitempty"`
+	URN      string         `json:"urn"`
 	Title    string         `json:"title"`
 	Subtitle string         `json:"subtitle,omitempty"`
 	Icon     string         `json:"icon,omitempty"`

@@ -1,7 +1,8 @@
-import {IDockviewPanelProps} from "dockview-react";
+import type {IDockviewPanelProps} from "dockview-react";
 import {DetailsItem} from "@/components/details/details-item.tsx";
 import {DetailProvider, useDetailStore} from "@/state/detail.tsx";
-import {SourceKind, UntypedSourceEntry} from "@bindings/bdo-viewer/internal/sources";
+import type {UntypedSourceEntry} from "@bindings/bdo-viewer/internal/sources";
+import {SourceKind} from "@bindings/bdo-viewer/internal/sources";
 import {type ComponentType, useCallback, useEffect, useRef, useState} from "react";
 import {useDebounce} from "@/utils.tsx";
 import {GrindSpotDetails} from "@/components/details/details-grindspot.tsx";
@@ -11,11 +12,20 @@ import {RegionDetails} from "@/components/details/details-region.tsx";
 import {CharacterDetails} from "@/components/details/details-character.tsx";
 import {useSnapshot} from "valtio/react";
 
+function titleOf(entry: UntypedSourceEntry | undefined): string | undefined {
+	const value = entry?.value as { name?: string; title?: string } | undefined;
+	if (!value || typeof value !== "object") {
+		return undefined;
+	}
+	return value.name ?? value.title;
+}
+
 function DetailsPanelInner({entry, props}: { entry: UntypedSourceEntry, props: IDockviewPanelProps }) {
 
 	const containerRef = useRef<HTMLDivElement>(null);
 
-	const d                       = useDetailStore();
+	const d = useDetailStore();
+
 	const {scrollOffset, loading} = useSnapshot(d);
 
 
@@ -37,10 +47,8 @@ function DetailsPanelInner({entry, props}: { entry: UntypedSourceEntry, props: I
 		// this effect's mount only fires once; re-apply whenever this tab
 		// becomes the active one again (switching away resets scrollTop
 		// outside React, so there's nothing else to catch it).
-		const disposeDidActiveChange = props.api.onDidActiveChange(event => {
-			if (event.isActive) {
-				restoreScroll();
-			}
+		const disposeDidActiveChange = props.api.onDidActiveChange(() => {
+			restoreScroll();
 		});
 
 		return () => {
@@ -57,6 +65,18 @@ function DetailsPanelInner({entry, props}: { entry: UntypedSourceEntry, props: I
 			restoreScroll();
 		}
 	}, [loading, restoreScroll]);
+
+	// The panel opens with whatever title the opener had — often just the urn for a
+	// bare link. Once the entry loads, retitle the tab from its real name.
+	useEffect(() => {
+		if (loading) {
+			return;
+		}
+		const name = titleOf(d.entry);
+		if (name) {
+			props.api.setTitle(name);
+		}
+	}, [loading, d, props.api]);
 
 	if (loading) {
 		return (
@@ -90,16 +110,15 @@ function DetailsPanelInner({entry, props}: { entry: UntypedSourceEntry, props: I
 
 	return (
 		<div
-			// overflow-anchor:none — the detail's sections stream in after the scroll offset is
-			// restored; without this the browser's scroll anchoring drifts the view to the bottom.
-			className="flex flex-col grow max-h-full overflow-auto [overflow-anchor:none]"
+			className="flex flex-col grow max-h-full overflow-auto"
 			ref={containerRef}
 			data-panel={"detail"}
 			data-source={entry.type}
 			data-urn={entry.urn}
 			onScroll={e => {
-				if (d.loading || !props.api.isActive)
+				if (d.loading) {
 					return;
+				}
 				saveScrollOffset(e.currentTarget.scrollTop);
 			}}
 		>
@@ -119,7 +138,7 @@ export const DetailsPanel = (props: IDockviewPanelProps) => {
 
 	const [entry, setEntry] = useState<UntypedSourceEntry>(() => ({
 		type  : params.source,
-		urn   : params.urn,
+		urn   : params.urn ?? "",
 		value : params.key
 	}));
 
@@ -127,7 +146,7 @@ export const DetailsPanel = (props: IDockviewPanelProps) => {
 	useEffect(() => {
 		const disposeDidParametersChange = props.api.onDidParametersChange(event => {
 			const newParams = event as { key: string, source: SourceKind, urn?: string };
-			setEntry({type : newParams.source, urn : newParams.urn, value : newParams.key});
+			setEntry({type : newParams.source, urn : newParams.urn ?? "", value : newParams.key});
 		});
 
 		return () => {
@@ -135,7 +154,7 @@ export const DetailsPanel = (props: IDockviewPanelProps) => {
 		};
 	}, [props.api]);
 
-	if (!props.params?.key || !props.params?.source || !props?.params?.urn) {
+	if (!props.params?.urn || !props.params?.source) {
 		return (
 			<div className="flex flex-col grow max-h-full h-full w-full items-center justify-center overflow-auto p-8">
 				<p className={"text-fg text-lg"}>

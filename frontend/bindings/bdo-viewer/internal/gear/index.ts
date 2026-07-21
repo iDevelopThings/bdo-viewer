@@ -7,11 +7,13 @@ export {
 };
 
 export type {
+    CrystalGroupUsage,
     EventEquipHistoryUpdatedPayload,
     EventLoadoutUpdatedPayload,
     EventSlotBlockUpdatedPayload,
     MasteryConfigSet,
     MasteryData,
+    SimpleCrystalSlot,
     SimpleSlotData,
     StatSheet,
     StatSource,

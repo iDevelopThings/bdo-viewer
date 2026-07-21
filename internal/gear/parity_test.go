@@ -37,7 +37,7 @@ func bootStores(t *testing.T) {
 // (class stamina is a flat constant, not a per-level curve).
 func TestParityNakedStamina(t *testing.T) {
 	for _, lvl := range []int{1, 56, 60, 61, 65} {
-		s := ComputeStats(model.CharacterClassTypeMaehwa, lvl, Fitness{}, nil, nil, nil)
+		s := ComputeStats(model.CharacterClassTypeMaehwa, lvl, Fitness{}, nil, nil, nil, nil)
 		if got := statTotal(s, model.StatIds.MaxStamina); got != 1040 {
 			t.Errorf("naked L%d Max Stamina = %v, want 1040 (base 20 + class 1020)", lvl, got)
 		}
@@ -102,7 +102,7 @@ func TestParityFixedBuild(t *testing.T) {
 		slots = append(slots, slot)
 	}
 
-	sheet := ComputeStats(model.CharacterClassTypeMaehwa, 65, Fitness{}, nil, slots, nil)
+	sheet := ComputeStats(model.CharacterClassTypeMaehwa, 65, Fitness{}, nil, slots, nil, nil)
 
 	t.Logf("%-24s %8s %8s %8s", "stat", "ours", "garmoth", "diff")
 	for stat, want := range garmothBuild {

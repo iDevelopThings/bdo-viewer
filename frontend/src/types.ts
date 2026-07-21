@@ -5,3 +5,5 @@ export type DeepReadonly<T> = T extends (infer U)[]
 		: T;
 
 export type MaybeReadonly<T> = T | DeepReadonly<T>;
+
+export type MaybeNullable<T> = T | null | undefined;

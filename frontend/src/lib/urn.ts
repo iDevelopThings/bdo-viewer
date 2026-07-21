@@ -86,7 +86,7 @@ export class URNHandler {
 		}
 	}
 
-	public is(handler: URNHandler) : handler is URNHandler {
+	public is(handler: URNHandler|undefined) : handler is URNHandler {
 		if(!handler) {
 			return false;
 		}
@@ -129,6 +129,22 @@ export function parseURN(raw: string): URNParts {
 	}
 
 	throw new Error(`Invalid URN: ${raw}`);
+}
+
+// urnKind returns a urn's source discriminant: its domain, or "domain:kind" when
+// the urn carries a kind segment — e.g. "item", "world:region", "knowledge:theme".
+// This is the authoritative discriminant for an entry (finer-grained than the
+// source's SourceKind, which can't tell knowledge themes from entries).
+export function urnKind(raw: string | undefined): string | undefined {
+	if (!raw) {
+		return undefined;
+	}
+	try {
+		const parsed = parseURN(raw);
+		return parsed.kind ? `${parsed.domain}:${parsed.kind}` : parsed.domain;
+	} catch {
+		return undefined;
+	}
 }
 
 export function createURNHandler(domain: string, kinds: string[] = []): URNHandler {

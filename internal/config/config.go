@@ -142,7 +142,9 @@ func WriteJsonConfig[T any](value *T, filename string) error {
 
 	return nil
 }
-func ReadJsonConfig[T any](filename string) (*T, error) {
+// ReadRawJsonConfig returns the file's bytes (nil if it doesn't exist yet) for callers that
+// version their state and need to migrate the document before it will decode.
+func ReadRawJsonConfig(filename string) ([]byte, error) {
 	path := filepath.Join(Dir(), filename)
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -150,6 +152,18 @@ func ReadJsonConfig[T any](filename string) (*T, error) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("read config file error: %w", err)
+	}
+
+	return data, nil
+}
+
+func ReadJsonConfig[T any](filename string) (*T, error) {
+	data, err := ReadRawJsonConfig(filename)
+	if err != nil {
+		return nil, err
+	}
+	if data == nil {
+		return nil, nil
 	}
 
 	var value T

@@ -1,8 +1,6 @@
-import {useEffect, useState} from "react";
-import {CancelError} from "@wailsio/runtime";
+import {useState} from "react";
+import {useAsync} from "react-async-hook";
 import {GetStatsByURN} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
-import type {StatGroup} from "@bindings/bdo-viewer/internal/stats";
-import {ItemURN} from "@/lib/urn.ts";
 import {flatStats, namedGroups} from "@/lib/stat-groups.ts";
 import {StatCard} from "@/components/details/stats.tsx";
 import {EffectSections} from "@/components/details/effects.tsx";
@@ -10,33 +8,20 @@ import {Button} from "@/components/ui/button.tsx";
 import {Label} from "@/components/ui/label.tsx";
 import {Slider} from "@/components/ui/slider.tsx";
 import {gearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
-import {ItemIcon} from "@/lib/item-icon.tsx";
+import {EntryIcon} from "@/lib/entry-icon.tsx";
 import {getGradeColor} from "@/lib/types/item-grades.ts";
 import {useDebounce} from "@/utils.tsx";
 import {useSnapshot} from "valtio/react";
+import {ComboboxTriggerNoChevron} from "@/components/ui/combobox.tsx";
+
+import {GearSlotPicker} from "@/components/gear-builder/gear-slot-button.tsx";
 
 
-function SlotStats({itemId, level, caphras}: { itemId: number; level: number; caphras: number }) {
-	const [groups, setGroups] = useState<StatGroup[]>([]);
-
-	useEffect(() => {
-		let cancelled = false;
-		GetStatsByURN(ItemURN.new(itemId), level, caphras).then(
-			result => {
-				if (!cancelled) {
-					setGroups(result ?? []);
-				}
-			},
-			e => {
-				if (!cancelled && !(e instanceof CancelError)) {
-					console.error("GearSlotDetail: failed to load stats", e);
-				}
-			},
-		);
-		return () => {
-			cancelled = true;
-		};
-	}, [itemId, level, caphras]);
+function SlotStats({urn, level, caphras}: { urn: string | undefined; level: number; caphras: number }) {
+	const {result : groups = []} = useAsync(
+		async () => (urn ? (await GetStatsByURN(urn, level, caphras)) ?? [] : []),
+		[urn, level, caphras],
+	);
 
 	// flatStats is only the untitled card row (AP/DP/basics); the titled sections
 	// (Enhancement Effect, Set Effect, Caphras Enhancement, Hidden, …) come from
@@ -66,22 +51,24 @@ export function GearSlotDetail() {
 
 	// Hold the enhance level locally while dragging so the slider stays smooth without a store write
 	// (and full re-render + stat re-fetch) on every tick — commit to the backend debounced instead.
-	const [dragEnhanceLevel, setDragEnhanceLevel]           = useState<number | null>(null);
-	const [dragCaphrasLevel, setDragCaphrasLevel]             = useState<number | null>(null);
+	const [dragEnhanceLevel, setDragEnhanceLevel] = useState<number | null>(null);
+	const [dragCaphrasLevel, setDragCaphrasLevel] = useState<number | null>(null);
 
 	const [committedEnhanceLevel, setCommittedEnhanceLevel] = useState(slot?.enhanceLevel);
 	const [committedCaphrasLevel, setCommittedCaphrasLevel] = useState(slot?.caphrasLevel);
 
 	const commitEnhance = useDebounce((l: number) => {
+		if(!gearBuilderStore.selectedSlot) return;
 		void gearBuilderStore.upgrade(gearBuilderStore.selectedSlot.id, l);
 	}, 5);
 	const commitCaphras = useDebounce((l: number) => {
+		if(!gearBuilderStore.selectedSlot) return;
 		void gearBuilderStore.upgrade(gearBuilderStore.selectedSlot.id, undefined, l);
 	}, 5);
 
 	// Drop the local override whenever the store's committed level changes: our debounced commit
 	// landing, an external change (e.g. max-on-equip), or a different slot being selected.
-	if (slot?.enhanceLevel !== committedEnhanceLevel ) {
+	if (slot?.enhanceLevel !== committedEnhanceLevel) {
 		setCommittedEnhanceLevel(slot?.enhanceLevel);
 		setDragEnhanceLevel(null);
 	}
@@ -101,19 +88,19 @@ export function GearSlotDetail() {
 
 	const enhanceLevel = dragEnhanceLevel ?? slot.enhanceLevel;
 	const caphrasLevel = dragCaphrasLevel ?? slot.caphrasLevel;
-	const minLevel     = slot?.enhancementMinLevel ?? 0;
-	const maxLevel     = slot?.enhancementMaxLevel ?? 0;
-	const minCaphras   = slot?.caphrasMinLevel;
-	const maxCaphras   = slot?.caphrasMaxLevel ?? 0;
+	const minLevel     = slot.enhancementMinLevel ?? 0;
+	const maxLevel     = slot.enhancementMaxLevel ?? 0;
+	const minCaphras   = slot.caphrasMinLevel ?? 0;
+	const maxCaphras   = slot.caphrasMaxLevel ?? 0;
 
-	const gradeColor = getGradeColor(item?.extra?.grade);
-
+	const gradeColor = getGradeColor(item.extra?.grade);
 
 	return (
-		<div className={"flex flex-col gap-4 border-t border-surface-border p-4"}>
+		<div className={"flex flex-col gap-4 p-4"}>
 			<div className={"flex flex-row items-center gap-3"}>
-				<ItemIcon
-					urn={{id : item.urn, name : item.title}}
+				<EntryIcon
+					urn={item.urn}
+					title={item.title}
 					grade={item.extra?.grade}
 					imageClass={"w-8 h-8 shrink-0"}
 					className={"flex-none"}
@@ -127,13 +114,18 @@ export function GearSlotDetail() {
 					<span className={"text-xs text-fg-subtle"}>{slot.info.Title}</span>
 				</div>
 				<div className={"flex flex-row gap-1 ml-auto"}>
-					<Button
-						variant={"outline"}
-						size={"xs"}
-						onClick={() => gearBuilderStore.openPicker(slot.id)}
-					>
-						Change
-					</Button>
+					<GearSlotPicker
+						slot={slot}
+						positioning={{
+							align : "end",
+							side  : "bottom",
+						}}
+						trigger={
+							<ComboboxTriggerNoChevron render={<Button variant={"outline"} size={"xs"} />}>
+								Change
+							</ComboboxTriggerNoChevron>
+						}
+					/>
 					<Button
 						variant={"ghost"}
 						size={"xs"}
@@ -186,7 +178,7 @@ export function GearSlotDetail() {
 				</div>
 			)}
 
-			<SlotStats itemId={item.id} level={slot.enhanceLevel} caphras={slot.caphrasLevel} />
+			<SlotStats urn={item.urn} level={slot.enhanceLevel} caphras={slot.caphrasLevel} />
 		</div>
 	);
 }

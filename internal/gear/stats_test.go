@@ -177,7 +177,7 @@ func TestCritChanceFromLevel(t *testing.T) {
 // have data for; the in-game absolute values are higher by the passive-skill
 // contribution we don't model.
 func TestNakedBaseStats(t *testing.T) {
-	s := ComputeStats(model.CharacterClassTypeMaehwa, 61, Fitness{}, nil, nil, nil)
+	s := ComputeStats(model.CharacterClassTypeMaehwa, 61, Fitness{}, nil, nil, nil, nil)
 
 	checks := map[model.StatId]float64{
 		model.StatIds.Accuracy:             421, // class 417 + base kit 4

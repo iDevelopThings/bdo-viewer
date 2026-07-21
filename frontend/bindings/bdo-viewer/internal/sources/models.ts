@@ -6,8 +6,7 @@
 import * as json$0 from "../../../encoding/json/models.js";
 
 export interface ListSourceEntry {
-    "id": number;
-    "urn"?: string;
+    "urn": string;
     "title": string;
     "subtitle"?: string;
     "icon"?: string;
@@ -54,6 +53,7 @@ export enum SourceKind {
     Region = "region",
     Character = "character",
     Mastery = "mastery",
+    CrystalRules = "crystalrules",
 };
 
 export interface SourceNavigationNode {
@@ -68,6 +68,6 @@ export interface SourceNavigationNode {
 
 export interface UntypedSourceEntry {
     "type": SourceKind;
-    "urn"?: string;
+    "urn": string;
     "value": any;
 }

@@ -8,7 +8,7 @@ export const Call = new Proxy(RealCall, {
 		const value = Reflect.get(target, prop, receiver);
 		if (typeof value !== "function") return value;
 		return (...args: any[]) => {
-			if (!window?.__app?.wailsDebug?.enabled) {
+			if (!window.__app?.wailsDebug.enabled) {
 				return (value as (...args: any[]) => any).apply(target, args); // keep this = RealCall
 			}
 

@@ -30,6 +30,7 @@ type BindingTypes struct {
 	KnowledgeTheme *model.KnowledgeTheme `json:"knowledgeTheme,omitempty"`
 	KnowledgeEntry *model.KnowledgeEntry `json:"knowledgeEntry,omitempty"`
 	Character      *model.Character      `json:"character,omitempty"`
+	CrystalRules   *model.CrystalRules   `json:"crystalRules,omitempty"`
 }
 
 // Catalog is the thin facade the frontend binds against. It owns no dataset —

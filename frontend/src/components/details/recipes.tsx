@@ -1,14 +1,9 @@
-import {RecipeTreeByproduct} from "@bindings/bdo-viewer/internal/recipe";
+import type {RecipeTreeByproduct} from "@bindings/bdo-viewer/internal/recipe";
 import {RECIPE_TYPE_COLOR, recipeTypeLabel} from "@/lib/recipe-labels.ts";
-import {EntryTooltip} from "@/components/details/entry-tooltip.tsx";
 import type {DeepReadonly} from "@/types.ts";
-import {openItemPanel} from "@/state/panels.ts";
-import {ItemIcon} from "@/lib/item-icon.tsx";
-import {DetailsSection} from "@/components/details/details-components.tsx";
+import {EntityChip, DetailsSection} from "@/components/details/details-components.tsx";
 import {useDetail} from "@/state/detail.tsx";
-import {getMiddleClickProps} from "@/utils.tsx";
 import {RecipeTreeView} from "@/components/recipes/recipe-tree.tsx";
-import {tryGetGradeColor} from "@/lib/types/item-grades.ts";
 import {itemOf, type RItems} from "@/components/recipes/recipe-tree-context.tsx";
 
 // DetailsRecipes is the item-detail wrapper around the shared RecipeTreeView: it
@@ -43,7 +38,7 @@ export function DetailsRecipes() {
 			{craftable && (
 				<DetailsSection title={"Recipes"} borderTop>
 					<RecipeTreeView
-						root={root!}
+						root={root}
 						items={items}
 						onSelectRecipe={(path, sel) => detail.selectRecipe(path, sel)}
 						onToggleCraft={(path, craft) => detail.toggleCraft(path, craft)}
@@ -72,34 +67,33 @@ function ByproductsSection({byproducts, items}: { byproducts: DeepReadonly<Recip
 }
 
 function ByproductEntry({bp, items}: { bp: DeepReadonly<RecipeTreeByproduct>, items: RItems }) {
-	const out   = itemOf(items, bp.realOutput);
-	const color = tryGetGradeColor(out?.extra?.grade)?.toString() ?? "#d4d4d8";
+	const out = itemOf(items, bp.realOutput);
 
 	return (
 		<div className={"flex flex-col gap-1.5 bg-surface-2 rounded-md p-2"}>
 			<div className={"flex flex-row gap-2 items-center flex-wrap"}>
-				<div
-					className={"flex flex-row gap-1 items-center bg-surface-3/50 px-1.5 py-0.5 rounded-md cursor-pointer select-none"}
-					{...getMiddleClickProps(
-						() => out && openItemPanel({id : out.id, name : out.title}, false),
-						() => out && openItemPanel({id : out.id, name : out.title}, true),
-					)}
-				>
-					<ItemIcon urn={bp.realOutput} className={"shrink-0"} imageClass={"w-4 h-4"} />
-					<span className={"text-sm"} style={{color}}>{out?.title}</span>
-				</div>
+				<EntityChip
+					urn={bp.realOutput}
+					name={out?.title ?? bp.realOutput}
+					grade={out?.extra?.grade}
+				/>
 				<span className={"text-sm"} style={{color : RECIPE_TYPE_COLOR}}>{recipeTypeLabel(bp.type, bp.station)}</span>
 			</div>
 			{bp.inputs?.length ? (
 				<div className={"flex flex-row flex-wrap gap-2 items-center"}>
-					{bp.inputs.map((input, i) => (
-						<EntryTooltip key={`${input.item}:${i}`} urn={input.item} className={"shrink-0"} side={"top"}>
-							<div className={"flex flex-row gap-1 items-center bg-surface-3/50 px-1.5 py-0.5 rounded-md select-none"}>
-								<ItemIcon urn={input.item} className={"shrink-0"} imageClass={"w-4 h-4"} />
-								<span className={"text-sm text-fg-muted"}>×{input.count}</span>
-							</div>
-						</EntryTooltip>
-					))}
+					{bp.inputs.map((input, i) => {
+						const inp = itemOf(items, input.item);
+						return (
+							<EntityChip
+								key={`${input.item}:${i}`}
+								urn={input.item}
+								name={inp?.title ?? "Item"}
+								grade={inp?.extra?.grade}
+								compact
+								trailing={!!input.count && <span className={"text-xs text-fg-subtle"}>×{input.count}</span>}
+							/>
+						);
+					})}
 				</div>
 			) : null}
 		</div>
@@ -109,7 +103,7 @@ function ByproductEntry({bp, items}: { bp: DeepReadonly<RecipeTreeByproduct>, it
 export function DetailsUsedIn() {
 	const [, snap] = useDetail();
 
-	if (!snap?.usedIn?.length) {
+	if (!snap.usedIn.length) {
 		return null;
 	}
 
@@ -119,22 +113,13 @@ export function DetailsUsedIn() {
 		<DetailsSection title={`Used In (${usedIn.length})`} borderTop>
 			<div className={"flex flex-col gap-2"}>
 				{usedIn.map((use, index) => (
-					<div
-						key={index}
-						className={"flex flex-row gap-2 items-center cursor-pointer"}
-						{...getMiddleClickProps(
-							() => openItemPanel({id : use.output.id, name : use.output.title}, false),
-							() => openItemPanel({id : use.output.id, name : use.output.title}, true),
-						)}
-					>
-						<EntryTooltip urn={use.output.urn} className={"gap-2"} side={"top"}>
-							<div className={"flex flex-row gap-1 items-center bg-surface-3/50 px-1.5 py-0.5 rounded-md select-none"}>
-								<img src={use.output.icon} alt={use.output.title} className={"w-4 h-4"} />
-								<span className={"text-sm text-fg-muted"}>{use.output.title}</span>
-							</div>
-							<span className={"text-sm text-fg-subtle"}>via <span className={"font-bold"}>{recipeTypeLabel(use.type, use.station)}</span></span>
-							<span className={"text-sm text-fg-subtle"}>×{use.count}</span>
-						</EntryTooltip>
+					<div key={index} className={"flex flex-row gap-2 items-center flex-wrap"}>
+						<EntityChip
+							urn={use.output.urn}
+							name={use.output.title}
+						/>
+						<span className={"text-sm text-fg-subtle"}>via <span className={"font-bold"}>{recipeTypeLabel(use.type, use.station)}</span></span>
+						{!!use.count && <span className={"text-sm text-fg-subtle"}>×{use.count}</span>}
 					</div>
 				))}
 			</div>

@@ -7,10 +7,11 @@ import {cn} from "@/lib/utils.ts";
 import {findSourceByURN} from "@/state/sources/sources.ts";
 import {EffectSections} from "@/components/details/effects.tsx";
 import {flatStats, namedGroups} from "@/lib/stat-groups.ts";
-import {Tooltip as TooltipPrimitive} from "@base-ui/react/tooltip";
+import type {Tooltip as TooltipPrimitive} from "@base-ui/react/tooltip";
 import {GetEntryDetailsByURN} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
-import {EntryDetailsData} from "@/state/detail-store.tsx";
-import {getGradeColor, ItemGrades, ItemGrade} from "@/lib/types/item-grades.ts";
+import type {EntryDetailsData} from "@/state/detail-store.tsx";
+import type { ItemGrade} from "@/lib/types/item-grades.ts";
+import {getGradeColorScale, ItemGrades} from "@/lib/types/item-grades.ts";
 
 // Drop-in tooltip for any entry, given its URN: <EntryTooltip urn={"urn::item:123"}>…</EntryTooltip>.
 // Data loads lazily on first hover (and is cached after that), so wrapping
@@ -33,7 +34,7 @@ export function EntryTooltip({urn, children, className, ...props}: EntryTooltipP
 				if (open && !details && !loading) {
 					setLoading(true);
 					GetEntryDetailsByURN(urn).then(result => {
-						setDetails(result);
+						setDetails(result ?? undefined);
 						setLoading(false);
 					});
 				}
@@ -65,7 +66,7 @@ function EntryTooltipCard({urn, details}: { urn: string, details: EntryDetailsDa
 	const effects = namedGroups(details.stats);
 
 	if (kind === SourceKind.Item) {
-		const item = details[kind] as ItemModel | undefined;
+		const item = details[kind];
 		if (item) {
 			return <ItemTooltipCard item={item} stats={stats} effects={effects} />;
 		}
@@ -96,14 +97,14 @@ function StatRows({stats}: { stats: ReturnType<typeof flatStats> }) {
 
 function ItemTooltipCard({item, stats, effects}: { item: ItemModel, stats: ReturnType<typeof flatStats>, effects: ReturnType<typeof namedGroups> }) {
 	const grade      = item.grade as ItemGrade | undefined;
-	const gradeColor = getGradeColor(grade, ItemGrades.White);
+	const scale = getGradeColorScale(grade, ItemGrades.White);
 	const equipLabel = item.equipInfo?.type || item.equipInfo?.slot || item.equipInfo?.kind;
 
 	return (
 		<div className={"w-80 overflow-hidden rounded-sm border border-amber-800/40 bg-surface-0/95 shadow-xl"}>
 			<div
 				className={"relative flex flex-row items-center gap-3 px-3 py-2.5"}
-				style={{background : `linear-gradient(to bottom, ${gradeColor.darken(0.35)}, ${gradeColor.darken(0.7)})`}}
+				style={scale ? {background : `linear-gradient(to bottom, ${scale.detailBackground[0]}, ${scale.detailBackground[1]})`} : undefined}
 			>
 				{equipLabel && (
 					<span className={"absolute top-1.5 right-2 text-[10px] text-amber-200/70"}>Equipment({equipLabel})</span>

@@ -44,7 +44,7 @@ export function AppRoot() {
 			/>
 		);
 	} else if (phase !== "ready") {
-		body = <LoadScreen onRetry={() => load.reload()} />;
+		body = <LoadScreen onRetry={() => void load.reload()} />;
 	} else {
 		body = (
 			<>

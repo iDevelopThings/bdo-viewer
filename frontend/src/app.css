@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
+@import "dockview-react/dist/styles/dockview.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -272,6 +273,7 @@ html, body, #root {
     --dv-context-menu-background-color: var(--popover);
     --dv-context-menu-color: var(--popover-foreground);
 }
+
 .dockview-theme-shadcn .dv-drop-target-container .dv-drop-target-anchor.dv-drop-target-anchor-container-changed {
     opacity: 0;
     transition: none;
@@ -309,4 +311,34 @@ html, body, #root {
 .bdo-layout .dv-groupview:has([data-panel="list"]) .dv-tab {
     width: 100%;
     padding: 0;
+}
+
+/*
+ * Edge groups lay their content out as a flex sibling of the (vertical/horizontal) tab strip.
+ * The default min-width/height:auto stops that content shrinking below its intrinsic size, so
+ * it overflows the group — which clips it. Let it shrink and defer to the panel's own scroll.
+ */
+.bdo-layout .dv-groupview-edge > .dv-content-container {
+    min-width: 0;
+    min-height: 0;
+}
+
+/*
+ * Kill dockview's background-color transitions on the sash and scrollbar. background-color can't be
+ * composited, so animating it during a resize forces a full-frame main-thread repaint for the whole
+ * drag (~6fps, GPU idle). We still want the colour change on hover/active — just instant, not animated.
+ */
+.dv-split-view-container .dv-sash-container .dv-sash:not(.disabled):active, .dv-split-view-container .dv-sash-container .dv-sash:not(.disabled):hover {
+    /*transition-property: none !important;*/
+    /*transition-timing-function: unset !important;*/
+    /*transition-duration: unset !important;*/
+    /*transition-delay: unset !important;*/
+}
+
+.dv-scrollable .dv-scrollbar {
+    /*backface-visibility: hidden;*/
+    /*transition-property: unset !important;*/
+    /*transition-timing-function: unset !important;*/
+    /*transition-duration: unset !important;*/
+    /*transition-delay: unset !important;*/
 }

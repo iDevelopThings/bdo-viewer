@@ -4,7 +4,7 @@ import {cva, type VariantProps} from "class-variance-authority";
 import {cn} from "@/lib/utils.ts";
 import type {DeepReadonly} from "@/types.ts";
 import {ChevronRight} from "lucide-react";
-import {SourceNavigationNode} from "@bindings/bdo-viewer/internal/sources";
+import type {SourceNavigationNode} from "@bindings/bdo-viewer/internal/sources";
 import {memo, useEffect, useMemo, useRef} from "react";
 
 const sidebarNodeVariants = cva(
@@ -100,7 +100,7 @@ export const SidebarNode = memo(function SidebarNode({node, parent, depth}: Side
 			</div>
 			{hasChildren && expanded && (
 				<div className={"flex flex-col w-full"}>
-					<SidebarNode key={`sbn:${parent.id}:${node.path}_ALL_`} node={allNode} depth={depth + 1} parent={parent} />
+					<SidebarNode key={`sbn:${parent?.id}:${node.path}_ALL_`} node={allNode} depth={depth + 1} parent={parent} />
 
 					{node.children.map(child => (
 						<SidebarNode key={`sbnc:${node.id}:${child.id}`} node={child} parent={node} depth={depth + 1} />

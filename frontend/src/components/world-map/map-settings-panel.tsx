@@ -5,7 +5,7 @@ import {Label} from "@/components/ui/label.tsx";
 import {mapState} from "@/components/world-map/map-state.ts";
 import {Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList, ComboboxTrigger} from "@/components/ui/combobox.tsx";
 import {npcRoleLabel} from "@/components/world-map/npc-roles.ts";
-import {NPCSpawnType} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import type {NPCSpawnType} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {cn} from "@/lib/utils.ts";
 
 function ToggleRow(

@@ -59,8 +59,10 @@ export function EntryPicker({
 	const [sortDir, setSortDir] = useState<SortDir>(defaultSortDir);
 	const [filters, setFilters] = useState<ItemFilters>({});
 
+	// Object.values drops the optional keys' `| undefined`, so type v explicitly — a
+	// cleared filter is undefined at runtime even though the value union hides it.
 	const hasActiveFilters = query.trim() !== "" || Object.values(filters).some(
-		v => Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && v !== "",
+		(v: ItemFilters[keyof ItemFilters]) => Array.isArray(v) ? v.length > 0 : v !== undefined && v !== "",
 	);
 
 	// baseFilters is usually an inline object literal, so depend on its content, not

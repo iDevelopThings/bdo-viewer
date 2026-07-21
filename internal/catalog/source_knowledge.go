@@ -219,7 +219,7 @@ func (s *KnowledgeSource) IconPath(e *model.KnowledgeEntry) string {
 		return ""
 	}
 
-	return "/icons/knowledge_icons/" + filepath.ToSlash(e.Image)
+	return "/icons/by-urn/" + e.GetURN().String()
 }
 
 func (s *KnowledgeSource) GetNavigationTree() sources.SourceNavigationNodeSimple {
@@ -382,7 +382,6 @@ func (s *KnowledgeSource) List(params sources.ListSourceParams) []sources.ListSo
 	out := make([]sources.ListSourceEntry, len(items))
 	for i, it := range items {
 		out[i] = sources.ListSourceEntry{
-			ID:    it.Key,
 			URN:   it.GetURN().String(),
 			Title: it.Name,
 		}

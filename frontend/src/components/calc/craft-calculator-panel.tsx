@@ -2,16 +2,16 @@ import {useEffect, useMemo, useState} from "react";
 import {useSnapshot} from "valtio/react";
 import {Plus, X} from "lucide-react";
 import type {ListSourceEntry} from "@bindings/bdo-viewer/internal/sources";
-import {Requirement} from "@bindings/bdo-viewer/internal/recipe";
+import {type Requirement} from "@bindings/bdo-viewer/internal/recipe";
 import {addTarget, calc, type CalcTarget, calcRuntime, recompute, removeTarget, selectRecipe, setQty, toggleCraft} from "@/state/calc/calc-store.ts";
 import {RecipeTreeView} from "@/components/recipes/recipe-tree.tsx";
 import {EntryPicker} from "@/components/entry-list/entry-picker.tsx";
 import {fetchMarket, market, marketLoaded, marketStatus} from "@/lib/market-data.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Input} from "@/components/ui/input.tsx";
-import {ItemIcon} from "@/lib/item-icon.tsx";
+import {EntryIcon} from "@/lib/entry-icon.tsx";
 import {moneyLabel} from "@/utils.tsx";
-import {openItemPanel} from "@/state/panels.ts";
+import {goToURN} from "@/state/panels.ts";
 import type {DeepReadonly} from "@/types.ts";
 import {tryGetGradeColor} from "@/lib/types/item-grades.ts";
 import {itemOf} from "@/components/recipes/recipe-tree-context.tsx";
@@ -21,7 +21,7 @@ import {itemOf} from "@/components/recipes/recipe-tree-context.tsx";
 // the base materials just that target needs. A combined shopping list at the
 // bottom rolls every target's materials into one priced total.
 
-type ItemMap = Record<string, ListSourceEntry | null | undefined>;
+export type ItemMap = Record<string, ListSourceEntry | null | undefined>;
 
 export function CraftCalculatorPanel() {
 	const {targets}             = useSnapshot(calc);
@@ -41,7 +41,7 @@ export function CraftCalculatorPanel() {
 		const m: ItemMap = {};
 		for (const plan of plans.values()) {
 			for (const [urn, it] of Object.entries(plan.tree.items ?? {})) {
-				if (it) m[urn] = it as ListSourceEntry;
+				if (it) m[urn] = it;
 			}
 		}
 		return m;
@@ -113,11 +113,11 @@ function TargetBlock({target, items}: { target: DeepReadonly<CalcTarget>, items:
 			data-urn={target.urn}
 		>
 			<div className={"flex flex-row items-center gap-2"}>
-				<ItemIcon urn={target.urn} className={"shrink-0"} imageClass={"w-6 h-6"} />
+				<EntryIcon urn={target.urn} className={"shrink-0"} imageClass={"w-6 h-6"} />
 				<span
 					className={"flex-1 min-w-0 truncate text-sm font-semibold cursor-pointer hover:underline"}
 					style={{color : tryGetGradeColor(item?.extra?.grade)?.toString()}}
-					onClick={() => item && openItemPanel({id : item.id, name : item.title}, false)}
+					onClick={() => item && goToURN(item.urn, {title : item.title})}
 				>
 					{item?.title ?? target.urn}
 				</span>
@@ -133,7 +133,7 @@ function TargetBlock({target, items}: { target: DeepReadonly<CalcTarget>, items:
 				</Button>
 			</div>
 
-			{plan?.tree?.root && (
+			{plan?.tree.root && (
 				<RecipeTreeView
 					root={plan.tree.root}
 					items={plan.tree.items ?? {}}
@@ -198,9 +198,9 @@ function ShoppingRow({urn, count, cost, item}: {
 			className={"flex flex-row items-center gap-2 py-1 cursor-pointer hover:bg-surface-2/50 rounded-sm px-1"}
 			data-testid={"shopping-row"}
 			data-urn={urn}
-			onClick={() => item && openItemPanel({id : item.id, name : item.title}, false)}
+			onClick={() => item && goToURN(item.urn, {title : item.title})}
 		>
-			<ItemIcon urn={urn} className={"shrink-0"} imageClass={"w-5 h-5"} />
+			<EntryIcon urn={urn} className={"shrink-0"} imageClass={"w-5 h-5"} />
 			<span className={"flex-1 min-w-0 truncate text-sm"} style={{color : tryGetGradeColor(item?.extra?.grade)?.toString()}}>
 				{item?.title ?? urn}
 			</span>

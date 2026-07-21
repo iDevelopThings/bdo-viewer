@@ -297,6 +297,87 @@ export interface CrystalGroup {
     "max": number;
 }
 
+/**
+ * CrystalGroupRule limits how many crystals from one family may be equipped.
+ */
+export interface CrystalGroupRule {
+    "key": number;
+    "name": string;
+    "sourceName"?: string;
+    "max": number;
+}
+
+/**
+ * CrystalPresetSlot is a int-wide identifier. The zero-cost conversion CrystalPresetSlot(x) is
+ * intentional: the underlying value is the wire value.
+ */
+export enum CrystalPresetSlot {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = 0,
+
+    CrystalPresetSlotBase0 = 0,
+    CrystalPresetSlotBase1 = 1,
+    CrystalPresetSlotBase2 = 2,
+    CrystalPresetSlotBase3 = 3,
+    CrystalPresetSlotBase4 = 4,
+    CrystalPresetSlotBase5 = 5,
+    CrystalPresetSlotBase6 = 6,
+    CrystalPresetSlotBase7 = 7,
+    CrystalPresetSlotBase8 = 8,
+    CrystalPresetSlotBase9 = 9,
+    CrystalPresetSlotBase10 = 10,
+    CrystalPresetSlotBase11 = 11,
+    CrystalPresetSlotCostume = 12,
+    CrystalPresetSlotHeartL = 13,
+    CrystalPresetSlotHeartR = 14,
+    CrystalPresetSlotLoMLL = 15,
+    CrystalPresetSlotLoMLR = 16,
+    CrystalPresetSlotDawnNecklace = 17,
+    CrystalPresetSlotDawnRingI = 18,
+    CrystalPresetSlotDawnRingII = 19,
+    CrystalPresetSlotDawnEarringI = 20,
+    CrystalPresetSlotDawnEarringII = 21,
+    CrystalPresetSlotDawnBelt = 22,
+    CrystalPresetSlotMAX = 23,
+};
+
+/**
+ * CrystalRules contains transfusion-family limits and special-slot restrictions.
+ */
+export interface CrystalRules {
+    "groups": CrystalGroupRule[] | null;
+    "specialSlots": CrystalSpecialSlotRule[] | null;
+}
+
+/**
+ * CrystalSpecialSlot is a uint8-wide identifier. The zero-cost conversion CrystalSpecialSlot(x) is
+ * intentional: the underlying value is the wire value.
+ */
+export enum CrystalSpecialSlot {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = 0,
+
+    CrystalSpecialSlotPearlAvatarChest = 14,
+    CrystalSpecialSlotNecklace = 17,
+    CrystalSpecialSlotRingI = 18,
+    CrystalSpecialSlotRingII = 19,
+    CrystalSpecialSlotEarringI = 20,
+    CrystalSpecialSlotEarringII = 21,
+    CrystalSpecialSlotBelt = 22,
+};
+
+/**
+ * CrystalSpecialSlotRule lists crystal families accepted by a special slot.
+ */
+export interface CrystalSpecialSlotRule {
+    "slot": CrystalSpecialSlot;
+    "allowedGroups": number[] | null;
+}
+
 export interface EffectGroup {
     "title": string;
     "marker"?: string;
@@ -824,6 +905,33 @@ export interface Item {
     "crystalGroup"?: CrystalGroup | null;
 
     /**
+     * EnhancementGroupKey identifies the item's specific enhancement family.
+     */
+    "enhancementGroupKey"?: number;
+
+    /**
+     * EnhancementType identifies the broader enhancement system used by the item.
+     */
+    "enhancementType"?: ItemEnhancementType;
+
+    /**
+     * UnlocksDawnCrystalSlot is the client static-status predicate used to
+     * unlock the matching necklace, ring, earring or belt crystal-preset slot.
+     */
+    "unlocksDawnCrystalSlot"?: boolean;
+
+    /**
+     * ReformsFrom / ReformsInto come from itemimprovement.dbss (gear reform chains).
+     * source items that can reform into this one
+     */
+    "reformsFrom"?: models$0.EntityRefList<Item> | null;
+
+    /**
+     * results this item can reform into
+     */
+    "reformsInto"?: models$0.EntityRefList<Item> | null;
+
+    /**
      * a raw/gathered material (itemmaking.xml node/collect/fishing)
      */
     "gathered"?: boolean;
@@ -1077,8 +1185,6 @@ export interface Item {
      * variable strings and market registration limit.
      */
     "unknownAfterMarketLimit0"?: number | null;
-    "unknownAfterMarketLimit1"?: number | null;
-    "unknownAfterMarketLimit5"?: number | null;
     "unknownAfterMarketLimit55"?: number | null;
     "unknownAfterMarketLimit56"?: number | null;
     "unknownAfterMarketLimit58"?: number | null;
@@ -1147,6 +1253,48 @@ export interface Item {
     "enhancement"?: Enhancement | null;
     "itemSets"?: models$0.EntityRefList<ItemSet> | null;
 }
+
+/**
+ * ItemEnhancementType is a uint32-wide identifier. The zero-cost conversion ItemEnhancementType(x) is
+ * intentional: the underlying value is the wire value.
+ */
+export enum ItemEnhancementType {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = 0,
+
+    ItemEnhancementTypeNone = 0,
+    ItemEnhancementTypeEquipment = 1,
+    ItemEnhancementTypeBlackstar = 2,
+    ItemEnhancementTypeReserved3 = 3,
+    ItemEnhancementTypeReserved4 = 4,
+    ItemEnhancementTypeReserved5 = 5,
+    ItemEnhancementTypeSlumberingOrigin = 6,
+    ItemEnhancementTypeLifeSkillClothing = 7,
+    ItemEnhancementTypeUtilityEquipment = 8,
+    ItemEnhancementTypeCaravelGalleassEquipment = 9,
+    ItemEnhancementTypeImprovedCaravelGalleassEquipment = 10,
+    ItemEnhancementTypeCarrackPanokseonEquipment = 11,
+    ItemEnhancementTypeChiroEquipment = 12,
+    ItemEnhancementTypeAccessory = 13,
+    ItemEnhancementTypeCapotiaAccessory = 14,
+    ItemEnhancementTypeLifeSkillAccessory = 15,
+    ItemEnhancementTypeTuvalaAccessory = 16,
+    ItemEnhancementTypeSealedAsulaAccessory = 17,
+    ItemEnhancementTypeQuestAccessory = 18,
+    ItemEnhancementTypeSovereignWeapon = 19,
+    ItemEnhancementTypeTarnishedSword = 20,
+    ItemEnhancementTypeKharazadAccessory = 21,
+    ItemEnhancementTypePreonneAccessory = 22,
+    ItemEnhancementTypeTuvalaEquipment = 23,
+    ItemEnhancementTypeEdanaArmor = 24,
+    ItemEnhancementTypeImperfectAlchemyStone = 25,
+    ItemEnhancementTypeSturdyAlchemyStone = 26,
+    ItemEnhancementTypeSharpAlchemyStone = 27,
+    ItemEnhancementTypeResplendentAlchemyStone = 28,
+    ItemEnhancementTypeSplendidAlchemyStone = 29,
+};
 
 /**
  * ItemGrade is a int8-wide identifier. The zero-cost conversion ItemGrade(x) is

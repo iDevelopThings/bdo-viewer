@@ -1,10 +1,9 @@
 import type {DockviewApi, DockviewIDisposable as IDisposable, IDockviewPanel} from "dockview-react";
 import {useSyncExternalStore} from "react";
-import {Item} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {SourceKind} from "@bindings/bdo-viewer/internal/sources";
 import type {MaybeReadonly} from "@/types.ts";
-import {ItemURN} from "@/lib/urn.ts";
-import {findSourceByType, findSourceByURN, WrappedSource} from "@/state/sources/sources.ts";
+import type {WrappedSource} from "@/state/sources/sources.ts";
+import {findSourceByType, findSourceByURN} from "@/state/sources/sources.ts";
 import {navigateToURN, getNavigationNodeByURN} from "@/state/navigation.tsx";
 import {mapState} from "@/components/world-map/map-state.ts";
 import {addHistoryEntry} from "@/components/history/history.tsx";
@@ -14,8 +13,9 @@ import {addHistoryEntry} from "@/components/history/history.tsx";
 export type PanelRequest<P extends object = Record<string, unknown>> = {
 	// The kind of content, e.g. "item", "npc" - namespaces the pinned panel id.
 	source: string;
-	// Uniquely identifies this content within `source`, e.g. an item id.
-	key: string | number;
+	// Uniquely identifies this content within `source` — the urn for entity panels,
+	// a stable literal (e.g. "settings") for tool panels.
+	key: string;
 	// Canonical cross-source identifier, when available.
 	urn?: string;
 	// The registered dockview component that renders this content.
@@ -32,7 +32,7 @@ export type OpenPanelOptions = {
 
 const PREVIEW_PANEL_ID = "preview";
 
-let api: DockviewApi | undefined;
+let _api: DockviewApi | undefined;
 
 // api.panels is dockview's own live panel list - nothing here duplicates it.
 // This just bridges "a panel was added/removed/re-targeted" into React via
@@ -43,15 +43,6 @@ let apiListeners: IDisposable[] = [];
 
 function notifyChange() {
 	changeListeners.forEach(cb => cb());
-}
-
-function contentKeyOf(params: Record<string, unknown> | undefined): string | undefined {
-	if (params?.urn !== undefined) {
-		return String(params.urn);
-	}
-	return params?.source !== undefined && params?.key !== undefined
-		? `${params.source}:${params.key}`
-		: undefined;
 }
 
 function trackPanel(panel: IDockviewPanel) {
@@ -69,9 +60,12 @@ export function setDockviewApi(instance: DockviewApi | undefined) {
 	panelListeners.forEach(d => d.dispose());
 	panelListeners.clear();
 
-	api = instance;
-
+	_api               = instance;
 	window.dockviewApi = instance;
+
+	if (!_api) {
+		console.error("Dockview API is not available. Panels will not function correctly.");
+	}
 
 	if (instance) {
 		apiListeners.push(instance.onDidAddPanel(panel => {
@@ -91,7 +85,9 @@ export function setDockviewApi(instance: DockviewApi | undefined) {
 // The id of the currently focused dockview panel, or undefined. Backs the rail's
 // active-tool highlight; re-reads on any add/remove/active-panel change.
 export function useActivePanelId(): string | undefined {
-	return useSyncExternalStore(subscribePanelChanges, () => api?.activePanel?.id);
+	// Reads _api directly, not getDockviewApi(): this runs on first render before
+	// dockview mounts, where a missing api is expected — logging it would be noise.
+	return useSyncExternalStore(subscribePanelChanges, () => _api?.activePanel?.id);
 }
 
 function subscribePanelChanges(callback: () => void): () => void {
@@ -100,14 +96,17 @@ function subscribePanelChanges(callback: () => void): () => void {
 }
 
 export function getDockviewApi() {
-	return api;
+	if (!_api) {
+		console.error("Dockview API is not available. Panels will not function correctly.");
+	}
+	return _api;
 }
 
 function panelId(request: Pick<PanelRequest, "source" | "key" | "urn">, pinned: boolean) {
 	return pinned ? request.urn ?? `${request.source}:${request.key}` : PREVIEW_PANEL_ID;
 }
 
-function entryURNForSource(source: string, key: string | number, explicit?: string): string | undefined {
+function entryURNForSource(source: string, key: string, explicit?: string): string | undefined {
 	if (explicit) {
 		return explicit;
 	}
@@ -121,6 +120,7 @@ function entryURNForSource(source: string, key: string | number, explicit?: stri
 // - Pinned: a persistent tab keyed by `${source}:${key}`; re-opening the same one just
 //   focuses the existing tab instead of erroring on a duplicate id.
 export function openPanel<P extends object>(request: PanelRequest<P>, options: OpenPanelOptions = {}): IDockviewPanel | undefined {
+	const api = getDockviewApi();
 	if (!api) {
 		console.warn("openPanel: dockview api is not ready yet");
 		return undefined;
@@ -172,43 +172,28 @@ export function openPanel<P extends object>(request: PanelRequest<P>, options: O
 					referencePanel : listPanel?.id,
 					direction      : listPanel ? "right" : "within"
 				}
-
-		/* position  : referencePanel
-			? {referencePanel : referencePanel.id, direction : "within"}
-			: undefined, */
 	});
 }
 
-export type ItemPanelItem = Item | { id: string | number, name: string }
-
-export function openItemPanel(item: MaybeReadonly<ItemPanelItem>, pinned: boolean = false) {
-
-	const p = openPanel({
-		source    : SourceKind.Item,
-		key       : item.id,
-		urn       : ItemURN.new(item.id),
-		component : "itemDetails",
-		title     : item.name
-	}, {pinned});
-
-	if (p) {
-		addHistoryEntry({type : SourceKind.Item, urn : ItemURN.new(item.id), value : item});
-	}
-
-	return p;
+// openItemPanel opens the shared item-details panel for a urn. `title` is optional:
+// the panel titles itself from the entry it loads (see DetailsPanel), so a bare urn
+// (a link, persisted state) is enough. Pass it when the caller already has the title
+// to skip the tab briefly showing the urn before the load resolves.
+export function openItemPanel(urn: string, opts: { title?: string; pinned?: boolean } = {}) {
+	return openSourceDetails(SourceKind.Item, urn, opts);
 }
 
-export function openSourceDetails(source: SourceKind, value: { id: string | number, name: string, urn?: string }, pinned: boolean = false) {
+export function openSourceDetails(source: SourceKind, urn: string, opts: { title?: string; pinned?: boolean } = {}) {
 	const p = openPanel({
-		source    : source,
-		key       : value.id,
-		urn       : value.urn,
+		source,
+		key       : urn,
+		urn,
 		component : "itemDetails",
-		title     : value.name
-	}, {pinned});
+		title     : opts.title ?? urn,
+	}, {pinned : opts.pinned});
 
 	if (p) {
-		addHistoryEntry({type : source, urn : entryURNForSource(source, value.id, value.urn), value : value});
+		addHistoryEntry({type : source, urn, value : {name : opts.title}});
 	}
 
 	return p;
@@ -279,33 +264,30 @@ export function openCompareItemsPanel() {
 }
 
 export function isPanelOpen<P extends object>(request: Pick<PanelRequest<P>, "source" | "key"> & { urn?: string }, options: OpenPanelOptions = {}): boolean {
-	return !!api?.getPanel(panelId(request, options.pinned ?? false));
+	return !!getDockviewApi()?.getPanel(panelId(request, options.pinned ?? false));
 }
 
 export function closePanel<P extends object>(request: Pick<PanelRequest<P>, "source" | "key"> & { urn?: string }, options: OpenPanelOptions = {}) {
-	const panel = api?.getPanel(panelId(request, options.pinned ?? false));
+	const panel = getDockviewApi()?.getPanel(panelId(request, options.pinned ?? false));
 	if (panel) {
-		api?.removePanel(panel);
+		getDockviewApi()?.removePanel(panel);
 	}
 }
 
 // Scans the live api.panels list directly - no separate state to keep in sync.
-export function isContentPanelOpen(source: string, key: string | number): boolean {
-	const contentKey = `${source}:${key}`;
-	return !!api?.panels.some(p => contentKeyOf(p.params) === contentKey);
-}
-
+// Reads _api (not getDockviewApi): a passive render-time read that runs before
+// dockview mounts, where a missing api is expected rather than an error.
 export function isURNPanelOpen(urn: string | undefined): boolean {
 	if (!urn) {
 		return false;
 	}
-	return !!api?.panels.some(p => contentKeyOf(p.params) === urn);
+	return !!_api?.panels.some(p => (p.params as { urn?: string }).urn === urn);
 }
 
-export function useIsContentPanelOpen(source: string, key: string | number, urn?: string): boolean {
+export function useIsContentPanelOpen(urn: string | undefined): boolean {
 	return useSyncExternalStore(
 		subscribePanelChanges,
-		() => isURNPanelOpen(urn) || isContentPanelOpen(source, key),
+		() => isURNPanelOpen(urn),
 	);
 }
 
@@ -315,7 +297,7 @@ export type GoToURNOptions = {
 	prefer?: "panel" | "navigation";
 };
 
-export function goToURN(urn: string | undefined, options: GoToURNOptions = {}): boolean {
+export function goToURN(urn: string | null | undefined, options: GoToURNOptions = {}): boolean {
 	if (!urn) {
 		return false;
 	}
@@ -334,15 +316,10 @@ export function goToURN(urn: string | undefined, options: GoToURNOptions = {}): 
 	const sourceRef = source?.entryFromURN(urn);
 	if (sourceRef) {
 		const navNode = getNavigationNodeByURN(urn);
-		openSourceDetails(
-			sourceRef.source,
-			{
-				id   : sourceRef.key,
-				name : options.title ?? navNode?.title ?? urn,
-				urn,
-			},
-			options.pinned ?? false,
-		);
+		openSourceDetails(sourceRef.source, urn, {
+			title  : options.title ?? navNode?.title,
+			pinned : options.pinned ?? false,
+		});
 		return true;
 	}
 

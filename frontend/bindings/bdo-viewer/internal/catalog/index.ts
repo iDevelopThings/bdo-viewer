@@ -8,5 +8,7 @@ export {
 
 export type {
     BindingTypes,
-    ItemVendorData
+    CrystalStatIdInfo,
+    ItemVendorData,
+    NodeInfoRef
 } from "./models.js";

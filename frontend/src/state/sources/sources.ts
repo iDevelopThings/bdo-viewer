@@ -1,10 +1,10 @@
 import {GetAllSources, GetNavigationTree} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
-import {type Source, SourceKind, UntypedSourceEntry} from "@bindings/bdo-viewer/internal/sources";
-import {Character, WorldRegion, KnowledgeEntry, KnowledgeTheme, type Item, Zone, NPC} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import type {Source, SourceKind, UntypedSourceEntry} from "@bindings/bdo-viewer/internal/sources";
+import type {Character, WorldRegion, KnowledgeEntry, KnowledgeTheme, Item, Zone, NPC, Territory, WorldNode} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 import {buildNavigationTree} from "@/state/navigation.tsx";
 import {persist} from "valtio-persist";
-import type {MaybeReadonly, DeepReadonly} from "@/types.ts";
-import {createURNHandler, parseURN, type URNHandler, KnowledgeURN} from "@/lib/urn.ts";
+import type {MaybeReadonly} from "@/types.ts";
+import {createURNHandler, parseURN, type URNHandler, urnKind} from "@/lib/urn.ts";
 import type {SortOption} from "@/components/entry-list/entry-list.tsx";
 
 
@@ -25,15 +25,8 @@ type SourceURNDefinition = {
 	defaultKind?: string;
 };
 
-type SourceURNMetadata = {
-	domain: string;
-	kinds?: string[];
-	kind?: string;
-	defaultKind?: string;
-};
-
 function sourceURNDefinition(source: Source): SourceURNDefinition | undefined {
-	const meta = (source as Source & { urn?: SourceURNMetadata }).urn;
+	const meta = (source).urn;
 	if (!meta?.domain) {
 		return undefined;
 	}
@@ -45,13 +38,13 @@ function sourceURNDefinition(source: Source): SourceURNDefinition | undefined {
 	};
 }
 
-export function wrapSource(source: Source | undefined): WrappedSource | undefined {
+export function wrapSource(source: Source): WrappedSource | undefined {
 	if (!source) {
 		return undefined;
 	}
 
-	if ((source as any)[wrappedSourceSymbol]) {
-		return (source as any)[wrappedSourceSymbol];
+	if ((source)[wrappedSourceSymbol]) {
+		return (source)[wrappedSourceSymbol];
 	}
 
 	const urnDefinition          = sourceURNDefinition(source);
@@ -114,8 +107,8 @@ export const {store : sources} = await persist<SourcesState>({
 		merge   : (initialState, restoredState) => {
 			const result          = Object.assign(initialState, restoredState);
 			result.wrappedSources = restoredState.wrappedSources
-				.map(s => wrapSource(s)!)
-				.filter(s => s !== undefined);
+				.map(s => wrapSource(s))
+				.filter((s): s is WrappedSource => s !== undefined);
 			return result;
 		},
 	}
@@ -131,11 +124,11 @@ export async function loadSources() {
 			GetNavigationTree()
 		]);
 
-		sources.wrappedSources = sourceList
+		sources.wrappedSources = (sourceList ?? [])
 			.map(s => wrapSource(s))
-			.filter(s => s !== undefined);
+			.filter((s): s is WrappedSource => s !== undefined);
 
-		buildNavigationTree(tree);
+		buildNavigationTree(tree ?? []);
 
 	} catch (error) {
 		console.error("Failed to load sources", error);
@@ -155,62 +148,62 @@ export function findSourceByURN(urn: string | undefined): WrappedSource | undefi
 	return sources.wrappedSources.find(source => source.matchesURN(urn));
 }
 
-export function isRegion(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.Region, value: WorldRegion } {
-	if (entry === undefined) {
-		return false;
-	}
-	return entry.type === SourceKind.Region;
+// URNValueMap associates each urn kind (its domain, or "domain:kind") with the
+// model type the entry's value holds. The go source system is dynamic, so this
+// is a frontend convenience for typing an otherwise-`any` value — the guards
+// below are a light validation layer, not a hard guarantee.
+export type URNValueMap = {
+	"item": Item;
+	"npc": NPC;
+	"grindspot": Zone;
+	"character": Character;
+	"knowledge:theme": KnowledgeTheme;
+	"knowledge:entry": KnowledgeEntry;
+	"world:region": WorldRegion;
+	"world:territory": Territory;
+	"world:node": WorldNode;
+};
+export type URNKind = keyof URNValueMap;
+
+// EntryOf narrows the entry's value to a urn kind's model type while keeping the
+// rest of the entry (urn, type) — a bare {type, value} predicate would drop them.
+export type EntryOf<K extends URNKind> = Omit<UntypedSourceEntry, "value"> & { value: URNValueMap[K] };
+
+// isKind discriminates on the urn rather than the entry's `type`: the urn is
+// authoritative and finer-grained (it distinguishes knowledge themes from
+// entries, which the single Knowledge source kind cannot).
+export function isKind<K extends URNKind>(entry: MaybeReadonly<UntypedSourceEntry> | undefined, kind: K): entry is EntryOf<K> {
+	return urnKind(entry?.urn) === kind;
 }
 
-export function isCharacter(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.Character, value: Character } {
-	return entry?.type === SourceKind.Character;
+export function isRegion(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is EntryOf<"world:region"> {
+	return isKind(entry, "world:region");
 }
 
-export function isKnowledge(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.Knowledge, value: KnowledgeEntry } {
+export function isCharacter(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is EntryOf<"character"> {
+	return isKind(entry, "character");
+}
+
+export function isKnowledge(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is EntryOf<"knowledge:entry"> {
 	return isKnowledgeEntry(entry);
 }
 
-export function isKnowledgeEntry(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.Knowledge, value: KnowledgeEntry } {
-	if (entry === undefined) {
-		return false;
-	}
-	if (typeof entry.value !== "object" || entry.value === null) {
-		return false;
-	}
-	return entry.type === SourceKind.Knowledge && (
-		KnowledgeURN.match(entry.urn, "entry") || "description" in entry.value
-	);
+export function isKnowledgeEntry(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is EntryOf<"knowledge:entry"> {
+	return isKind(entry, "knowledge:entry");
 }
 
-export function isKnowledgeTheme(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.Knowledge, value: KnowledgeTheme } {
-	if (entry === undefined) {
-		return false;
-	}
-	if (typeof entry.value !== "object" || entry.value === null) {
-		return false;
-	}
-	return entry.type === SourceKind.Knowledge && (
-		KnowledgeURN.match(entry.urn, "theme") || ("key" in entry.value && !("description" in entry.value))
-	);
+export function isKnowledgeTheme(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is EntryOf<"knowledge:theme"> {
+	return isKind(entry, "knowledge:theme");
 }
 
-export function isItem(entry: UntypedSourceEntry | DeepReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.Item, value: Item } {
-	if (entry === undefined) {
-		return false;
-	}
-	return entry.type === "item";
+export function isItem(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is EntryOf<"item"> {
+	return isKind(entry, "item");
 }
 
-export function isGrindSpot(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.GrindSpot, value: Zone } {
-	if (entry === undefined) {
-		return false;
-	}
-	return entry.type === SourceKind.GrindSpot;
+export function isGrindSpot(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is EntryOf<"grindspot"> {
+	return isKind(entry, "grindspot");
 }
 
-export function isNpc(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is { type: SourceKind.Npc, value: NPC } {
-	if (entry === undefined) {
-		return false;
-	}
-	return entry.type === SourceKind.Npc;
+export function isNpc(entry: MaybeReadonly<UntypedSourceEntry> | undefined): entry is EntryOf<"npc"> {
+	return isKind(entry, "npc");
 }

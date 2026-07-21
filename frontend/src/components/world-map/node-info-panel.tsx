@@ -1,15 +1,15 @@
 import {useSnapshot} from "valtio";
 import {MapPin, X} from "lucide-react";
 import {mapState} from "@/components/world-map/map-state.ts";
-import {WrappedWorldNode} from "@/components/world-map/world-node.ts";
-import {ItemCardSimple} from "@/components/details/details-components.tsx";
+import type {WrappedWorldNode} from "@/components/world-map/world-node.ts";
+import {ChipList, EntityChip} from "@/components/details/details-components.tsx";
 import {cn} from "@/lib/utils.ts";
-import {MaybeReadonly} from "@/types.ts";
-import {NPC} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
-import {SourceKind} from "@bindings/bdo-viewer/internal/sources";
-import {openSourceDetails} from "@/state/panels.ts";
+import type {MaybeReadonly} from "@/types.ts";
+import type {NPC} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import {goToURN} from "@/state/panels.ts";
+import {Button} from "@/components/ui/button.tsx";
 
-function Field({label, value}: { label: string; value: string | number }) {
+function Field({label, value}: { label: string; value: React.ReactNode }) {
 	return (
 		<div className="flex flex-row items-baseline justify-between gap-3">
 			<span className="text-xs text-fg-subtle">{label}</span>
@@ -47,7 +47,7 @@ function Production({node}: { node: WrappedWorldNode }) {
 					</div>
 					<div className="flex flex-row flex-wrap gap-1">
 						{g.productItems().map(item => (
-							<ItemCardSimple key={item.urn} item={item} />
+							<EntityChip key={item.urn} urn={item.urn} name={item.name ?? item.urn} grade={item.grade} />
 						))}
 					</div>
 				</div>
@@ -58,27 +58,31 @@ function Production({node}: { node: WrappedWorldNode }) {
 
 /** One NPC attached to the node: click the name to open them, the pin to fly to where they stand. */
 function NpcRow({role, npc}: { role: string; npc: NPC }) {
-	const pos = npc.spawns?.find(s => s.pos?.length >= 3)?.pos;
+	const pos = npc.spawns?.find(s => s.pos.length >= 3)?.pos;
 
 	return (
 		<div className="flex flex-row items-baseline justify-between gap-2">
 			<span className="text-xs text-fg-subtle">{role}</span>
 			<div className="flex min-w-0 flex-row items-center gap-1">
-				<button
-					onClick={() => openSourceDetails(SourceKind.Npc, {id : npc.id, name : npc.name, urn : npc.urn})}
-					className="truncate text-xs text-fg hover:text-fg hover:underline"
+				<Button
+					variant="plain"
+					size="inline"
+					onClick={() => goToURN(npc.urn, {title : npc.name})}
+					className="truncate hover:underline"
 					title={npc.title}
 				>
 					{npc.name}
-				</button>
+				</Button>
 				{pos && (
-					<button
+					<Button
+						variant="ghost"
+						size="icon-xs"
 						onClick={() => mapState.focusWorldPos(pos)}
 						title={`Show ${npc.name} on the map`}
-						className="text-fg-subtle hover:text-fg"
+						className="size-5 text-fg-subtle"
 					>
 						<MapPin size={11} />
-					</button>
+					</Button>
 				)}
 			</div>
 		</div>
@@ -99,10 +103,29 @@ function People({node}: { node: WrappedWorldNode }) {
 	return (
 		<Section title="NPCs">
 			{manager && <NpcRow role="Node manager" npc={manager} />}
-			{manager && owner && <Field label="Managed from" value={owner.name} />}
+			{manager && owner && (
+				<Field
+					label="Managed from"
+					value={(
+						<Button
+							variant="plain"
+							size="inline"
+							onClick={() => mapState.updateNode(owner, "select")}
+							className="hover:underline"
+						>
+							{owner.name}
+						</Button>
+					)}
+				/>
+			)}
 			{rep && <NpcRow role="Representative" npc={rep} />}
 		</Section>
 	);
+}
+
+function knowledgeLabel(urn: string): string {
+	const key = urn.split(":").pop();
+	return key ? `#${key}` : urn;
 }
 
 function NodeDetails({node}: { node: WrappedWorldNode }) {
@@ -110,6 +133,7 @@ function NodeDetails({node}: { node: WrappedWorldNode }) {
 	const parent  = node.parent();
 	const linked  = node.linkedNodes();
 	const totalCP = node.totalCP();
+	const knowledgeURNs = node.knowledge?.urns ?? [];
 
 	return (
 		<div className="flex flex-col gap-2">
@@ -122,11 +146,24 @@ function NodeDetails({node}: { node: WrappedWorldNode }) {
 
 			<div className="flex flex-col gap-0.5">
 				{node.territoryName && <Field label="Territory" value={node.territoryName} />}
-				{parent && <Field label="Location" value={parent.name} />}
+				{parent && (
+					<Field
+						label="Location"
+						value={(
+							<Button
+								variant="plain"
+								size="inline"
+								onClick={() => mapState.updateNode(parent, "select")}
+								className="hover:underline"
+							>
+								{parent.name}
+							</Button>
+						)}
+					/>
+				)}
 				{node.cp > 0 && <Field label="Contribution" value={`${node.cp} CP`} />}
 				{node.main && totalCP > node.cp && <Field label="With sub-nodes" value={`${totalCP} CP`} />}
 				{!!node.grindZone && <Field label="Grind zone" value={node.grindTier ? `Tier ${node.grindTier}` : "Yes"} />}
-				{!!node.knowledge?.urns?.length && <Field label="Knowledge" value={node.knowledge.urns.length} />}
 				<Field label="Connections" value={linked.length} />
 				<Field label="Position" value={`${x.toFixed(0)}, ${z.toFixed(0)}`} />
 			</div>
@@ -135,17 +172,28 @@ function NodeDetails({node}: { node: WrappedWorldNode }) {
 
 			<Production node={node} />
 
+			{knowledgeURNs.length > 0 && (
+				<Section title={`Knowledge (${knowledgeURNs.length})`}>
+					<ChipList
+						items={knowledgeURNs.map(urn => ({urn, name : knowledgeLabel(urn)}))}
+						onClick={(item, pinned) => goToURN(item.urn, {pinned})}
+					/>
+				</Section>
+			)}
+
 			{linked.length > 0 && (
 				<Section title={`Connects to (${linked.length})`}>
 					<div className="flex flex-row flex-wrap gap-1">
 						{linked.map(l => (
-							<button
+							<Button
 								key={l.urn}
+								variant="chip"
+								size="xs"
 								onClick={() => mapState.updateNode(l, "select")}
-								className="rounded bg-surface-2/80 px-1.5 py-0.5 text-xs text-fg-muted hover:bg-surface-3 hover:text-fg"
+								className="bg-surface-2/80 hover:bg-surface-3"
 							>
 								{l.name}
-							</button>
+							</Button>
 						))}
 					</div>
 				</Section>
@@ -177,25 +225,21 @@ export function NodeInfoPanel() {
 					<MapPin size={13} /> {selected ? "Selected node" : hovered ? "Hovered node" : "Nodes"}
 				</span>
 				{selected && (
-					<button
+					<Button
+						variant="ghost"
+						size="icon-xs"
 						onClick={() => mapState.updateNode(null, "select")}
-						title="Clear selection"
-						className="text-fg-subtle hover:text-fg"
+						title="Deselect"
+						className="size-5"
 					>
-						<X size={14} />
-					</button>
+						<X size={12} />
+					</Button>
 				)}
 			</div>
-
-			<div className="overflow-y-auto overflow-x-hidden p-2">
-				{shown ? (
-					<NodeDetails node={shown} />
-				) : (
-					 <p className="text-xs text-fg-subtle">
-						 Hover a node to preview it, click to pin it here.
-						 <span className="mt-1 block text-fg-subtle">{map.nodes.length} nodes · {map.links.length} links</span>
-					 </p>
-				 )}
+			<div className="overflow-y-auto p-2">
+				{shown
+					? <NodeDetails node={shown} />
+					: <p className="text-xs text-fg-subtle">Hover or select a node on the map.</p>}
 			</div>
 		</div>
 	);

@@ -1,6 +1,6 @@
 import {persist} from "valtio-persist";
 import {ref} from "valtio/vanilla";
-import {SourceKind, SourceNavigationNode} from "@bindings/bdo-viewer/internal/sources";
+import type {SourceKind, SourceNavigationNode} from "@bindings/bdo-viewer/internal/sources";
 import {findSourceByType, type WrappedSource} from "@/state/sources/sources.ts";
 import {useSnapshot} from "valtio/react";
 

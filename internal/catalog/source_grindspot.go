@@ -152,7 +152,6 @@ func (s *GrindSpotSource) List(params sources.ListSourceParams) []sources.ListSo
 	out := make([]sources.ListSourceEntry, len(items))
 	for i, it := range items {
 		out[i] = sources.ListSourceEntry{
-			ID:    it.Key,
 			URN:   urn.GrindSpot.New(it.Key).String(),
 			Title: it.Name,
 		}

@@ -1,8 +1,7 @@
 import {useDetail} from "@/state/detail.tsx";
-import {DetailsHeader, DetailsNpcList, DetailsSection} from "@/components/details/details-components.tsx";
-import {getEntryKey} from "@/state/detail-store.tsx";
+import {ChipList, DetailsHeader, DetailsNpcList, DetailsSection, DetailsShell} from "@/components/details/details-components.tsx";
+import {DetailsJsonInspector} from "@/components/details/details-item.tsx";
 import {isRegion} from "@/state/sources/sources.ts";
-import {NpcURN} from "@/lib/urn.ts";
 
 export function RegionDetails() {
 	const [, d] = useDetail();
@@ -11,40 +10,38 @@ export function RegionDetails() {
 		return null;
 	}
 
-	const e = d.entry.value;
-
+	const e         = d.entry.value;
+	const territory = d.regionExtra?.territory;
+	const group     = d.regionExtra?.warehouseGroup ?? [];
 
 	return (
-		<div
-			className="flex flex-col grow "
+		<DetailsShell
+			header={(
+				<DetailsHeader
+					title={e.name}
+					urn={territory?.urn}
+					lines={{
+						"ID"        : d.entry.urn,
+						"Territory" : () => territory?.name,
+						"Nation"    : () => territory?.nation,
+						"Capital"   : () => territory?.capitalName,
+					}}
+				/>
+			)}
 		>
-			<DetailsHeader
-				title={e.name}
-				icon={d.regionExtra?.territory?.iconLarge}
-				lines={{
-					"ID"     : getEntryKey(d.entry).toString(),
-					"Nation" : d.regionExtra?.territory?.nation
-				}}
-			/>
-			<div className={"gap-8 pb-8"}>
-				<DetailsSection title={"Json"} expandable={false} borderTop>
-					<code><pre>{JSON.stringify({
-						entry : e,
-						extra : d.regionExtra,
-					}, null, 2)}</pre>
-					</code>
+			{group.length > 0 && (
+				<DetailsSection title={"Warehouse Group"} borderTop>
+					<ChipList items={group.map(name => ({name}))} />
 				</DetailsSection>
+			)}
 
+			{d.regionExtra?.npcs?.length ? (
+				<DetailsSection title={"NPCs"} borderTop>
+					<DetailsNpcList npcUrns={d.regionExtra.npcs} />
+				</DetailsSection>
+			) : null}
 
-				{d.regionExtra?.npcs?.length && (
-					<DetailsSection title={"NPCS"} borderTop>
-						<DetailsNpcList npcUrns={(d.regionExtra?.npcs ?? []).map(id => NpcURN.new(id))} />
-					</DetailsSection>
-				)}
-
-			</div>
-
-		</div>
+			<DetailsJsonInspector data={{entry : e, extra : d.regionExtra}} />
+		</DetailsShell>
 	);
 }
-

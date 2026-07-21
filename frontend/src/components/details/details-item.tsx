@@ -6,16 +6,13 @@ import {namedGroups} from "@/lib/stat-groups.ts";
 import {GameText} from "@/lib/game-text.tsx";
 import {DetailsStats} from "@/components/details/stats.tsx";
 import {DetailsRecipes, DetailsUsedIn} from "@/components/details/recipes.tsx";
-import {Chip, ChipList, DetailsHeader, DetailsSection, SectionSubtitle} from "@/components/details/details-components.tsx";
+import {Chip, ChipList, DetailsHeader, DetailsSection, DetailsShell, EntityMapChip, SectionSubtitle, DetailsNodeList,} from "@/components/details/details-components.tsx";
 import {useDetail, useDetailStore} from "@/state/detail.tsx";
 import {JsonInspector} from "@rexxars/react-json-inspector";
 import "@rexxars/react-json-inspector/json-inspector.css";
-import {useEffect, useMemo} from "react";
 import {useSnapshot} from "valtio";
-import {MapPinIcon} from "lucide-react";
-import {mapState} from "@/components/world-map/map-state.ts";
-import {openMapAt, openMapAtNode, goToURN} from "@/state/panels.ts";
-import {ItemVendorData} from "@bindings/bdo-viewer/internal/catalog";
+import {openMapAt, goToURN} from "@/state/panels.ts";
+import type {ItemVendorData} from "@bindings/bdo-viewer/internal/catalog";
 
 import {isItem} from "@/state/sources/sources.ts";
 import {ItemTypeInfos} from "@/lib/types/item-types.gen.ts";
@@ -28,49 +25,46 @@ export function DetailsItem() {
 	}
 
 	return (
-		<div
-			className="flex flex-col grow "
+		<DetailsShell
+			header={(
+				<DetailsHeader
+					title={item.name}
+					urn={item.urn}
+					grade={item.grade}
+					lines={{
+						"ID"            : item.urn,
+						"Type"          : ItemTypeInfos[item.itemType].title,
+						"Crystal Group" : () => {
+							if (!item.crystalGroup) {
+								return undefined;
+							}
+							const str = item.crystalGroup.name;
+							if (item.crystalGroup.max < 1000) {
+								return str + ` (max transfusable: ${item.crystalGroup.max})`;
+							}
+							return str;
+						},
+						"Equips to"     : () => item.equipInfo?.slots?.length ? item.equipInfo.slots.join(", ") : undefined,
+					}}
+				/>
+			)}
 		>
-			<DetailsHeader
-				title={item.name}
-				icon={item.icon}
-				grade={item.grade}
-				lines={{
-					"ID"              : item.id.toString(),
-					"Type"            : ItemTypeInfos[item.itemType]?.title,
-					"Crystal Group: " : () => {
-						if (!item.crystalGroup) {
-							return undefined;
-						}
-						const str = item.crystalGroup.name;
-						if (item.crystalGroup.max < 1000) {
-							return str + ` (max transfusable: ${item.crystalGroup.max})`;
-						}
-						return str;
-					},
-					"Equips to: "     : () => item.equipInfo?.slots?.length > 0 ? item.equipInfo.slots.join(", ") : undefined,
-				}}
-			/>
-			<div className={"gap-8 pb-8"}>
-				<DetailsSection title={"Description"}>
-					<GameText text={item.description} className={"text-sm"} />
-				</DetailsSection>
+			<DetailsSection title={"Description"}>
+				<GameText text={item.description} className={"text-sm"} />
+			</DetailsSection>
 
+			<DetailsStats />
 
-				<DetailsStats />
+			<DetailsEnhancements />
+			<DetailsEffects />
 
-				<DetailsEnhancements />
-				<DetailsEffects />
+			<DetailsAcquisition />
+			<DetailsRecipes />
+			<DetailsUsedIn />
+			<DetailsKnowledge />
 
-				<DetailsAcquisition />
-				<DetailsRecipes />
-				<DetailsUsedIn />
-				<DetailsKnowledge />
-
-				<DetailsJsonInspector />
-			</div>
-
-		</div>
+			<DetailsJsonInspector />
+		</DetailsShell>
 	);
 }
 
@@ -78,8 +72,6 @@ export function DetailsEnhancements() {
 	const {level, levelName, minLevel, maxLevel, maxCaphrasStep, caphrasStep, valid} = useSnapshot(useDetailStore());
 
 	const store = useDetailStore();
-
-	// const [details, d] = useDetail();
 
 	if (!valid)
 		return null;
@@ -89,12 +81,13 @@ export function DetailsEnhancements() {
 
 			<div className={"flex flex-col gap-6 max-w-4/6"}>
 				<div className="flex items-center gap-6">
-					<Label htmlFor="slider-demo-temperature">Enhance Level</Label>
+					<Label htmlFor="enhance-level">Enhance Level</Label>
 					<span className="text-sm text-muted-foreground">
                         {levelName} ({level})
 			        </span>
 				</div>
 				<Slider
+					id="enhance-level"
 					value={level}
 					onValueChange={(value) => {
 						store.setLevel(value as number);
@@ -154,35 +147,35 @@ export function DetailsKnowledge() {
 		<DetailsSection title={"Knowledge"} borderTop>
 			<div className={"flex flex-col gap-4"}>
 
-				{d.knowledge.entries?.length > 0 && (
+				{(d.knowledge.entries?.length ?? 0) > 0 && (
 					<div className={"flex flex-col gap-2"}>
-						<SectionSubtitle title={"Categories"} />
+						<SectionSubtitle title={"Entries"} />
 						<ChipList
 							variant={"md"}
 							onClick={(item, pinned) => {
-								goToURN(item.id.toString(), {
+								goToURN(item.urn, {
 									title : item.name,
 									pinned
 								});
 							}}
-							items={d.knowledge.entries.map((entry) => ({id : entry.urn, name : entry.name}))}
+							items={d.knowledge.entries?.map((entry) => ({urn : entry.urn, name : entry.name}))}
 						/>
 
 					</div>
 				)}
 
-				{d.knowledge.themes?.length > 0 && (
+				{(d.knowledge.themes?.length ?? 0) > 0 && (
 					<div className={"flex flex-col gap-2"}>
 						<SectionSubtitle title={"Themes"} />
 						<ChipList
 							variant={"md"}
 							onClick={(item, pinned) => {
-								goToURN(item.id.toString(), {
+								goToURN(item.urn, {
 									title : item.name,
 									pinned
 								});
 							}}
-							items={d.knowledge.themes.map((theme) => ({id : theme.urn, name : theme.name}))}
+							items={d.knowledge.themes?.map((theme) => ({urn : theme.urn, name : theme.name}))}
 						/>
 
 					</div>
@@ -198,21 +191,7 @@ function vendorTowns(vendor: MaybeReadonly<ItemVendorData>): string[] {
 }
 
 export function DetailsAcquisition() {
-	const [, d]   = useDetail();
-	const {graph} = useSnapshot(mapState);
-
-	// The gather-node chips name their nodes from the map graph, which the user may never have
-	// opened the map to load.
-	useEffect(() => {
-		if (d.gatherNodes.length) {
-			void mapState.ensureLoaded();
-		}
-	}, [d.gatherNodes.length]);
-
-	const gatherNodes = useMemo(
-		() => d.gatherNodes.map(urn => ({urn, node: graph.node(urn)})),
-		[d.gatherNodes, graph],
-	);
+	const [, d] = useDetail();
 
 	if (d.vendors?.length === 0 && d.gatheredFrom.length === 0 && d.gatherNodes.length === 0) {
 		return null;
@@ -221,29 +200,29 @@ export function DetailsAcquisition() {
 	return (
 		<DetailsSection title={"Acquisition"} borderTop>
 			<div className={"flex flex-col gap-4"}>
-				{d.vendors?.length > 0 && (
+				{(d.vendors?.length ?? 0) > 0 && (
 					<div className={"flex flex-col gap-2"}>
-						<p className="text-sm text-fg-subtle font-semibold mb-2 uppercase">Sold By</p>
+						<SectionSubtitle title={"Sold By"} />
 						<div className={"flex flex-row gap-2 flex-wrap"}>
-							{d.vendors.map((vendor, i) => {
-								const towns = vendorTowns(vendor);
+							{d.vendors?.map((vendor, i) => {
+								const towns    = vendorTowns(vendor);
+								const npcURN   = vendor.urns?.[0];
+								const hasSpawn = (vendor.spawns?.length ?? 0) > 0;
+								const locLabel = towns.length === 1 ? towns[0]
+									: towns.length > 1 ? `${towns.length} towns`
+										: undefined;
 								return (
-									<Chip
+									<EntityMapChip
 										key={`vendor-${vendor.name}-${i}`}
-										label={(
-											<span className={"flex flex-row items-center gap-1.5"}>
-												{vendor.name}
-												{vendor.title && <span className={"text-fg-subtle"}>{vendor.title}</span>}
-												{towns.length > 0 && (
-													<span className={"text-fg-subtle"}>{towns.join(", ")}</span>
-												)}
-												{vendor.spawns?.length > 0 && <MapPinIcon size={11} className={"text-fg-subtle"} />}
-											</span>
-										)}
-										variant={"sm"}
-										// A vendor the client's NPC table has no record of has no spawn to fly to
-										// (Item.UnresolvedVendors); the rest go to their first placement.
-										onClick={vendor.spawns?.length ? () => openMapAt(vendor.spawns![0].pos) : undefined}
+										name={vendor.name}
+										subtitle={vendor.title}
+										location={locLabel}
+										onOpen={npcURN
+											? (pinned) => goToURN(npcURN, {title : vendor.name, pinned})
+											: hasSpawn
+												? () => openMapAt(vendor.spawns![0].pos)
+												: undefined}
+										onMap={hasSpawn ? () => openMapAt(vendor.spawns![0].pos) : undefined}
 									/>
 								);
 							})}
@@ -252,7 +231,7 @@ export function DetailsAcquisition() {
 				)}
 				{d.gatheredFrom.length > 0 && (
 					<div className={"flex flex-col gap-2"}>
-						<p className="text-sm text-fg-subtle font-semibold mb-2 uppercase">Gathered From</p>
+						<SectionSubtitle title={"Gathered From"} />
 						<div className={"flex flex-row gap-2 flex-wrap"}>
 							{d.gatheredFrom.map((source) => (
 								<Chip
@@ -268,25 +247,8 @@ export function DetailsAcquisition() {
 				)}
 				{d.gatherNodes.length > 0 && (
 					<div className={"flex flex-col gap-2"}>
-						<p className="text-sm text-fg-subtle font-semibold mb-2 uppercase">Gather Nodes</p>
-						<div className={"flex flex-row gap-2 flex-wrap"}>
-							{gatherNodes.map(({urn, node}) => {
-								return (
-									<Chip
-										key={`gather-node-${urn}`}
-										label={(
-											<span className={"flex flex-row items-center gap-1.5"}>
-												{node ? `${node.parent()?.name ?? node.name}` : urn}
-												{node && <span className={"text-fg-subtle"}>{node.name}</span>}
-												<MapPinIcon size={11} className={"text-fg-subtle"} />
-											</span>
-										)}
-										variant={"sm"}
-										onClick={() => openMapAtNode(urn)}
-									/>
-								);
-							})}
-						</div>
+						<SectionSubtitle title={"Gather Nodes"} />
+						<DetailsNodeList nodeUrns={d.gatherNodes} />
 					</div>
 				)}
 			</div>
@@ -294,12 +256,12 @@ export function DetailsAcquisition() {
 	);
 }
 
-export function DetailsJsonInspector() {
+export function DetailsJsonInspector({data}: { data?: unknown } = {}) {
 	const [, d] = useDetail();
 
 	return (
 		<DetailsSection title={"Raw Data"} borderTop>
-			<JsonInspector data={d.entry.value} />
+			<JsonInspector data={data ?? d.entry?.value} />
 		</DetailsSection>
 	);
 }

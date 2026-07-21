@@ -8,7 +8,7 @@
  * comes from worldmap/<layer>/meta.json — see WorldMeta / fetchWorldMeta.
  */
 
-import {MaybeReadonly} from "@/types.ts";
+import type {MaybeReadonly} from "@/types.ts";
 
 /** Native (finest-level) tile geometry. */
 export const TILE_PX = 128;

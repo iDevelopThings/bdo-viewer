@@ -1,6 +1,5 @@
 import {proxy, type Snapshot, snapshot, subscribe} from "valtio";
-import {LocalStorageStrategy, type MergeStrategy, type SerializationStrategy, type StorageStrategy} from "valtio-persist";
-import {type SerializedSpecialType, type TypeMarker} from "valtio-persist";
+import {LocalStorageStrategy, type MergeStrategy, type SerializationStrategy, type StorageStrategy, type SerializedSpecialType, type TypeMarker} from "valtio-persist";
 import {proxyMap, proxySet} from "valtio/utils";
 
 const TYPE_MARKER = {
@@ -171,6 +170,7 @@ export class JSONSerializationStrategy<T> implements SerializationStrategy<T, fa
 
 		// Handle Class Instances - more complex case
 		if (
+			// null-prototype objects (Object.create(null)) have no constructor at runtime.
 			obj.constructor &&
 			obj.constructor !== Object &&
 			obj.constructor !== Array
@@ -180,7 +180,7 @@ export class JSONSerializationStrategy<T> implements SerializationStrategy<T, fa
 				__type    : TYPE_MARKER.Class,
 				className : obj.constructor.name,
 //				value     : {...obj}, // Convert to plain object
-				value: this.processForSerialization({...obj}, path), // Recursively process properties
+				value : this.processForSerialization({...obj}, path), // Recursively process properties
 			} as SerializedSpecialType;
 
 			if (!this.canProcess(r, path)) {
@@ -266,7 +266,7 @@ export class JSONSerializationStrategy<T> implements SerializationStrategy<T, fa
 						typeof objRecord.value === "string" ||
 						objRecord.value === undefined
 					) {
-						return Symbol(objRecord.value as string | undefined);
+						return Symbol(objRecord.value);
 					}
 					break;
 
@@ -407,9 +407,11 @@ export interface PersistResultSync<T extends object> {
 	persist: () => void;
 	restore: () => boolean;
 	clear: () => void;
-	// Stop persisting this store. Needed for short-lived stores (e.g. a per-entry detail store)
-	// so their subscription doesn't leak; long-lived singletons can ignore it.
-	dispose: () => void;
+	// Start persisting: subscribes to store changes and returns the unsubscribe. Call it in an
+	// effect (React) or once for a singleton — keeping subscribe/unsubscribe symmetric so a
+	// StrictMode mount→unmount→remount re-establishes the subscription instead of leaving it
+	// disposed. Any listeners the store wires up in its own setup follow the same lifecycle.
+	subscribe: () => () => void;
 }
 
 function debounce(func: () => void, wait: number) {
@@ -475,7 +477,7 @@ export function persistSync<T extends object>(
 			      ? new o.serializationStrategy()
 			      : o.serializationStrategy;
 
-	serializer.canProcess = o.canSerialize.bind(serializer)
+	serializer.canProcess = o.canSerialize.bind(serializer);
 
 	const merger =
 		      typeof o.mergeStrategy === "function"
@@ -519,10 +521,10 @@ export function persistSync<T extends object>(
 	const data = storage.get(key) || null;
 
 	const storedState = data
-		? serializer.deserialize(data) || null : null;
+		? serializer.deserialize(data) : null;
 
 	const mergedState = storedState
-		? merger.merge(initialState, storedState) || null
+		? merger.merge(initialState, storedState)
 		: undefined;
 
 	const store = proxy<T>(mergedState ?? initialState);
@@ -541,42 +543,44 @@ export function persistSync<T extends object>(
 		const serialized = serializer.serialize(currentState);
 
 		// Now we have a definite string type for serialized
-		const syncStorage = storage as StorageStrategy<false>;
-		syncStorage.set(key, serialized);
+		storage.set(key, serialized);
 	};
 
 	// Set up persistence
 	const debouncedPersist = debounce(persistData, debounceTime);
 
-	// Subscribe to changes
-	const unsubscribe = subscribe(store, () => {
-		const currentState = snapshot(store);
-
-		if (shouldPersist(previousState, currentState)) {
-			debouncedPersist();
-		}
-
-		// Update previous state for next comparison
-		previousState = currentState;
-	});
+	// Subscribe on demand rather than eagerly here: the caller binds this in an effect, so the
+	// subscribe/unsubscribe pair survives a StrictMode remount (an eager subscription created in
+	// render but disposed in an effect cleanup would be torn down and never re-established).
+	const subscribeToChanges = () => {
+		previousState = snapshot(store);
+		return subscribe(store, () => {
+			const currentState = snapshot(store);
+			if (shouldPersist(previousState, currentState)) {
+				debouncedPersist();
+			}
+			// Update previous state for next comparison
+			previousState = currentState;
+		});
+	};
 
 	// Return the result
 	return {
 		store,
-		dispose : unsubscribe,
-		persist : persistData,
-		clear   : () => {
+		subscribe : subscribeToChanges,
+		persist   : persistData,
+		clear     : () => {
 			storage.remove(key);
 		},
-		restore : () => {
+		restore   : () => {
 			const data = storage.get(key) || null;
 
 			const storedState = data
-				? serializer.deserialize(data) || null
+				? serializer.deserialize(data)
 				: null;
 
 			const mergedState = storedState
-				? merger.merge(initialState, storedState) || null
+				? merger.merge(initialState, storedState)
 				: undefined;
 
 			if (mergedState) {

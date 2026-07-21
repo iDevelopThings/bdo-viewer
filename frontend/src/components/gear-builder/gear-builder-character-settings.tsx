@@ -5,7 +5,8 @@ import {Input} from "@/components/ui/input.tsx";
 import {Label} from "@/components/ui/label.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {gearBuilderStore} from "@/components/gear-builder/gear-builder-store.ts";
-import {LifeSkillType, LifeSkillTypeInfos} from "@/lib/types/life-skill-types.gen.ts";
+import type {LifeSkillType} from "@/lib/types/life-skill-types.gen.ts";
+import {LifeSkillTypeInfos} from "@/lib/types/life-skill-types.gen.ts";
 import {LifeSkillGradeInfos, LifeSkillGradeValues} from "@/lib/types/life-skill-grades.gen.ts";
 import {useDebounce} from "@/utils.tsx";
 import {useSnapshot} from "valtio/react";
@@ -20,7 +21,7 @@ const GRADES = LifeSkillGradeValues
 	.filter(g => g.value >= 0);
 
 const GRADE_MIN_MAXES = GRADES.reduce((acc, g) => {
-	acc[g.value] = {min : 0, max : g.maxLevel - g.minLevel};
+	acc[g.value] = {min : 0, max : (g.maxLevel ?? 0) - (g.minLevel ?? 0)};
 	return acc;
 }, {} as Record<number, { min: number, max: number }>);
 
@@ -65,7 +66,7 @@ export function GearBuilderCharacterSettings() {
 					<Input
 						type={"number"}
 						min={1}
-						value={level ?? 65}
+						value={level}
 						onChange={e => saveLevel(parseInt(e.target.value, 10) || 1)}
 						className={"h-8 w-24 text-center"}
 					/>
@@ -96,8 +97,8 @@ export function GearBuilderCharacterSettings() {
 
 								<Input
 									type={"number"}
-									min={GRADE_MIN_MAXES[m?.rank ?? 0]?.min ?? 0}
-									max={GRADE_MIN_MAXES[m?.rank ?? 0]?.max ?? 0}
+									min={GRADE_MIN_MAXES[m?.rank ?? 0].min}
+									max={GRADE_MIN_MAXES[m?.rank ?? 0].max}
 									value={m?.lvl ?? 0}
 									onChange={e => save(info.value, {lvl : parseInt(e.target.value, 10) || 0})}
 									className={"h-8 text-center"}

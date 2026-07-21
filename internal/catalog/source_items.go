@@ -3,9 +3,9 @@ package catalog
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -61,6 +61,8 @@ type ItemSource struct {
 	ByName map[string]*model.Item `json:"-"`
 
 	CategoryCounts *models.Reducer[model.Item, map[string]*CategoryCount] `json:"-"`
+
+	UniqueCrystalStatIds []model.StatId `json:"-"`
 }
 
 var (
@@ -92,32 +94,29 @@ func (s *ItemSource) GetSourceKind() sources.SourceKind { return s.Kind }
 // constructor must not touch Instance, which is nil until startup.
 func (s *ItemSource) Load() error {
 	var items []model.Item
-	var enhancements []model.Enhancement
 
-	const steps = 4
+	const steps = 5
+	step := 0
 
 	{
 		ijTimed := utils.Timed("[SOURCE] load items.json")
 		defer ijTimed()
 
-		s.Reporter.Step(1, steps, "Loading items.json")
+		step++
+		s.Reporter.Step(step, steps, "Loading items.json")
 		if err := util.ReadJSON(filepath.Join(config.GetExtractedDataDir(), "items.json"), &items); err != nil {
 			return errors.Wrap(err, "read items.json")
 		}
 	}
 
-	{
-		ijTimed := utils.Timed("[SOURCE] load enhancements.json")
-		defer ijTimed()
-
-		s.Reporter.Step(2, steps, "Loading item_enhancements.json")
-
-		if err := util.ReadJSON(filepath.Join(config.GetExtractedDataDir(), "item_enhancements.json"), &enhancements); err != nil {
-			return errors.Wrap(err, "read item_enhancements.json")
-		}
+	step++
+	s.Reporter.Step(step, steps, "Loading item_enhancements.json")
+	if err := s.loadEnhancements(); err != nil {
+		return err
 	}
 
-	s.Reporter.Step(3, steps, "Loading marketcategories.json")
+	step++
+	s.Reporter.Step(step, steps, "Loading marketcategories.json")
 	if err := s.loadMarketCategories(); err != nil {
 		return err
 	}
@@ -126,36 +125,13 @@ func (s *ItemSource) Load() error {
 	s.ItemVariants = make(map[urn.URN][]*model.Item)
 	s.EquipType = make([]string, 0)
 	s.ByName = make(map[string]*model.Item)
+	s.UniqueCrystalStatIds = make([]model.StatId, 0)
 
-	s.EnhancementStore = models.NewStore[model.Enhancement](
-		len(enhancements),
-		func(u urn.URN) bool {
-			return u.Domain == urn.Enhancement.Domain()
-		},
-	)
-	for i := range enhancements {
-		en := &enhancements[i]
-		if err := s.EnhancementStore.Add(en.GetURN(), en); err != nil {
-			return fmt.Errorf("registering enhancement %s: %w", en.GetURN().String(), err)
-		}
+	step++
+	s.Reporter.Step(step, steps, "Loading item_sets.json")
+	if err := s.loadItemSets(); err != nil {
+		return err
 	}
-	models.RegisterStore(s.EnhancementStore)
-
-	var sets []model.ItemSet
-	if err := util.ReadJSON(filepath.Join(config.GetExtractedDataDir(), "item_sets.json"), &sets); err != nil {
-		return errors.Wrap(err, "read item_sets.json")
-	}
-	s.ItemSetStore = models.NewStore[model.ItemSet](
-		len(sets),
-		func(u urn.URN) bool { return u.Domain == urn.ItemSet.Domain() },
-	)
-	for i := range sets {
-		set := &sets[i]
-		if err := s.ItemSetStore.Add(set.GetURN(), set); err != nil {
-			return fmt.Errorf("registering item set %s: %w", set.GetURN().String(), err)
-		}
-	}
-	models.RegisterStore(s.ItemSetStore)
 
 	s.Store = models.NewStore[model.Item](
 		len(items), func(u urn.URN) bool {
@@ -163,7 +139,8 @@ func (s *ItemSource) Load() error {
 		},
 	)
 
-	s.Reporter.Step(4, steps, "Registering items")
+	step++
+	s.Reporter.Step(step, steps, "Registering items")
 
 	for i := range items {
 		it := &items[i]
@@ -186,7 +163,7 @@ func (s *ItemSource) Load() error {
 	// Update image paths relative to viewer
 	s.Store.AddHook(
 		func(it *model.Item) error {
-			it.Icon = "/icons/icons/" + strconv.FormatUint(uint64(it.ID), 10) + ".webp"
+			it.Icon = "/icons/by-urn/" + it.GetURN().String()
 			return nil
 		},
 	)
@@ -199,6 +176,24 @@ func (s *ItemSource) Load() error {
 
 			if e, ok := s.EnhancementStore.Get(it.Enhancement.Urn); ok {
 				it.Enhancement.Levels = e.Levels
+			}
+
+			return nil
+		},
+	)
+
+	// Index stat ids used on transfusion jewels (crystals) for the frontend's crystal picker.
+	s.Store.AddHook(
+		func(it *model.Item) error {
+			if it.CrystalGroup == nil {
+				return nil
+			}
+			if it.Effects == nil {
+				return nil
+			}
+
+			for _, stat := range it.Effects.Stats.Stats {
+				s.indexCrystalStatId(stat.StatID)
 			}
 
 			return nil
@@ -253,6 +248,56 @@ func (s *ItemSource) Load() error {
 	)
 
 	models.RegisterStore(s.Store)
+
+	return nil
+}
+
+func (s *ItemSource) loadItemSets() error {
+	var sets []model.ItemSet
+	if err := util.ReadJSON(filepath.Join(config.GetExtractedDataDir(), "item_sets.json"), &sets); err != nil {
+		return errors.Wrap(err, "read item_sets.json")
+	}
+
+	s.ItemSetStore = models.NewStore[model.ItemSet](
+		len(sets),
+		func(u urn.URN) bool { return u.Domain == urn.ItemSet.Domain() },
+	)
+
+	for i := range sets {
+		set := &sets[i]
+		if err := s.ItemSetStore.Add(set.GetURN(), set); err != nil {
+			return fmt.Errorf("registering item set %s: %w", set.GetURN().String(), err)
+		}
+	}
+
+	models.RegisterStore(s.ItemSetStore)
+
+	return nil
+}
+
+func (s *ItemSource) loadEnhancements() error {
+	ijTimed := utils.Timed("[SOURCE] load enhancements.json")
+	defer ijTimed()
+
+	var enhancements []model.Enhancement
+
+	if err := util.ReadJSON(filepath.Join(config.GetExtractedDataDir(), "item_enhancements.json"), &enhancements); err != nil {
+		return errors.Wrap(err, "read item_enhancements.json")
+	}
+
+	s.EnhancementStore = models.NewStore[model.Enhancement](
+		len(enhancements),
+		func(u urn.URN) bool {
+			return u.Domain == urn.Enhancement.Domain()
+		},
+	)
+	for i := range enhancements {
+		en := &enhancements[i]
+		if err := s.EnhancementStore.Add(en.GetURN(), en); err != nil {
+			return fmt.Errorf("registering enhancement %s: %w", en.GetURN().String(), err)
+		}
+	}
+	models.RegisterStore(s.EnhancementStore)
 
 	return nil
 }
@@ -453,6 +498,19 @@ func (s *ItemSource) GetStats(ref urn.URN, level int, caphrasStep int) []stats.S
 	return sections
 }*/
 
+type crystalFilters struct {
+	// CrystalGroup, when set, keeps only socket crystals of that transfusion family.
+	CrystalGroup *uint32 `json:"crystalGroup,omitempty"`
+	// StatIds narrows to crystals granting every listed stat — picking more stats narrows the
+	// list rather than widening it, which is what you want when hunting for one crystal that
+	// covers several stats.
+	StatIds []model.StatId `json:"statIds,omitempty"`
+	// GroupUsage is how many of each transfusion family the preset already holds (group key ->
+	// count), so families at their cap can be dropped. The loadout lives in the gear builder,
+	// which this source can't reach into, so the caller passes the counts down.
+	GroupUsage map[uint32]int `json:"groupUsage,omitempty"`
+}
+
 // itemFilters are the item-specific fields carried in ListSourceParams.Filters;
 // Category/SubCategory are handled generically by ListSourceParams itself.
 type itemFilters struct {
@@ -468,13 +526,23 @@ type itemFilters struct {
 	// calculator's add-item picker).
 	Craftable  bool `json:"craftable,omitempty"`
 	Consumable bool `json:"consumable,omitempty"`
+
+	// Crystals filters the list to only items that are transfusion jewels of the given family.
+	Crystals *crystalFilters `json:"crystals,omitempty"`
 }
 
 // List dispatches to the named source's provider. Returns nil for an
 // unregistered source.
 func (s *ItemSource) List(params sources.ListSourceParams) []sources.ListSourceEntry {
 	var f itemFilters
-	_ = json.Unmarshal(params.Filters, &f) // empty/absent Filters = zero value = no constraint
+	// Empty/absent Filters = zero value = no constraint. A malformed one lands in the same place,
+	// which lists everything — deliberately: a filter shape broken by a game update should leave
+	// the app usable, not empty. Logged so it's still diagnosable.
+	if len(params.Filters) > 0 {
+		if err := json.Unmarshal(params.Filters, &f); err != nil {
+			log.Printf("List: bad item filters %s: %v", params.Filters, err)
+		}
+	}
 
 	// We need to handle earing2,artifact2,ring2 etc, mapping to the first slot of the pair.
 	for i, slot := range f.EquipSlots {
@@ -488,6 +556,7 @@ func (s *ItemSource) List(params sources.ListSourceParams) []sources.ListSourceE
 		if it.Name == "" {
 			return false
 		}
+
 		// hide ghost records (loc name with no item data) and reissued copies
 		// of the same item (bound reward/season duplicates) — the canonical
 		// (tradeable/base) record represents the item; variants stay reachable
@@ -522,6 +591,28 @@ func (s *ItemSource) List(params sources.ListSourceParams) []sources.ListSourceE
 			return false
 		}
 
+		// The filter's presence alone means "transfusion jewels only"; its fields narrow further.
+		if f.Crystals != nil {
+			if it.CrystalGroup == nil {
+				return false
+			}
+
+			// We're only looking for specific families, ie dawn crystal slots.
+			if f.Crystals.CrystalGroup != nil && it.CrystalGroup.Key != *f.Crystals.CrystalGroup {
+				return false
+			}
+
+			if len(f.Crystals.StatIds) > 0 && !it.HasStatIds(f.Crystals.StatIds...) {
+				return false
+			}
+
+			// Hide what the builder would refuse anyway — an equip that silently does nothing
+			// reads as a broken picker.
+			if CrystalRules.GroupFull(it.CrystalGroup, f.Crystals.GroupUsage) {
+				return false
+			}
+		}
+
 		if ef != "" && !it.HasEffect(ef) {
 			return false
 		}
@@ -534,8 +625,8 @@ func (s *ItemSource) List(params sources.ListSourceParams) []sources.ListSourceE
 			if !slices.Contains(f.EquipSlots, it.EquipInfo.Slot) {
 				return false
 			}
-
 		}
+
 		if f.Craftable && (recipe.Instance == nil || !recipe.Instance.IsCraftable(it.GetURN())) {
 			return false
 		}
@@ -544,14 +635,6 @@ func (s *ItemSource) List(params sources.ListSourceParams) []sources.ListSourceE
 		}
 
 		return true
-
-		/*return it.Name != "" &&
-		(params.Category == "" || it.MarketCategory == params.Category) &&
-		(params.SubCategory == "" || it.MarketSubCategory == params.SubCategory) &&
-		(f.Grade == "" || it.Grade == f.Grade) &&
-		(f.ItemType == "" || it.ItemType == f.ItemType) &&
-		(f.EquipType == "" || (it.EquipInfo != nil && it.EquipInfo.Type == f.EquipType)) &&
-		(ef == "" || it.HasEffect(ef))*/
 	}
 
 	items := FilterAndRank(
@@ -565,7 +648,6 @@ func (s *ItemSource) List(params sources.ListSourceParams) []sources.ListSourceE
 	out := make([]sources.ListSourceEntry, len(items))
 	for i, it := range items {
 		out[i] = sources.ListSourceEntry{
-			ID:    it.ID,
 			URN:   it.GetURN().String(),
 			Title: it.Name,
 			Icon:  it.Icon,
@@ -634,4 +716,34 @@ func itemLess(by, dir string) func(a, b *model.Item) bool {
 	}
 
 	return less
+}
+
+// indexCrystalStatId records a stat key granted by a transfusion jewel, deduped.
+func (s *ItemSource) indexCrystalStatId(id model.StatId) {
+	if id == "" || slices.Contains(s.UniqueCrystalStatIds, id) {
+		return
+	}
+
+	s.UniqueCrystalStatIds = append(s.UniqueCrystalStatIds, id)
+}
+
+type CrystalStatIdInfo struct {
+	StatId model.StatId `json:"statId"`
+	Name   string       `json:"name"`
+}
+
+func (c *Catalog) GetCrystalStatIds() []CrystalStatIdInfo {
+	ids := make([]CrystalStatIdInfo, 0, len(Items.UniqueCrystalStatIds))
+	for _, statId := range Items.UniqueCrystalStatIds {
+		ids = append(ids, CrystalStatIdInfo{
+			StatId: statId,
+			Name:   statId.Label(),
+		})
+	}
+
+	slices.SortFunc(ids, func(a, b CrystalStatIdInfo) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+
+	return ids
 }

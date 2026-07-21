@@ -29,14 +29,21 @@ export function AddConsumable(itemRef: models$0.EntityRef<model$0.Item> | null):
 }
 
 /**
+ * ClearCrystal empties one preset socket.
+ */
+export function ClearCrystal(slotId: model$0.CrystalPresetSlot): $CancellablePromise<void> {
+    return $Call.ByName("bdo-viewer/internal/gear.BuilderService.ClearCrystal", slotId);
+}
+
+/**
  * EnteredBuilder Called by frontend when the user opens the builder panel
  */
 export function EnteredBuilder(): $CancellablePromise<void> {
     return $Call.ByName("bdo-viewer/internal/gear.BuilderService.EnteredBuilder");
 }
 
-export function Equip(itemRef: models$0.EntityRef<model$0.Item> | null): $CancellablePromise<boolean> {
-    return $Call.ByName("bdo-viewer/internal/gear.BuilderService.Equip", itemRef);
+export function Equip(itemRef: models$0.EntityRef<model$0.Item> | null, slotId: model$0.SlotName): $CancellablePromise<boolean> {
+    return $Call.ByName("bdo-viewer/internal/gear.BuilderService.Equip", itemRef, slotId);
 }
 
 export function GetAllClasses(): $CancellablePromise<model$0.CharacterClassTypeInfo[] | null> {
@@ -71,6 +78,13 @@ export function SaveState(): $CancellablePromise<void> {
 
 export function SetClass($class: model$0.CharacterClassType): $CancellablePromise<void> {
     return $Call.ByName("bdo-viewer/internal/gear.BuilderService.SetClass", $class);
+}
+
+/**
+ * SetCrystal places a jewel in a preset socket. Returns false on validation failure.
+ */
+export function SetCrystal(slotId: model$0.CrystalPresetSlot, itemRef: models$0.EntityRef<model$0.Item> | null): $CancellablePromise<boolean> {
+    return $Call.ByName("bdo-viewer/internal/gear.BuilderService.SetCrystal", slotId, itemRef);
 }
 
 /**

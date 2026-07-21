@@ -1,4 +1,5 @@
-import {GearSlotButton, GearSlotButtonVariant} from "@/components/gear-builder/gear-slot-button.tsx";
+import type {GearSlotButtonVariant} from "@/components/gear-builder/gear-slot-button.tsx";
+import {GearSlotButton} from "@/components/gear-builder/gear-slot-button.tsx";
 import {SlotName} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
 
 // Positions slots evenly on an ellipse inside a relative container. Null
@@ -23,7 +24,7 @@ function RingSlots({order, radiusX, radiusY, startAngle = 0, variant = "sm"}: {
 						className={"absolute -translate-x-1/2 -translate-y-1/2"}
 						style={{left : `${left}%`, top : `${top}%`}}
 					>
-						<GearSlotButton slotId={slotId} size={variant} />
+						<GearSlotButton slotId={slotId ?? undefined} size={variant} />
 					</div>
 				);
 			})}
@@ -88,22 +89,27 @@ const SLOT_STEP = (2 * Math.PI) / OUTER_RING.length;
 
 export function GearRing() {
 	return (
-		<div className={"flex flex-col items-center gap-3 w-full flex-1 min-h-0 relative"}>
+		<div className={"flex flex-col items-center gap-8 w-full"}>
+			<div className={"flex flex-col items-center gap-3 w-full flex-1 min-h-0 relative"}>
 
-			<div className={"relative flex-1 min-h-0 aspect-square max-w-full min-h-130 max-h-130"}>
-				<div className={"absolute inset-[17.5%] rounded-full border border-surface-border"} />
-				<div className={"absolute inset-[34%] rounded-full border border-surface-border"} />
-				<div className={"absolute inset-[10%] bg-radial-[at_50%_50%] from-surface-3/30  to-transparent to-70%"} />
+				<div className={"flex flex-1 min-h-90 w-full items-center justify-center @container-size"}>
+					<div className={"relative min-w-90 max-w-90 aspect-square"}>
+						<div className={"absolute inset-[5%] rounded-full border border-surface-border"} />
+						<div className={"absolute inset-[32%] rounded-full border border-[#654f34]"} />
+						<div className={"absolute inset-[20%] bg-radial-[at_50%_50%] from-surface-3/30  to-transparent to-70%"} />
 
-				<RingSlots order={OUTER_RING} radiusX={33} radiusY={33} startAngle={-SLOT_STEP} variant={"sm"} />
-				<RingSlots order={INNER_RING} radiusX={15} radiusY={15} variant={"sm"} />
+						<RingSlots order={OUTER_RING} radiusX={45} radiusY={45} startAngle={-SLOT_STEP} variant={"lg"} />
+						<RingSlots order={INNER_RING} radiusX={18} radiusY={18} variant={"xs"} />
 
-				{/* Alchemy stone stays dead-centre (matching the in-game window); everything else rings around it. */}
-				<div className={"absolute inset-0 flex items-center justify-center pointer-events-none"}>
-					<div className={"pointer-events-auto"}>
-						<GearSlotButton slotId={SlotName.SlotNameAlchemyStone} size={"xs"} />
+						{/* Alchemy stone stays dead-centre (matching the in-game window); everything else rings around it. */}
+						<div className={"absolute inset-0 flex items-center justify-center pointer-events-none"}>
+							<div className={"pointer-events-auto"}>
+								<GearSlotButton slotId={SlotName.SlotNameAlchemyStone} size={"xs"} />
+							</div>
+						</div>
 					</div>
 				</div>
+
 			</div>
 
 			<UnderRingRow slots={UNDER_RING} />

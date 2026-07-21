@@ -1,13 +1,14 @@
 import {ref} from "valtio/vanilla";
-import {SourceKind, UntypedSourceEntry} from "@bindings/bdo-viewer/internal/sources";
+import type { UntypedSourceEntry} from "@bindings/bdo-viewer/internal/sources";
+import {SourceKind} from "@bindings/bdo-viewer/internal/sources";
 import {findSourceByType, type WrappedSource} from "@/state/sources/sources.ts";
-import {EnchantLevel, Enhancement, Item, KnowledgeEntry, KnowledgeTheme, Territory, WorldRegion} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
-import {GetEntryDetails, GetEntryDetailsByURN, GetStatsByURN} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
+import type {EnchantLevel, Enhancement, Item, KnowledgeEntry, KnowledgeTheme, Territory, WorldRegion} from "@bindings/github.com/idevelopthings/bdo-data-extractor/src/model";
+import {GetEntryDetailsByURN, GetStatsByURN} from "@bindings/bdo-viewer/internal/sources/sourceregistry.ts";
 import type {StatGroup} from "@bindings/bdo-viewer/internal/stats";
-import {MaybeReadonly} from "@/types.ts";
-import {RecipeSelection, RecipeTree, Use} from "@bindings/bdo-viewer/internal/recipe";
+import type {MaybeReadonly} from "@/types.ts";
+import type {RecipeSelection, RecipeTree, Use} from "@bindings/bdo-viewer/internal/recipe";
 import {ResolveRecipeTree} from "@bindings/bdo-viewer/internal/recipe/resolver.ts";
-import {ItemVendorData} from "@bindings/bdo-viewer/internal/catalog";
+import type {ItemVendorData} from "@bindings/bdo-viewer/internal/catalog";
 import {fetchMarket, marketLoaded} from "@/lib/market-data.tsx";
 
 export type EntryDetailsData = {
@@ -20,45 +21,22 @@ export type EntryDetailsData = {
 	stats?: StatGroup[] | null
 }
 
-export function getEntryKey(entry: UntypedSourceEntry | undefined): string | undefined {
-	if (!entry || !entry.value)
-		return undefined;
-	if (typeof entry.value === "number" || typeof entry.value === "string") {
-		return entry.value.toString();
-	}
-	if ("id" in entry.value) {
-		return entry.value.id;
-	}
-	if ("key" in entry.value) {
-		return entry.value.key;
-	}
-	// if (!("id" in entry.value)) {
-	// 	console.error("Invalid entry", entry);
-	// 	return undefined;
-	// }
-	// return entry.value.id;
-	console.error("Invalid entry", entry);
-	return undefined;
-}
-
 export function getEntryURN(entry: MaybeReadonly<UntypedSourceEntry | undefined>): string | undefined {
 	return entry?.urn;
 }
 
 export function areEntriesEqual(a: UntypedSourceEntry | undefined, b: UntypedSourceEntry | undefined): boolean {
-	if (a === b) return true;
-	if (!a || !b) return false;
-	if (a.urn || b.urn) return a.urn === b.urn;
-	if (a.type !== b.type) return false;
-	const aKey = getEntryKey(a)?.toString();
-	const bKey = getEntryKey(b)?.toString();
-
-
-	return aKey === bKey;
+	if (a === b) {
+		return true;
+	}
+	if (!a || !b) {
+		return false;
+	}
+	return a.urn === b.urn;
 }
 
 export type PartialSourceEntry = UntypedSourceEntry & {
-	value: number | string | Item;
+	value: string | Item;
 }
 
 
@@ -70,9 +48,9 @@ export type KnowledgeData = {
 export type WorldInfoData = {
 	territory?: Territory
 	area?: WorldRegion
-	connectedTowns?: string[]
+	warehouseGroup?: string[]
 	variantKeys?: number[]
-	npcs?: number[]
+	npcs?: string[]
 }
 
 export class DetailStore {
@@ -132,21 +110,24 @@ export class DetailStore {
 			throw new Error("DetailStore must be initialized with an entry");
 		}
 		if (this._loaded) {
-			// console.warn("DetailStore is already loaded, skipping load", this.entry);
 			return;
 		}
 
+		const entryURN = getEntryURN(this.entry);
+		if (!entryURN) {
+			console.error("DetailStore.load: entry has no urn", this.entry);
+			this.loading = false;
+			return;
+		}
 
 		this.loading = true;
 
 		try {
-			const entryURN               = getEntryURN(this.entry);
-			const data: EntryDetailsData = entryURN
-				? await GetEntryDetailsByURN(entryURN)
-				: await GetEntryDetails(
-					this.entry.type,
-					parseInt(getEntryKey(this.entry))
-				);
+			const data = await GetEntryDetailsByURN(entryURN);
+			if (!data || !this.source) {
+				this.loading = false;
+				return;
+			}
 
 			this.entry.value = data[this.source.kind];
 
@@ -162,19 +143,24 @@ export class DetailStore {
 				this.recipeSelections     = {};
 				this.recipeCraftOverrides = {};
 			}
+			// The details response already carries base-level (0/0) stats, so the panel can
+			// paint them immediately; refreshStats only re-runs on enhance/caphras changes.
+			if ("stats" in data) {
+				this._stats = data.stats ?? [];
+			}
 			if ("usedIn" in data)
 				// ref() — read-only list, replaced wholesale; skip valtio's per-entry proxying.
 				this.usedIn = ref(data.usedIn || []);
 			if ("vendors" in data)
-				this.vendors = data?.vendors || [];
+				this.vendors = data.vendors || [];
 			if ("regionExtra" in data) {
-				const d          = data.regionExtra as WorldInfoData;
+				const d          = data.regionExtra as WorldInfoData & { connectedTowns?: string[] };
 				this.regionExtra = {
-					area           : d?.area,
-					territory      : d?.territory,
-					connectedTowns : d?.connectedTowns || [],
-					variantKeys    : d?.variantKeys || [],
-					npcs           : d?.npcs || []
+					area            : d.area,
+					territory       : d.territory,
+					warehouseGroup  : d.warehouseGroup ?? [],
+					variantKeys     : d.variantKeys || [],
+					npcs            : d.npcs || []
 				};
 			}
 
@@ -184,14 +170,20 @@ export class DetailStore {
 
 		if ("enhancement" in this.entry.value) {
 			this.enhancement = this.entry.value.enhancement;
-			this.setLevel(this._level);
+			this.applyLevel(this._level);
+			// The response's stats are base level (0/0); if a non-base enhance/caphras level was
+			// restored, refresh them before dropping loading so the panel opens at its final size.
+			if (this._level !== 0 || this._caphrasStep !== 0) {
+				await this.refreshStats();
+			}
 		} else {
 			this.enchant = undefined;
-			void this.refreshStats();
 		}
 
 		this.loading = false;
 
+		// Refine the already-shown recipe tree with live prices once market data lands. Fire and
+		// forget: recipes render from the details response, and scroll anchoring holds the reflow.
 		void this.ensureEconomicRecipes();
 	}
 
@@ -201,17 +193,13 @@ export class DetailStore {
 				return;
 			} */
 
-		if (this.entry.type) {
+		if (this.entry?.type) {
 			this.source = findSourceByType(this.entry.type);
 		}
 	}
 
-	public postLoad() {
-		this.initialize(this.entry);
-	}
-
 	public get gatheredFrom(): string[] {
-		if (!("gatheredFrom" in this.entry.value)) {
+		if (!this.entry || !("gatheredFrom" in this.entry.value)) {
 			return [];
 		}
 
@@ -220,7 +208,7 @@ export class DetailStore {
 
 	/** URNs of the worldmap sub-nodes this item is gathered at (urn::world:node:<key>). */
 	public get gatherNodes(): string[] {
-		if (!("gatherNodes" in this.entry.value)) {
+		if (!this.entry || !("gatherNodes" in this.entry.value)) {
 			return [];
 		}
 
@@ -228,21 +216,17 @@ export class DetailStore {
 	}
 
 	public get valid() {
-		return this.enhancement !== undefined && (this.enhancement?.maxLevel > this.enhancement?.minLevel);
+		return this.enhancement !== undefined && (this.enhancement.maxLevel > this.enhancement.minLevel);
 	}
 
 	public get minLevel() {
-		if (!this.enhancement) {
-			return 0;
-		}
-		return this.enhancement.levels.length > 0 ? this.enhancement.levels[0].level : 0;
+		const levels = this.enhancement?.levels ?? [];
+		return levels.length > 0 ? levels[0].level : 0;
 	}
 
 	public get maxLevel() {
-		if (!this.enhancement) {
-			return 0;
-		}
-		return this.enhancement.levels.length > 0 ? this.enhancement.levels[this.enhancement.levels.length - 1].level : 0;
+		const levels = this.enhancement?.levels ?? [];
+		return levels.length > 0 ? levels[levels.length - 1].level : 0;
 	}
 
 
@@ -277,14 +261,19 @@ export class DetailStore {
 		return caphras.length > 0 ? Math.max(...caphras.map(c => c.level)) : 0;
 	}
 
-	public setLevel(value: number) {
+	// applyLevel is the synchronous part of setLevel (clamp + resolve enchant/caphras)
+	// without the stats refetch, so load() can settle level before awaiting stats once.
+	private applyLevel(value: number) {
 		this._level = Math.max(this.minLevel, Math.min(this.maxLevel, value));
 
 		if (this.enhancement) {
-			this.enchant = this.enhancement.levels.find(l => l.level === this._level);
+			this.enchant = this.enhancement.levels?.find(l => l.level === this._level);
 		}
 		this._caphrasStep = Math.min(this._caphrasStep, this.maxCaphrasStep);
+	}
 
+	public setLevel(value: number) {
+		this.applyLevel(value);
 		void this.refreshStats();
 	}
 
