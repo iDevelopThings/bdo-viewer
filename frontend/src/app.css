@@ -323,22 +323,3 @@ html, body, #root {
     min-height: 0;
 }
 
-/*
- * Kill dockview's background-color transitions on the sash and scrollbar. background-color can't be
- * composited, so animating it during a resize forces a full-frame main-thread repaint for the whole
- * drag (~6fps, GPU idle). We still want the colour change on hover/active — just instant, not animated.
- */
-.dv-split-view-container .dv-sash-container .dv-sash:not(.disabled):active, .dv-split-view-container .dv-sash-container .dv-sash:not(.disabled):hover {
-    /*transition-property: none !important;*/
-    /*transition-timing-function: unset !important;*/
-    /*transition-duration: unset !important;*/
-    /*transition-delay: unset !important;*/
-}
-
-.dv-scrollable .dv-scrollbar {
-    /*backface-visibility: hidden;*/
-    /*transition-property: unset !important;*/
-    /*transition-timing-function: unset !important;*/
-    /*transition-duration: unset !important;*/
-    /*transition-delay: unset !important;*/
-}
