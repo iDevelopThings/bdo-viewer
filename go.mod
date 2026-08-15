@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/dgravesa/go-parallel v0.6.0
 	github.com/goccy/go-json v0.10.6
-	github.com/idevelopthings/bdo-data-extractor v0.1.8
+	github.com/idevelopthings/bdo-data-extractor v0.1.9
 	github.com/pkg/errors v0.9.1
 	github.com/tidwall/gjson v1.19.0
 	github.com/tidwall/sjson v1.2.5

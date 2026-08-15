@@ -1185,21 +1185,14 @@ export interface Item {
      * variable strings and market registration limit.
      */
     "unknownAfterMarketLimit0"?: number | null;
-    "unknownAfterMarketLimit55"?: number | null;
-    "unknownAfterMarketLimit56"?: number | null;
-    "unknownAfterMarketLimit58"?: number | null;
-    "unknownAfterMarketLimit59"?: number | null;
-    "unknownAfterMarketLimit60"?: number | null;
-    "unknownAfterMarketLimit64"?: number | null;
-    "unknownAfterMarketLimit68"?: number | null;
-    "unknownAfterMarketLimit72"?: number | null;
-    "unknownAfterMarketLimit76"?: number | null;
+    "unknownAfterMarketLimit79"?: number | null;
     "unknownAfterMarketLimit80"?: number | null;
-
-    /**
-     * UnknownFooter6 is the final u16 after the crystal group.
-     */
-    "unknownFooter6"?: number | null;
+    "unknownAfterMarketLimit81"?: number | null;
+    "unknownAfterMarketLimit85"?: number | null;
+    "unknownAfterMarketLimit89"?: number | null;
+    "unknownAfterMarketLimit93"?: number | null;
+    "unknownAfterMarketLimit97"?: number | null;
+    "unknownAfterMarketLimit101"?: number | null;
 
     /**
      * Acquisition, from the per-item info XML (ui_html/xml/<lang>/<id>.xml). The XML
